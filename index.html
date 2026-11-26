@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Dental Planner</title>
+<title>Dental Student Planner</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -325,6 +325,20 @@ button.sm { padding: 5px 12px; font-size: 13px; }
 .subj-head .btn { padding: 7px 13px; font-size: 12.5px; }
 @media (min-width: 640px) { .subj-head b { flex: 1 1 auto; margin-bottom: 0; } }
 
+/* v5: busy timeline + subject icons */
+.sicon {
+  width: 30px; height: 30px; border-radius: 10px; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 16px; line-height: 1; vertical-align: middle;
+}
+b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15px; margin-inline-end: 2px; }
+.sess.busyrow { opacity: 0.85; }
+.sess.busyrow .sicon { width: 26px; height: 26px; font-size: 14px; }
+.tag.free { background: #e0f2fe; color: #075985; }
+.dayhead b { font-size: 15px; }
+.addblock { background: #f6faf9; border: 1px dashed var(--line); border-radius: 12px; padding: 10px; margin-top: 10px; }
+.addblock input[type="time"] { padding: 7px 9px; }
+
 /* v4: curriculum + smart warnings */
 .btn.sm { padding: 6px 12px; font-size: 12.5px; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
@@ -452,57 +466,57 @@ button.sm { padding: 5px 12px; font-size: 13px; }
     ],
   };
 
-  const S = (code, ar, en, diff, topics, aliases) => ({ code, ar, en, diff, src: 'guide', topics: topics || null, aliases: aliases || [] });
+  const S = (code, ar, en, diff, topics, aliases, icon) => ({ code, ar, en, diff, src: 'guide', topics: topics || null, aliases: aliases || [], icon: icon || '' });
 
   const YEARS = {
     1: [
-      S('GANM-1', 'تشريح عام', 'General Anatomy', 3, null, ['anatomy', 'تشريح']),
-      S('GHSM-1', 'هيستولوجيا عامة', 'General Histology', 2, null, ['histology', 'هستولوجي', 'هيستولوجيا']),
-      S('GPHM-1', 'فسيولوجيا عامة', 'General Physiology', 3, null, ['physiology', 'فسيولوجيا', 'فسيولوجي']),
-      S('BCHM-1', 'كيمياء حيوية', 'Biochemistry', 3, null, ['biochemistry', 'كيمياء']),
-      S('HDED-1', 'تشريح وظيفي للأسنان', 'Dental Anatomy and Physiology', 2, null, ['dental anatomy', 'تشريح الاسنان', 'تشريح وظيفي', 'dentition']),
-      S('SDE I-1', 'التفكير النقدي وتنمية مهارات I', 'Critical Thinking and Skills Development I', 1, null, ['critical thinking', 'تفكير نقدي', 'مهارات']),
-      S('Univ102', 'القضايا المجتمعية', 'Community Issues', 1, null, ['community', 'قضايا']),
+      S('GANM-1', 'تشريح عام', 'General Anatomy', 3, null, ['anatomy', 'تشريح'], '🦴'),
+      S('GHSM-1', 'هيستولوجيا عامة', 'General Histology', 2, null, ['histology', 'هستولوجي', 'هيستولوجيا'], '🔬'),
+      S('GPHM-1', 'فسيولوجيا عامة', 'General Physiology', 3, null, ['physiology', 'فسيولوجيا', 'فسيولوجي'], '❤️'),
+      S('BCHM-1', 'كيمياء حيوية', 'Biochemistry', 3, null, ['biochemistry', 'كيمياء'], '🧪'),
+      S('HDED-1', 'تشريح وظيفي للأسنان', 'Dental Anatomy and Physiology', 2, null, ['dental anatomy', 'تشريح الاسنان', 'تشريح وظيفي', 'dentition'], '🦷'),
+      S('SDE I-1', 'التفكير النقدي وتنمية مهارات I', 'Critical Thinking and Skills Development I', 1, null, ['critical thinking', 'تفكير نقدي', 'مهارات'], '💡'),
+      S('Univ102', 'القضايا المجتمعية', 'Community Issues', 1, null, ['community', 'قضايا'], '🌍'),
     ],
     2: [
-      S('OBID-2', 'بيولوجيا الفم والأسنان', 'Oral Biology', 2, Y2_TOPICS.OBID2, ['oral biology', 'oral histology', 'oral bio', 'بيولوجيا', 'هيستولوجي الفم', 'هستولوجي الفم', 'اورال']),
-      S('DMAD-2', 'المواد الحيوية لطب الأسنان', 'Dental Biomaterials', 2, Y2_TOPICS.DMAD2, ['biomaterials', 'materials', 'المواد الحيوية', 'بيوماتيريالز', 'ماتيريالز', 'خواص المواد', 'مواد']),
-      S('GPAM-2', 'باثولوجيا عامة', 'General Pathology', 3, Y2_TOPICS.GPAM2, ['pathology', 'باثولوجيا', 'باثولوجي', 'باثو']),
-      S('GMEM-2', 'أمراض باطنة وجلدية وتناسلية', 'General Medicine, Skin and Venereal Diseases', 3, Y2_TOPICS.GMEM2, ['medicine', 'باطنة', 'ميديسن', 'امراض باطنة', 'جلدية']),
-      S('PHAM-2', 'الأقربازين', 'Pharmacology', 3, Y2_TOPICS.PHAM2, ['pharmacology', 'الاقربازين', 'فارماكولوجي', 'فارماك', 'ادوية', 'pharma']),
-      S('MIBM-2', 'ميكروبيولوجي', 'Microbiology', 2, Y2_TOPICS.MIBM2, ['microbiology', 'ميكروبيولوجي', 'ميكروب', 'ميكرو', 'micro']),
-      S('UEN002', 'ريادة أعمال', 'Entrepreneurship', 1, Y2_TOPICS.UEN002, ['entrepreneurship', 'ريادة']),
+      S('OBID-2', 'بيولوجيا الفم والأسنان', 'Oral Biology', 2, Y2_TOPICS.OBID2, ['oral biology', 'oral histology', 'oral bio', 'بيولوجيا', 'هيستولوجي الفم', 'هستولوجي الفم', 'اورال'], '🧬'),
+      S('DMAD-2', 'المواد الحيوية لطب الأسنان', 'Dental Biomaterials', 2, Y2_TOPICS.DMAD2, ['biomaterials', 'materials', 'المواد الحيوية', 'بيوماتيريالز', 'ماتيريالز', 'خواص المواد', 'مواد'], '🧱'),
+      S('GPAM-2', 'باثولوجيا عامة', 'General Pathology', 3, Y2_TOPICS.GPAM2, ['pathology', 'باثولوجيا', 'باثولوجي', 'باثو'], '🔬'),
+      S('GMEM-2', 'أمراض باطنة وجلدية وتناسلية', 'General Medicine, Skin and Venereal Diseases', 3, Y2_TOPICS.GMEM2, ['medicine', 'باطنة', 'ميديسن', 'امراض باطنة', 'جلدية'], '🩺'),
+      S('PHAM-2', 'الأقربازين', 'Pharmacology', 3, Y2_TOPICS.PHAM2, ['pharmacology', 'الاقربازين', 'فارماكولوجي', 'فارماك', 'ادوية', 'pharma'], '💊'),
+      S('MIBM-2', 'ميكروبيولوجي', 'Microbiology', 2, Y2_TOPICS.MIBM2, ['microbiology', 'ميكروبيولوجي', 'ميكروب', 'ميكرو', 'micro'], '🦠'),
+      S('UEN002', 'ريادة أعمال', 'Entrepreneurship', 1, Y2_TOPICS.UEN002, ['entrepreneurship', 'ريادة'], '💼'),
     ],
     3: [
-      S('OPTD-3', 'تكنولوجيا العلاج التحفظي للأسنان', 'Operative Dentistry Technology', 3, null, ['operative', 'تحفظي', 'اوبرتيف']),
-      S('PRTD-3', 'تكنولوجيا الاستعاضة الصناعية لطب الأسنان', 'Removable Prosthodontics Technology', 3, null, ['removable', 'استعاضة', 'بروسثو', 'prosth']),
-      S('CRTD-3', 'تكنولوجيا الاستعاضات السنية المثبتة', 'Fixed Prosthodontics Technology', 3, null, ['fixed', 'مثبتة', 'تركيبات']),
-      S('GSUM-3', 'الجراحة العامة وأنف وأذن وحنجرة ورمد', 'General Surgery, ENT and Ophthalmology', 3, null, ['surgery', 'جراحة عامة', 'انف', 'رمد']),
-      S('ORAD-3', 'أشعة الفم والوجه والفكين', 'Oral and Maxillofacial Radiology', 2, null, ['radiology', 'اشعة', 'راديولوجي']),
-      S('OMPD-3', 'باثولوجيا الفم والوجه والفكين', 'Oral and Maxillofacial Pathology', 3, null, ['oral pathology', 'باثولوجيا الفم']),
-      S('SDE II-3', 'تنمية مهارات II', 'Skills Development II', 1, null, ['skills', 'مهارات']),
-      S('SDE III-3', 'مكافحة العدوى وسلامة المرضى', 'Infection Control and Patient Safety', 1, null, ['infection', 'عدوي']),
+      S('OPTD-3', 'تكنولوجيا العلاج التحفظي للأسنان', 'Operative Dentistry Technology', 3, null, ['operative', 'تحفظي', 'اوبرتيف'], '🦷'),
+      S('PRTD-3', 'تكنولوجيا الاستعاضة الصناعية لطب الأسنان', 'Removable Prosthodontics Technology', 3, null, ['removable', 'استعاضة', 'بروسثو', 'prosth'], '😁'),
+      S('CRTD-3', 'تكنولوجيا الاستعاضات السنية المثبتة', 'Fixed Prosthodontics Technology', 3, null, ['fixed', 'مثبتة', 'تركيبات'], '👑'),
+      S('GSUM-3', 'الجراحة العامة وأنف وأذن وحنجرة ورمد', 'General Surgery, ENT and Ophthalmology', 3, null, ['surgery', 'جراحة عامة', 'انف', 'رمد'], '🏥'),
+      S('ORAD-3', 'أشعة الفم والوجه والفكين', 'Oral and Maxillofacial Radiology', 2, null, ['radiology', 'اشعة', 'راديولوجي'], '☢️'),
+      S('OMPD-3', 'باثولوجيا الفم والوجه والفكين', 'Oral and Maxillofacial Pathology', 3, null, ['oral pathology', 'باثولوجيا الفم'], '🔬'),
+      S('SDE II-3', 'تنمية مهارات II', 'Skills Development II', 1, null, ['skills', 'مهارات'], '💡'),
+      S('SDE III-3', 'مكافحة العدوى وسلامة المرضى', 'Infection Control and Patient Safety', 1, null, ['infection', 'عدوي'], '🧼'),
     ],
     4: [
-      S('OMED-4', 'طب الفم والتشخيص', 'Oral Medicine and Diagnosis', 2, null, ['oral medicine', 'طب الفم', 'تشخيص']),
-      S('PERD-4', 'أمراض اللثة', 'Periodontology', 2, null, ['periodontology', 'perio', 'لثة', 'بيريو']),
-      S('ORTD-4', 'تقويم الأسنان', 'Orthodontics', 3, null, ['orthodontics', 'تقويم', 'اورثو']),
-      S('OMSD-4', 'جراحة الفم والوجه والفكين', 'Oral and Maxillofacial Surgery', 3, null, ['maxillofacial', 'جراحة الفم', 'جراحة']),
-      S('ORAD-4', 'أشعة الفم والوجه والفكين', 'Oral and Maxillofacial Radiology', 2, null, ['radiology', 'اشعة']),
-      S('OPRD-4', 'العلاج التحفظي للأسنان', 'Operative Dentistry', 3, null, ['operative', 'تحفظي']),
-      S('PROD-4', 'الاستعاضة الصناعية لطب الأسنان', 'Removable Prosthodontics', 3, null, ['removable', 'استعاضة']),
-      S('CRWD-4', 'الاستعاضات السنية المثبتة', 'Fixed Prosthodontics', 3, null, ['fixed', 'مثبتة']),
-      S('ENDD-4', 'علاج الجذور', 'Endodontics', 3, null, ['endodontics', 'جذور', 'عصب', 'اندو']),
+      S('OMED-4', 'طب الفم والتشخيص', 'Oral Medicine and Diagnosis', 2, null, ['oral medicine', 'طب الفم', 'تشخيص'], '🩺'),
+      S('PERD-4', 'أمراض اللثة', 'Periodontology', 2, null, ['periodontology', 'perio', 'لثة', 'بيريو'], '🩸'),
+      S('ORTD-4', 'تقويم الأسنان', 'Orthodontics', 3, null, ['orthodontics', 'تقويم', 'اورثو'], '😬'),
+      S('OMSD-4', 'جراحة الفم والوجه والفكين', 'Oral and Maxillofacial Surgery', 3, null, ['maxillofacial', 'جراحة الفم', 'جراحة'], '🏥'),
+      S('ORAD-4', 'أشعة الفم والوجه والفكين', 'Oral and Maxillofacial Radiology', 2, null, ['radiology', 'اشعة'], '☢️'),
+      S('OPRD-4', 'العلاج التحفظي للأسنان', 'Operative Dentistry', 3, null, ['operative', 'تحفظي'], '🦷'),
+      S('PROD-4', 'الاستعاضة الصناعية لطب الأسنان', 'Removable Prosthodontics', 3, null, ['removable', 'استعاضة'], '😁'),
+      S('CRWD-4', 'الاستعاضات السنية المثبتة', 'Fixed Prosthodontics', 3, null, ['fixed', 'مثبتة'], '👑'),
+      S('ENDD-4', 'علاج الجذور', 'Endodontics', 3, null, ['endodontics', 'جذور', 'عصب', 'اندو'], '🧵'),
     ],
     5: [
-      S('OMED-5', 'طب الفم', 'Oral Medicine', 2, null, ['oral medicine', 'طب الفم']),
-      S('PERD-5', 'أمراض اللثة', 'Periodontology', 2, null, ['periodontology', 'لثة']),
-      S('OMSD-5', 'جراحة الفم والوجه والفكين', 'Oral and Maxillofacial Surgery', 3, null, ['maxillofacial', 'جراحة']),
-      S('PEDD-5', 'طب أسنان الأطفال والصحة العامة للفم والأسنان', 'Pediatric Dentistry and Community Oral Health', 2, null, ['pediatric', 'pedodontics', 'اطفال', 'بيدو']),
-      S('OPRD-5', 'العلاج التحفظي للأسنان', 'Operative Dentistry', 3, null, ['operative', 'تحفظي']),
-      S('PROD-5', 'الاستعاضة الصناعية لطب الأسنان', 'Removable Prosthodontics', 3, null, ['removable', 'استعاضة']),
-      S('CRWD-5', 'الاستعاضات السنية المثبتة', 'Fixed Prosthodontics', 3, null, ['fixed', 'مثبتة']),
-      S('ENDD-5', 'علاج الجذور', 'Endodontics', 3, null, ['endodontics', 'جذور', 'اندو']),
+      S('OMED-5', 'طب الفم', 'Oral Medicine', 2, null, ['oral medicine', 'طب الفم'], '🩺'),
+      S('PERD-5', 'أمراض اللثة', 'Periodontology', 2, null, ['periodontology', 'لثة'], '🩸'),
+      S('OMSD-5', 'جراحة الفم والوجه والفكين', 'Oral and Maxillofacial Surgery', 3, null, ['maxillofacial', 'جراحة'], '🏥'),
+      S('PEDD-5', 'طب أسنان الأطفال والصحة العامة للفم والأسنان', 'Pediatric Dentistry and Community Oral Health', 2, null, ['pediatric', 'pedodontics', 'اطفال', 'بيدو'], '🧒'),
+      S('OPRD-5', 'العلاج التحفظي للأسنان', 'Operative Dentistry', 3, null, ['operative', 'تحفظي'], '🦷'),
+      S('PROD-5', 'الاستعاضة الصناعية لطب الأسنان', 'Removable Prosthodontics', 3, null, ['removable', 'استعاضة'], '😁'),
+      S('CRWD-5', 'الاستعاضات السنية المثبتة', 'Fixed Prosthodontics', 3, null, ['fixed', 'مثبتة'], '👑'),
+      S('ENDD-5', 'علاج الجذور', 'Endodontics', 3, null, ['endodontics', 'جذور', 'اندو'], '🧵'),
     ],
   };
 
@@ -566,6 +580,115 @@ button.sm { padding: 5px 12px; font-size: 13px; }
   const addDays = (d, n) => fmt(parse(d) + n * 864e5);
   const weekday = (d) => new Date(parse(d)).getUTCDay(); // 0 = Sunday
   const diffDays = (a, b) => Math.round((parse(b) - parse(a)) / 864e5);
+
+  const BREAK_M = 30;  // rest between scheduled tasks, in minutes
+  const DAY_MIN = 240; // a planning day starts at 04:00; a block after midnight belongs to the day before
+
+  /* ---------------- busy blocks / free time ---------------- */
+
+  // 'HH:MM' -> minutes since 00:00; null when the value is not a valid clock time.
+  function hmToMin(s) {
+    const m = /^([01]?\d|2[0-3]):([0-5]\d)$/.exec(String(s || '').trim());
+    return m ? (+m[1]) * 60 + (+m[2]) : null;
+  }
+
+  const fmtMin = (m) => String(Math.floor(m / 60) % 24).padStart(2, '0') + ':' + String(Math.round(m % 60)).padStart(2, '0');
+
+  function normBlock(b) {
+    const start = hmToMin(b && b.start), end = hmToMin(b && b.end);
+    return {
+      id: (b && b.id) || '', label: String((b && b.label) || ''),
+      kind: ['class', 'gym', 'sleep', 'other'].includes(b && b.kind) ? b.kind : 'other',
+      start, end,
+    };
+  }
+
+  // Busy blocks of one planning day, as [start,end) minutes with sleep-style
+  // midnight crossings unrolled (end may exceed 1440).
+  function busyOn(state, d) {
+    const wd = weekday(d);
+    const out = [];
+    ((state.busy || {})[wd] || []).forEach((raw) => {
+      const b = normBlock(raw);
+      if (b.start == null || b.end == null) return;
+      if (b.start === b.end) return;
+      if (b.end > b.start) {
+        if (b.end > DAY_MIN) out.push([b.start, b.end]); // entirely after the day boundary
+      } else {
+        // crosses midnight: the part before 04:00 belongs to the previous planning day
+        out.push([Math.max(b.start, DAY_MIN), 1440 + b.end]);
+      }
+    });
+    // yesterday's midnight-crossing blocks spill into the start of this day
+    const pwd = (wd + 6) % 7;
+    ((state.busy || {})[pwd] || []).forEach((raw) => {
+      const b = normBlock(raw);
+      if (b.start == null || b.end == null || b.end >= b.start) return;
+      if (b.end > DAY_MIN) out.push([0, b.end]);
+    });
+    ((state.busyOnce || {})[d] || []).forEach((raw) => {
+      const b = normBlock(raw);
+      if (b.start == null || b.end == null || b.start === b.end) return;
+      if (b.end > b.start) { if (b.end > DAY_MIN) out.push([b.start, b.end]); }
+      else out.push([Math.max(b.start, DAY_MIN), 1440 + b.end]);
+    });
+    out.sort((a, b2) => a[0] - b2[0]);
+    const merged = [];
+    out.forEach((r) => {
+      const last = merged[merged.length - 1];
+      if (last && r[0] < last[1]) { if (r[1] > last[1]) last[1] = r[1]; }
+      else merged.push(r.slice());
+    });
+    return merged;
+  }
+
+  // Free study windows of one planning day, in order: [start,end) minutes, may exceed 1440.
+  function freeWindowsOn(state, d) {
+    if ((state.blocked || []).includes(d)) return [];
+    const free = [];
+    let cur = DAY_MIN;
+    busyOn(state, d).forEach(([s, e]) => {
+      if (s > cur) free.push([cur, s]);
+      if (e > cur) cur = e;
+    });
+    if (cur < 1440 + DAY_MIN) free.push([cur, 1440 + DAY_MIN]);
+    return free;
+  }
+
+  function overlapOn(state, d) {
+    const raw = [];
+    const wd = weekday(d);
+    ((state.busy || {})[wd] || []).forEach((b) => raw.push(normBlock(b)));
+    ((state.busyOnce || {})[d] || []).forEach((b) => raw.push(Object.assign(normBlock(b), { once: true })));
+    const bad = [];
+    for (let i = 0; i < raw.length; i++) {
+      const a = raw[i];
+      if (a.start == null || a.end == null) bad.push({ type: 'invalid', block: a });
+    }
+    const valid = raw.filter((b) => b.start != null && b.end != null && b.start !== b.end);
+    for (let i = 0; i < valid.length; i++) for (let j = i + 1; j < valid.length; j++) {
+      const a = valid[i], b = valid[j];
+      const sameOnce = !!a.once === !!b.once;
+      if (!sameOnce) continue;
+      if (a.start === b.end || b.start === a.end) continue; // touching is fine
+      if (a.start === b.start) bad.push({ type: 'overlap', a, b });
+      else if (a.end > a.start && b.end > b.start && a.start < b.end && b.start < a.end) bad.push({ type: 'overlap', a, b });
+    }
+    return bad;
+  }
+
+  // True when [s,e) (minutes, crossing-midnight allowed) overlaps a block list.
+  function blockClashes(list, sm, em) {
+    const unr2 = (s, e) => (e > s ? [s, e] : [s, e + 1440]);
+    const [a0, a1] = unr2(sm, em);
+    return (list || []).some((raw) => {
+      const b = normBlock(raw);
+      if (b.start == null || b.end == null || b.start === b.end) return false;
+      const [b0, b1] = unr2(b.start, b.end);
+      if (a0 === b1 || b0 === a1) return false; // touching is fine
+      return a0 < b1 && b0 < a1;
+    });
+  }
 
   /* ---------------- rule-based difficulty / time estimation ---------------- */
 
@@ -641,16 +764,36 @@ button.sm { padding: 5px 12px; font-size: 13px; }
   function capacityOn(state, d) {
     if ((state.blocked || []).includes(d)) return 0;
     if (state.overrides && state.overrides[d] != null) return Math.max(0, Number(state.overrides[d]));
-    return Math.max(0, Number((state.availability || [])[weekday(d)]) || 0);
+    // free time is the day (04:00 -> 04:00) minus busy blocks; a 30-minute break is
+    // kept between tasks, and tasks never start after 03:30 so a break always fits
+    const mins = freeWindowsOn(state, d).reduce((a, [s, e]) => a + Math.max(0, Math.min(e, 1440 + DAY_MIN - BREAK_M) - s), 0);
+    return Math.max(0, Math.floor(mins / 60 * 2) / 2);
+  }
+
+  // Bookable gaps: [startMin, lengthHours] inside the free windows, trimmed so a
+  // session plus its trailing 30-minute break always fits inside the window.
+  function gapsOn(state, d) {
+    const out = [];
+    freeWindowsOn(state, d).forEach(([s, e]) => {
+      const end = Math.min(e, 1440 + DAY_MIN - BREAK_M);
+      if (end - s >= 60) out.push([s, (end - s) / 60]);
+    });
+    return out;
   }
 
   /**
    * state: { subjects:[{id,name, examDate|exam:{date,covered}, weight, lectures|tasks}],
-   *          availability:[7 numbers Sun..Sat], overrides:{date:hours}, blocked:[dates] }
-   * Sessions: {date,subjectId,lectureId,title,type,hours}
+   *          busy:{weekday 0..6: [{id,label,kind,start,end}]},
+   *          busyOnce:{date: [block]}, overrides:{date:hours}, blocked:[dates] }
+   * Blocks use 'HH:MM'; a block whose end <= start crosses midnight (sleep) and
+   * spills into the next day. Study sessions go into the free gaps between blocks
+   * with a 30-minute break after each one.
+   * Sessions: {date,subjectId,lectureId,title,type,hours,startMin,endMin}
    *   type: study | solve | clinic | revise | examreview | review
+   *   startMin/endMin: minutes since 00:00 (endMin may exceed 1440 past midnight)
    */
-  function generate(state, today) {
+  function generate(state, today, opts) {
+    const nowMin = opts && opts.nowMin != null ? Number(opts.nowMin) : null;
     const subs = (state.subjects || []).map(normSubject);
     const active = subs.filter((s) => (s.examDate ? s.examDate >= today : s.tasks.some((t) => !t.done)));
     if (!active.length) return { sessions: [], deficits: [] };
@@ -662,13 +805,47 @@ button.sm { padding: 5px 12px; font-size: 13px; }
     const days = [];
     for (let d = today; d < last; d = addDays(d, 1)) days.push(d);
     const cap = days.map((d) => capacityOn(state, d));
+    const gaps = days.map((d) => gapsOn(state, d).map((g) => g.slice()));
+    // today: nothing is booked in time that has already passed
+    if (nowMin != null && gaps.length && gaps[0].length) {
+      const start = Math.max(DAY_MIN, Math.ceil(nowMin / BREAK_M) * BREAK_M);
+      gaps[0].forEach((g) => {
+        const end = g[0] + g[1] * 60;
+        if (start <= g[0]) return;
+        if (start >= end) { g[1] = 0; return; }
+        g[1] = (end - start) / 60; g[0] = start;
+      });
+      gaps[0] = gaps[0].filter((g) => g[1] * 60 >= 60);
+      cap[0] = Math.min(cap[0], gaps[0].reduce((a, g) => a + g[1], 0));
+    }
     const idx = {}; days.forEach((d, i) => (idx[d] = i));
 
     const sessions = [];
-    const push = (date, subjectId, lectureId, title, type, hours) => {
-      const prev = sessions.find((x) => x.date === date && x.subjectId === subjectId && x.lectureId === lectureId && x.type === type);
-      if (prev) prev.hours += hours;
-      else sessions.push({ date, subjectId, lectureId, title, type, hours });
+    // Allocate up to h hours inside ONE gap of day i (a session never spans a busy
+    // block): the earliest gap that fits the whole block, else the biggest gap.
+    // A 30-minute break is reserved right after the placed block.
+    const alloc = (i, h) => {
+      let best = -1;
+      gaps[i].forEach((g, gi) => {
+        if (g[1] < SLOT - 1e-9) return;
+        if (best < 0) { best = gi; return; }
+        const fits = g[1] >= h - 1e-9, bestFits = gaps[i][best][1] >= h - 1e-9;
+        if ((fits && (!bestFits || g[0] < gaps[i][best][0])) || (!fits && !bestFits && g[1] > gaps[i][best][1])) best = gi;
+      });
+      if (best < 0) return { hours: 0, at: null };
+      const g = gaps[i][best];
+      const take = Math.min(h, g[1]);
+      const at = g[0];
+      g[0] += take * 60 + BREAK_M;
+      g[1] -= take + BREAK_M / 60;
+      if (g[1] < SLOT - 1e-9) gaps[i].splice(best, 1);
+      return { hours: take, at };
+    };
+    const push = (date, subjectId, lectureId, title, type, hours, startMin) => {
+      const prev = sessions.find((x) => x.date === date && x.subjectId === subjectId && x.lectureId === lectureId && x.type === type &&
+        (startMin == null ? x.startMin == null : x.endMin === startMin)); // merge only truly contiguous pieces
+      if (prev) { prev.hours += hours; if (startMin != null) prev.endMin += hours * 60; }
+      else sessions.push({ date, subjectId, lectureId, title, type, hours, startMin: startMin == null ? null : startMin, endMin: startMin == null ? null : startMin + hours * 60 });
     };
 
     // 1) reserve one review block on the last open day before each exam/quiz
@@ -681,8 +858,10 @@ button.sm { padding: 5px 12px; font-size: 13px; }
           if (i == null || cap[i] < SLOT) continue;
           const take = Math.min(want, Math.floor(cap[i] / SLOT) * SLOT);
           if (take < SLOT) continue;
-          push(d, s.id, null, '', 'examreview', take);
-          cap[i] -= take;
+          const a = alloc(i, take);
+          if (a.hours < SLOT) continue;
+          push(d, s.id, null, '', 'examreview', a.hours, a.at);
+          cap[i] -= a.hours;
           break;
         }
       });
@@ -714,16 +893,16 @@ button.sm { padding: 5px 12px; font-size: 13px; }
     };
 
     days.forEach((d, di) => {
-      let slots = Math.round(cap[di] / SLOT);
+      let slots = Math.round(Math.min(cap[di], gaps[di].reduce((a, g) => a + g[1], 0)) / SLOT);
       const todayH = {}; let lastPick = null;
       while (slots > 0) {
         const open = active.filter((s) => deadlineOf(s) > d);
         const needy = open.filter((s) => items[s.id].some((i) => i.rem > 1e-9 && (!i.due || i.due > d)));
-        let pick = null, review = false;
+        let pick = null, review = false, capped = false;
         if (needy.length) {
           const score = (s) => s.weight * remaining(s) / Math.max(capBefore(deadlineOf(s), di), SLOT);
           let pool = needy.filter((s) => (todayH[s.id] || 0) < MAX_PER_SUBJECT);
-          if (!pool.length) pool = needy;
+          if (!pool.length) { pool = needy; capped = true; } // everything hit the per-subject cap: keep filling the day
           const sticky = (s) => score(s) * (s.id === lastPick ? 1.25 : 1);
           pool.sort((a, b) => sticky(b) - sticky(a) || deadlineOf(a).localeCompare(deadlineOf(b)));
           pick = pool[0];
@@ -731,21 +910,33 @@ button.sm { padding: 5px 12px; font-size: 13px; }
           pick = open.filter((s) => s.examDate && s.examDate > d).sort((a, b) => a.examDate.localeCompare(b.examDate))[0];
           review = true; // spare time: general review of the nearest exam
         } else break;
-        let lectureId = null, title = '', type = 'review';
-        let hrs = SLOT;
         if (!review) {
           const it = items[pick.id].find((i) => i.rem > 1e-9 && (!i.due || i.due > d));
-          hrs = Math.min(SLOT, it.rem); // a short piece (e.g. 10 min solving) shows its real length
-          it.rem -= SLOT; lectureId = it.t.id; title = it.t.title; type = it.type;
+          // one task piece is placed contiguously; a short piece (e.g. 10 min solving) keeps its real length
+          const room = Math.min(it.rem, (capped ? it.rem : MAX_PER_SUBJECT - (todayH[pick.id] || 0)), slots * SLOT);
+          if (room <= 1e-9) { slots = 0; break; }
+          let take = it.rem <= room + 1e-9 ? it.rem : Math.floor(room / SLOT) * SLOT;
+          if (take < SLOT) take = Math.min(it.rem, room); // never drop a sub-slot piece
+          const a = alloc(di, take);
+          if (a.hours <= 1e-9) { slots = 0; break; } // no gap left that fits work + break
+          const placed = Math.min(take, a.hours);
+          it.rem -= placed;
+          push(d, pick.id, it.t.id, it.t.title, it.type, placed, a.at);
+          todayH[pick.id] = (todayH[pick.id] || 0) + placed;
+          slots -= Math.ceil(placed / SLOT - 1e-9);
+        } else {
+          // spare-time review: one contiguous chunk so the day view stays readable
+          const take = Math.min(slots * SLOT, 4);
+          const a = alloc(di, take);
+          if (a.hours < SLOT - 1e-9) { slots = 0; break; }
+          push(d, pick.id, null, '', 'review', a.hours, a.at);
+          slots -= Math.ceil(a.hours / SLOT - 1e-9);
         }
-        push(d, pick.id, lectureId, title, type, hrs);
         lastPick = pick.id;
-        todayH[pick.id] = (todayH[pick.id] || 0) + SLOT;
-        slots--;
       }
     });
 
-    sessions.sort((a, b) => a.date.localeCompare(b.date));
+    sessions.sort((a, b) => a.date.localeCompare(b.date) || (a.startMin == null ? 1e9 : a.startMin) - (b.startMin == null ? 1e9 : b.startMin));
     const deficits = active
       .map((s) => ({ subjectId: s.id, hours: Math.max(0, +remaining(s).toFixed(2)) }))
       .filter((x) => x.hours > 1e-9);
@@ -804,6 +995,8 @@ button.sm { padding: 5px 12px; font-size: 13px; }
     generate, progress, warnings, addDays, weekday, diffDays, capacityOn,
     estimate, estimateDifficulty, reviewHours, normSubject, SLOT,
     STUDY_H, SOLVE_H, CLINIC_H,
+    hmToMin, fmtMin, normBlock, busyOn, freeWindowsOn, gapsOn, overlapOn, blockClashes,
+    BREAK_M, DAY_MIN,
   };
 });
 
@@ -822,7 +1015,7 @@ button.sm { padding: 5px 12px; font-size: 13px; }
       days: ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'],
       daysShort: ['أحد', 'اتنين', 'تلات', 'اربع', 'خميس', 'جمعة', 'سبت'],
       months: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'],
-      appTitle: '🦷 مخطط الأسنان',
+      appTitle: '🦷 Dental Student Planner',
       langBtn: 'English',
       tabs: { schedule: 'الجدول', subjects: 'المواد', time: 'وقتي', progress: 'التقدم', profile: 'حسابي' },
       today: 'النهارده',
@@ -890,8 +1083,19 @@ button.sm { padding: 5px 12px; font-size: 13px; }
       addTaskBtn: 'ضيف',
       needTask: 'اكتب اسم المهمة الأول',
       confPh: 'ثقتي؟',
-      availTitle: 'ساعات المذاكرة المتاحة في كل يوم',
-      overrideTitle: 'يوم مختلف أو مقفول',
+      busyTitle: 'يومك في الأسبوع',
+      busySub: 'ضيف معاد كل حاجة في يومك (سكاشن، جيم، نوم) والمذاكرة هتتحط في الفراغات لوحدها، مع نص ساعة بريك بين كل مهمة والتانية.',
+      dayFree: (h) => 'فاضل للمذاكرة حوالي ' + h,
+      kindWord: { class: 'سكشن/محاضرة', gym: 'جيم', sleep: 'نوم', other: 'حاجة تانية' },
+      blockLabelPh: 'اسم الفترة (اختياري)',
+      fromPh: 'من',
+      toPh: 'لـ',
+      errOverlap: 'الفترة دي بتتقاطع مع فترة موجودة في نفس اليوم',
+      errTime: 'راجع الوقت: لازم تحدد "من" و"لـ" بشكل صحيح',
+      onceTitle: 'يوم معين مشغول',
+      busyOncePh: 'السبب (اختياري)',
+      examPastErr: 'مينفعش امتحان أو كويز بتاريخ أو وقت عدّى - اختار وقت جاي',
+      overrideTitle: 'يوم مختلف (تحديد ساعات يدوي)',
       hoursPh: 'ساعات (0 = مقفول)',
       saveBtn: 'حفظ',
       addFirst: 'ضيف مواد الأول.',
@@ -918,7 +1122,7 @@ button.sm { padding: 5px 12px; font-size: 13px; }
       skipBtn: 'كمل من غير حساب',
       fillBoth: 'اكتب الإيميل والباسورد',
       authWait: 'ثانية...',
-      welcomeTitle: 'أهلًا بيك في مخطط الأسنان',
+      welcomeTitle: 'أهلًا بيك في Dental Student Planner',
       welcomeSub: 'قولنا عنك شوية عشان نظبطلك الجدول',
       yourNamePh: 'اسمك',
       pickYear: 'اختار فرقتك',
@@ -930,7 +1134,7 @@ button.sm { padding: 5px 12px; font-size: 13px; }
       days: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
       daysShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
       months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
-      appTitle: '🦷 Dental Planner',
+      appTitle: '🦷 Dental Student Planner',
       langBtn: 'عربي',
       tabs: { schedule: 'Schedule', subjects: 'Subjects', time: 'My time', progress: 'Progress', profile: 'Profile' },
       today: 'Today',
@@ -998,8 +1202,19 @@ button.sm { padding: 5px 12px; font-size: 13px; }
       addTaskBtn: 'Add',
       needTask: 'Enter the task name first',
       confPh: 'Confidence?',
-      availTitle: 'Available study hours per day',
-      overrideTitle: 'A different or blocked day',
+      busyTitle: 'Your week, day by day',
+      busySub: 'Add when things happen in your day (sections, gym, sleep). Study sessions go into the free gaps by themselves, with a 30-minute break between one task and the next.',
+      dayFree: (h) => 'About ' + h + ' free for study',
+      kindWord: { class: 'Class/section', gym: 'Gym', sleep: 'Sleep', other: 'Other' },
+      blockLabelPh: 'Block name (optional)',
+      fromPh: 'from',
+      toPh: 'to',
+      errOverlap: 'This block overlaps another block on the same day',
+      errTime: 'Check the times: "from" and "to" must be valid',
+      onceTitle: 'A specific busy day',
+      busyOncePh: 'Reason (optional)',
+      examPastErr: "An exam or quiz can't be in the past - pick a future date/time",
+      overrideTitle: 'A different day (manual hours cap)',
       hoursPh: 'Hours (0 = blocked)',
       saveBtn: 'Save',
       addFirst: 'Add subjects first.',
@@ -1026,7 +1241,7 @@ button.sm { padding: 5px 12px; font-size: 13px; }
       skipBtn: 'Continue without an account',
       fillBoth: 'Enter the email and password',
       authWait: 'One moment...',
-      welcomeTitle: 'Welcome to Dental Planner',
+      welcomeTitle: 'Welcome to Dental Student Planner',
       welcomeSub: 'Tell us a bit about you so we can tune the schedule',
       yourNamePh: 'Your name',
       pickYear: 'Pick your year',
@@ -1050,14 +1265,14 @@ button.sm { padding: 5px 12px; font-size: 13px; }
   const empty = () => ({
     version: 3, lang: 'ar',
     profile: { name: '', year: null, onboarded: false },
-    availability: [2, 2, 2, 2, 2, 2, 2],
+    busy: {},        // weekly busy blocks per weekday 0..6: [{id,label,kind,start,end}]
+    busyOnce: {},    // one-date busy blocks: {date: [{id,label,kind,start,end}]}
     overrides: {}, blocked: [], subjects: [], savedAt: 0,
   });
 
   function migrate(old) {
     const st = empty();
     st.lang = old.lang === 'en' ? 'en' : 'ar';
-    if (Array.isArray(old.availability) && old.availability.length === 7) st.availability = old.availability.map((x) => Math.max(0, Number(x) || 0));
     st.overrides = old.overrides || {};
     st.blocked = old.blocked || [];
     st.subjects = (old.subjects || []).map((s) => ({
@@ -1085,9 +1300,11 @@ button.sm { padding: 5px 12px; font-size: 13px; }
     }
   } catch (e) { state = empty(); }
   if (!state.profile) state.profile = { name: '', year: null, onboarded: false };
+  if (!state.busy || typeof state.busy !== 'object') state.busy = {};
+  if (!state.busyOnce || typeof state.busyOnce !== 'object') state.busyOnce = {};
   const saveLocal = () => localStorage.setItem(KEY, JSON.stringify(state));
 
-  let tab = 'schedule', openSubject = null, openExam = null, taskKind = {}, authSkipped = false, toastTimer = null;
+  let tab = 'schedule', openSubject = null, openExam = null, taskKind = {}, authSkipped = false, toastTimer = null, timeDay = null;
   let calCursor = todayStr().slice(0, 7);
   let selDay = todayStr();
 
@@ -1098,6 +1315,65 @@ button.sm { padding: 5px 12px; font-size: 13px; }
   const clinicAllowed = () => yearNum() >= 4;
   const examOf = (s) => (s.exam && s.exam.date ? s.exam : null);
   const fmtHTxt = (h) => L().fmtH(Math.round(h * 2) / 2);
+  const fmtMin = Scheduler.fmtMin;
+
+  const KIND_ICON = { class: '🏫', gym: '💪', sleep: '😴', other: '📌' };
+  const ICON_POOL = ['📚', '📖', '🧠', '🔬', '🧪', '💊', '🦷', '📝'];
+  const ICON_KW = [
+    [/anatom|تشريح/, '🦴'], [/histolog|بيولوج|هستولوج|هيستولوج/, '🧬'],
+    [/physiol|فسيول/, '❤️'], [/biochem|كيمياء/, '🧪'],
+    [/pharmac|اقربازين|فارماك|ادويه/, '💊'], [/microbi|ميكروب/, '🦠'],
+    [/pathol|باثول/, '🔬'], [/medicine|باطنه|ميديسن/, '🩺'],
+    [/radiol|اشعه/, '☢️'], [/surg|جراح/, '🏥'], [/ortho|تقويم/, '😬'],
+    [/endo|جذور/, '🧵'], [/perio|لثه/, '🩸'], [/pedo|اطفال/, '🧒'],
+    [/prosth|استعاضه/, '😁'], [/fixed|مثبته|تركيبات/, '👑'],
+    [/entrepren|رياده/, '💼'], [/community|قضايا/, '🌍'],
+    [/skill|مهارات|thinking|تفكير/, '💡'], [/operative|تحفظي|dental|اسنان/, '🦷'],
+    [/infection|عدوي/, '🧼'],
+  ];
+  function iconOf(s) {
+    if (s.icon) return s.icon;
+    const c = typeof Curriculum !== 'undefined' && Curriculum.find(s.name, s.code);
+    if (c && c.icon) return c.icon;
+    const n = Curriculum.norm(s.name);
+    for (const [re, ic] of ICON_KW) if (re.test(n)) return ic;
+    let h = 0;
+    for (let i = 0; i < n.length; i++) h = (h * 31 + n.charCodeAt(i)) >>> 0;
+    return ICON_POOL[h % ICON_POOL.length];
+  }
+  const colorOfS = (s) => colorOf(s.code || s.id);
+
+  // Exam date/time must be now or in the future.
+  function examInPast(date, time) {
+    if (!date) return false;
+    const td = todayStr();
+    if (date < td) return true;
+    if (date > td) return false;
+    const m = Scheduler.hmToMin(time);
+    if (m == null) return false; // no time set: any time today is fine
+    const now = new Date();
+    return m < now.getHours() * 60 + now.getMinutes();
+  }
+
+  // Busy blocks to display on a given date (weekly + yesterday's sleep tail + one-offs).
+  function blocksForDate(d) {
+    const out = [];
+    const wd = Scheduler.weekday(d);
+    const pushB = (raw, spill) => {
+      const b = Scheduler.normBlock(raw);
+      if (b.start == null || b.end == null || b.start === b.end) return;
+      if (b.end > b.start) { if (!spill && b.end > Scheduler.DAY_MIN) out.push({ label: b.label, kind: b.kind, s: b.start, e: b.end }); }
+      else if (spill) { if (b.end > Scheduler.DAY_MIN) out.push({ label: b.label, kind: b.kind, s: 0, e: b.end }); }
+      else out.push({ label: b.label, kind: b.kind, s: Math.max(b.start, Scheduler.DAY_MIN), e: 1440 + b.end });
+    };
+    (state.busy[wd] || []).forEach((b) => pushB(b, false));
+    (state.busy[(wd + 6) % 7] || []).forEach((b) => {
+      const n = Scheduler.normBlock(b);
+      if (n.start != null && n.end != null && n.end < n.start) pushB(b, true);
+    });
+    ((state.busyOnce || {})[d] || []).forEach((b) => pushB(b, false));
+    return out.sort((a, b) => a.s - b.s);
+  }
 
   /* ---------------- cloud (Firebase Auth + Firestore) ---------------- */
   let fbAuth = null, fbDb = null, session = null, pushTimer = null, lastPull = 0, syncState = '';
@@ -1190,13 +1466,13 @@ button.sm { padding: 5px 12px; font-size: 13px; }
   function addFromCur(code) {
     const c = curForYear().find((x) => x.code === code);
     if (!c || state.subjects.some((s) => s.code === code)) return;
-    state.subjects.push({ id: uid(), name: curName(c), code: c.code, exam: null, tasks: [] });
+    state.subjects.push({ id: uid(), name: curName(c), code: c.code, icon: c.icon || '', exam: null, tasks: [] });
     save(); render();
   }
 
   function loadCur() {
     curMissing().forEach((c) => {
-      state.subjects.push({ id: uid(), name: curName(c), code: c.code, exam: null, tasks: [] });
+      state.subjects.push({ id: uid(), name: curName(c), code: c.code, icon: c.icon || '', exam: null, tasks: [] });
     });
     save(); render();
   }
@@ -1233,8 +1509,13 @@ button.sm { padding: 5px 12px; font-size: 13px; }
   function sessionRow(s, sj) {
     const title = s.type === 'review' ? L().generalReview : s.type === 'examreview' ? L().examReviewTitle : s.title;
     const doneable = s.lectureId && (s.type === 'study' || s.type === 'solve' || s.type === 'clinic');
-    return `<div class="sess"><i class="dot" style="background:${colorOf(sj.id)}"></i><div class="grow"><b>${esc(sj.name)}</b> - ${esc(title)} ${sessionTag(s)}</div><span class="muted hrs">${fmtHTxt(s.hours)}</span>` +
+    const time = s.startMin != null ? `<span class="muted hrs" dir="ltr">${fmtMin(s.startMin)} - ${fmtMin(s.endMin)}</span>` : '';
+    return `<div class="sess"><span class="sicon" style="background:${colorOfS(sj)}22">${iconOf(sj)}</span><div class="grow"><b>${esc(sj.name)}</b> - ${esc(title)} ${sessionTag(s)}</div>${time}<span class="muted hrs">${fmtHTxt(s.hours)}</span>` +
       (doneable ? `<button class="btn ghost" data-act="done" data-s="${sj.id}" data-l="${s.lectureId}">${esc(L().doneBtn)}</button>` : '') + '</div>';
+  }
+
+  function busyRow(b) {
+    return `<div class="sess busyrow"><span class="sicon" style="background:#64748b22">${KIND_ICON[b.kind] || KIND_ICON.other}</span><div class="grow muted">${esc(b.label || L().kindWord[b.kind] || '')}</div><span class="muted hrs" dir="ltr">${fmtMin(b.s)} - ${fmtMin(b.e)}</span></div>`;
   }
 
   /* ---------------- views ---------------- */
@@ -1255,7 +1536,8 @@ button.sm { padding: 5px 12px; font-size: 13px; }
         (w.openCount > 3 ? `<li class="muted">${esc(L().warnMore(w.openCount - 3))}</li>` : '') + '</ol></div>';
     });
 
-    const r = Scheduler.generate(state, today);
+    const now = new Date();
+    const r = Scheduler.generate(state, today, { nowMin: now.getHours() * 60 + now.getMinutes() });
 
     const byDay = {}; r.sessions.forEach((s) => (byDay[s.date] = byDay[s.date] || []).push(s));
     const examsByDay = {};
@@ -1293,8 +1575,12 @@ button.sm { padding: 5px 12px; font-size: 13px; }
       const e = examsByDay[selDay];
       h += `<div class="sess examrow"><div class="grow">📝 <b>${esc(e.subject.name)}</b> - ${esc(L().examLine(e.exam.kind, e.exam.date, e.exam.time, L().natureWord[e.exam.nature] || e.exam.nature))}</div></div>`;
     }
-    if (!sels.length && !examsByDay[selDay]) h += `<div class="muted" style="padding:6px 2px">${esc(L().noSessDay)}</div>`;
-    sels.forEach((s) => { const sj = subj(s.subjectId); if (sj) h += sessionRow(s, sj); });
+    const items = [];
+    sels.forEach((s) => { const sj = subj(s.subjectId); if (sj) items.push({ m: s.startMin == null ? 1e9 : s.startMin, html: sessionRow(s, sj) }); });
+    if (selDay >= today) blocksForDate(selDay).forEach((b) => items.push({ m: b.s, html: busyRow(b) }));
+    items.sort((a, b) => a.m - b.m);
+    if (!items.length && !examsByDay[selDay]) h += `<div class="muted" style="padding:6px 2px">${esc(L().noSessDay)}</div>`;
+    items.forEach((it) => { h += it.html; });
     h += '</div>';
 
     // upcoming exams
@@ -1304,7 +1590,7 @@ button.sm { padding: 5px 12px; font-size: 13px; }
       h += `<div class="day">${esc(L().upcomingExams)}</div>`;
       ups.forEach((s) => {
         const ex = s.exam, dl = Scheduler.diffDays(today, ex.date);
-        h += `<div class="card pcard" style="border-inline-start-color:${colorOf(s.id)}"><div class="row"><i class="dot" style="background:${colorOf(s.id)}"></i>
+        h += `<div class="card pcard" style="border-inline-start-color:${colorOfS(s)}"><div class="row"><span class="sicon" style="background:${colorOfS(s)}22">${iconOf(s)}</span>
           <div class="grow"><b>${esc(s.name)}</b><div class="muted">${esc(L().examLine(ex.kind, ex.date, ex.time, L().natureWord[ex.nature] || ex.nature))}${ex.covered ? ' · ' + esc(L().coveredShort(ex.covered)) : ''}</div></div>
           <span class="tag">${esc(L().daysLeft(dl))}</span></div></div>`;
       });
@@ -1333,7 +1619,7 @@ button.sm { padding: 5px 12px; font-size: 13px; }
       h += `<div class="card"><b>${esc(L().curTitle)}</b><div class="muted" style="margin-top:4px">${esc(L().curSub)}</div>`;
       if (!missing.length) h += `<div class="muted" style="margin-top:8px">${esc(L().curAllAdded)}</div>`;
       missing.forEach((c) => {
-        h += `<div class="row" style="margin-top:8px"><i class="dot" style="background:${colorOf(c.code)}"></i>
+        h += `<div class="row" style="margin-top:8px"><span class="sicon" style="background:${colorOf(c.code)}22">${c.icon || '📖'}</span>
           <span class="grow"><b>${esc(curName(c))}</b> <span class="muted">${esc(L().diff[c.diff - 1])} · ${esc(L().estBadge)}</span></span>
           <button class="btn sm" data-act="addCur" data-code="${esc(c.code)}">${esc(L().addCurBtn)}</button></div>`;
       });
@@ -1352,8 +1638,8 @@ button.sm { padding: 5px 12px; font-size: 13px; }
 
     state.subjects.forEach((s) => {
       const open = openSubject === s.id, exOpen = openExam === s.id, ex = examOf(s);
-      h += `<div class="card pcard" style="border-inline-start-color:${colorOf(s.id)}"><div class="row subj-head">
-        <b class="grow">${esc(s.name)}</b>
+      h += `<div class="card pcard" style="border-inline-start-color:${colorOfS(s)}"><div class="row subj-head">
+        <b class="grow"><span class="sicon" style="background:${colorOfS(s)}22">${iconOf(s)}</span> ${esc(s.name)}</b>
         ${ex ? `<span class="datechip">${esc(ex.date)}${ex.time ? ' ' + esc(ex.time) : ''}</span>` : `<span class="muted">${esc(L().noExamYet)}</span>`}
         <button class="btn ghost" data-act="toggleExam" data-s="${s.id}">${exOpen ? esc(L().closeBtn) : esc(L().editExam)}</button>
         <button class="btn ghost" data-act="toggle" data-s="${s.id}">${open ? esc(L().closeBtn) : esc(L().tasksBtn(s.tasks.length))}</button>
@@ -1404,9 +1690,49 @@ button.sm { padding: 5px 12px; font-size: 13px; }
   }
 
   function viewTime() {
-    let h = `<div class="card"><b>${esc(L().availTitle)}</b><div class="grid7" style="margin-top:10px">`;
-    L().days.forEach((n, i) => { h += `<label>${n}<input type="number" min="0" max="16" step="0.5" data-act="avail" data-i="${i}" value="${state.availability[i]}"></label>`; });
-    h += `</div></div><div class="card"><b>${esc(L().overrideTitle)}</b><div class="row" style="margin-top:10px"><input id="oDate" type="date"><input id="oHours" type="number" min="0" step="0.5" placeholder="${esc(L().hoursPh)}" style="width:160px"><button class="btn" data-act="addOverride">${esc(L().saveBtn)}</button></div>`;
+    const today = todayStr();
+    const wdToday = Scheduler.weekday(today);
+    if (timeDay == null) timeDay = wdToday;
+    let h = `<div class="card"><b>${esc(L().busyTitle)}</b><div class="muted" style="margin-top:4px">${esc(L().busySub)}</div></div>`;
+    L().days.forEach((name, i) => {
+      const blocks = (state.busy[i] || []).map(Scheduler.normBlock)
+        .filter((b) => b.start != null && b.end != null && b.start !== b.end)
+        .sort((a, b) => a.start - b.start);
+      const ref = Scheduler.addDays(today, (i - wdToday + 7) % 7);
+      const free = Scheduler.capacityOn({ busy: state.busy, blocked: [] }, ref);
+      const open = timeDay === i;
+      h += `<div class="card"><div class="row dayhead" data-act="toggleDay" data-i="${i}" style="cursor:pointer">
+        <b class="grow">${esc(name)}${i === wdToday ? ' <span class="tag">' + esc(L().today) + '</span>' : ''}</b>
+        <span class="tag free">${esc(L().dayFree(fmtHTxt(free)))}</span>
+        <span class="muted" style="font-weight:800">${open ? '−' : '+'}</span></div>`;
+      if (open) {
+        blocks.forEach((b) => {
+          h += `<div class="lec"><span class="sicon" style="background:#64748b22">${KIND_ICON[b.kind]}</span>
+            <span class="t grow">${esc(b.label || L().kindWord[b.kind])}<br><span class="muted" dir="ltr">${fmtMin(b.start)} - ${fmtMin(b.end)}</span></span>
+            <button class="btn ghost" data-act="delBlock" data-i="${i}" data-b="${esc(b.id)}">x</button></div>`;
+        });
+        h += `<div class="addblock"><div class="row"><select id="bk">${Object.keys(L().kindWord).map((k) => `<option value="${k}">${KIND_ICON[k]} ${esc(L().kindWord[k])}</option>`).join('')}</select>
+          <input id="bl" class="grow" placeholder="${esc(L().blockLabelPh)}"></div>
+          <div class="row" style="margin-top:8px"><span class="muted">${esc(L().fromPh)}</span><input id="bs" type="time" value="18:00">
+          <span class="muted">${esc(L().toPh)}</span><input id="be" type="time" value="20:00">
+          <button class="btn" data-act="addBlock" data-i="${i}">${esc(L().addBtn)}</button></div></div>`;
+      }
+      h += '</div>';
+    });
+    h += `<div class="card"><b>${esc(L().onceTitle)}</b>
+      <div class="row" style="margin-top:10px"><input id="o1Date" type="date"><input id="o1Label" class="grow" placeholder="${esc(L().busyOncePh)}"></div>
+      <div class="row" style="margin-top:8px"><span class="muted">${esc(L().fromPh)}</span><input id="o1s" type="time" value="09:00">
+      <span class="muted">${esc(L().toPh)}</span><input id="o1e" type="time" value="17:00">
+      <button class="btn" data-act="addBusyOnce">${esc(L().addBtn)}</button></div>`;
+    Object.keys(state.busyOnce).sort().forEach((d) => {
+      (state.busyOnce[d] || []).forEach((raw) => {
+        const b = Scheduler.normBlock(raw);
+        h += `<div class="lec"><span class="sicon" style="background:#64748b22">${KIND_ICON[b.kind]}</span>
+          <span class="t grow">${d} · ${esc(b.label || L().kindWord[b.kind])}<br><span class="muted" dir="ltr">${fmtMin(b.start)} - ${fmtMin(b.end)}</span></span>
+          <button class="btn ghost" data-act="delBusyOnce" data-d="${d}" data-b="${esc(b.id)}">x</button></div>`;
+      });
+    });
+    h += `</div><div class="card"><b>${esc(L().overrideTitle)}</b><div class="row" style="margin-top:10px"><input id="oDate" type="date"><input id="oHours" type="number" min="0" step="0.5" placeholder="${esc(L().hoursPh)}" style="width:160px"><button class="btn" data-act="addOverride">${esc(L().saveBtn)}</button></div>`;
     Object.keys(state.overrides).sort().forEach((d) => { h += `<div class="row" style="margin-top:8px"><span class="grow">${d}: ${fmtHTxt(state.overrides[d])}</span><button class="btn ghost" data-act="delOverride" data-d="${d}">x</button></div>`; });
     return h + '</div>';
   }
@@ -1414,10 +1740,13 @@ button.sm { padding: 5px 12px; font-size: 13px; }
   function viewProgress() {
     const today = todayStr();
     if (!state.subjects.length) return `<div class="card empty"><div class="big">📚</div><p>${esc(L().addFirst)}</p></div>`;
-    return Scheduler.progress(state, today).sort((a, b) => (a.daysLeft == null ? 9e9 : a.daysLeft) - (b.daysLeft == null ? 9e9 : b.daysLeft)).map((p) =>
-      `<div class="card pcard" style="border-inline-start-color:${colorOf(p.subjectId)}"><div class="row"><b class="grow">${esc(p.name)}</b>
+    return Scheduler.progress(state, today).sort((a, b) => (a.daysLeft == null ? 9e9 : a.daysLeft) - (b.daysLeft == null ? 9e9 : b.daysLeft)).map((p) => {
+      const sj = subj(p.subjectId);
+      const col = sj ? colorOfS(sj) : colorOf(p.subjectId);
+      return `<div class="card pcard" style="border-inline-start-color:${col}"><div class="row"><span class="sicon" style="background:${col}22">${sj ? iconOf(sj) : '📖'}</span><b class="grow">${esc(p.name)}</b>
       <span class="tag">${p.daysLeft == null ? esc(L().noExamProgress) : p.daysLeft < 0 ? esc(L().examPassed) : esc(L().daysLeft(p.daysLeft))}</span></div>
-      <div class="bar"><i style="width:${p.pct}%"></i></div><div class="muted">${esc(L().taskCount(p.done, p.total, p.pct))}</div></div>`).join('');
+      <div class="bar"><i style="width:${p.pct}%"></i></div><div class="muted">${esc(L().taskCount(p.done, p.total, p.pct))}</div></div>`;
+    }).join('');
   }
 
   function viewProfile() {
@@ -1512,7 +1841,6 @@ button.sm { padding: 5px 12px; font-size: 13px; }
     if (!a) return;
     if (a === 'check') { const x = taskOf(t.dataset.s, t.dataset.l); x.done = t.checked; if (!t.checked) x.confidence = 0; }
     else if (a === 'conf') taskOf(t.dataset.s, t.dataset.l).confidence = +t.value;
-    else if (a === 'avail') { const v = parseFloat(t.value); state.availability[+t.dataset.i] = v >= 0 ? v : 0; }
     else if (a === 'tdiff') { /* difficulty select re-renders chip */ const el = $('est-' + t.dataset.s); if (el) el.textContent = estChipText(t.dataset.s); return; }
     else return;
     save(); render();
@@ -1531,6 +1859,29 @@ button.sm { padding: 5px 12px; font-size: 13px; }
     if (a === 'calDay') { selDay = t.dataset.d; return render(); }
     if (a === 'addCur') { addFromCur(t.dataset.code); return; }
     if (a === 'loadCur') { loadCur(); return; }
+    if (a === 'toggleDay') { timeDay = timeDay === +t.dataset.i ? null : +t.dataset.i; return render(); }
+    if (a === 'addBlock') {
+      const i = +t.dataset.i;
+      const kind = $('bk').value, label = $('bl').value.trim();
+      const s = $('bs').value, e = $('be').value;
+      const sm = Scheduler.hmToMin(s), em = Scheduler.hmToMin(e);
+      if (sm == null || em == null || sm === em) return alert(L().errTime);
+      if (Scheduler.blockClashes(state.busy[i], sm, em)) return alert(L().errOverlap);
+      (state.busy[i] = state.busy[i] || []).push({ id: uid(), label, kind, start: s, end: e });
+      save(); return render();
+    }
+    if (a === 'delBlock') { const i = +t.dataset.i; state.busy[i] = (state.busy[i] || []).filter((b) => b.id !== t.dataset.b); save(); return render(); }
+    if (a === 'addBusyOnce') {
+      const d = $('o1Date').value, label = $('o1Label').value.trim();
+      const s = $('o1s').value, e = $('o1e').value;
+      if (!d) return;
+      const sm = Scheduler.hmToMin(s), em = Scheduler.hmToMin(e);
+      if (sm == null || em == null || sm === em) return alert(L().errTime);
+      if (Scheduler.blockClashes(state.busyOnce[d], sm, em)) return alert(L().errOverlap);
+      (state.busyOnce[d] = state.busyOnce[d] || []).push({ id: uid(), label, kind: 'other', start: s, end: e });
+      save(); return render();
+    }
+    if (a === 'delBusyOnce') { const d = t.dataset.d; state.busyOnce[d] = (state.busyOnce[d] || []).filter((b) => b.id !== t.dataset.b); if (!state.busyOnce[d].length) delete state.busyOnce[d]; save(); return render(); }
     if (a === 'addTopic') {
       const sj = subj(s);
       if (!sj) return;
@@ -1570,7 +1921,9 @@ button.sm { padding: 5px 12px; font-size: 13px; }
       if (hasExam) {
         const date = $('nDate').value;
         if (!date) return alert(L().needExam);
-        exam = { kind: $('nKind').value, date, time: $('nTime').value || '', nature: $('nNature').value, covered: +$('nCov').value || 0 };
+        const time = $('nTime').value || '';
+        if (examInPast(date, time)) return alert(L().examPastErr);
+        exam = { kind: $('nKind').value, date, time, nature: $('nNature').value, covered: +$('nCov').value || 0 };
       }
       state.subjects.push({ id: uid(), name, exam, tasks: [] });
       save(); return render();
@@ -1582,7 +1935,9 @@ button.sm { padding: 5px 12px; font-size: 13px; }
       const p = 'e-' + s + '-';
       const date = $(p + 'Date').value;
       if (!date) return alert(L().needExam);
-      subj(s).exam = { kind: $(p + 'Kind').value, date, time: $(p + 'Time').value || '', nature: $(p + 'Nature').value, covered: +$(p + 'Cov').value || 0 };
+      const time = $(p + 'Time').value || '';
+      if (examInPast(date, time)) return alert(L().examPastErr);
+      subj(s).exam = { kind: $(p + 'Kind').value, date, time, nature: $(p + 'Nature').value, covered: +$(p + 'Cov').value || 0 };
       save(); return render();
     }
     if (a === 'clearExam') { subj(s).exam = null; save(); return render(); }
