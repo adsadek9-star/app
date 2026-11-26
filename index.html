@@ -8,14 +8,61 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>:root {
+  /* dark is the default theme */
+  --bg: #0b1416;
+  --card: #142226;
+  --ink: #e7f1f0;
+  --muted: #93aab0;
+  --line: #234045;
+  --line-soft: #1d3237;
+  --soft: #18292e;
+  --input-bg: #0f1e22;
+  --ghost-bg: #1b3036;
+  --ghost-hover: #223b42;
+  --nav-bg: rgba(17, 30, 34, 0.86);
+  --bar-bg: #1e3439;
+  --exam-bg: #2e270f;
+  --exam-line: #54481a;
+  --warn-bg: linear-gradient(120deg, #2b1717, #2b1d12);
+  --warn-line: #4d2622;
+  --solve-bg: #0e2c3d;
+  --solve-ink: #6cc4ec;
+  --done-ink: #5f7d84;
+  --primary: #0d9488;
+  --primary-d: #0f766e;
+  --primary-2: #0284c7;
+  --teal-bg: #123f3a;
+  --teal-ink: #4fd8c6;
+  --amber-bg: #33280f;
+  --amber-ink: #e8b954;
+  --violet-bg: #241d3d;
+  --violet-ink: #b7a3ee;
+  --danger: #e06060;
+  --danger-bg: #381c1c;
+  --danger-ink: #f2a0a0;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 28px -14px rgba(0, 0, 0, 0.5);
+  --radius: 16px;
+}
+[data-theme="light"] {
   --bg: #eef4f3;
   --card: #ffffff;
   --ink: #12262b;
   --muted: #5d7379;
   --line: #dce8e6;
-  --primary: #0d9488;
-  --primary-d: #0f766e;
-  --primary-2: #0284c7;
+  --line-soft: #eef3f2;
+  --soft: #f6faf9;
+  --input-bg: #fbfdfd;
+  --ghost-bg: #eef4f3;
+  --ghost-hover: #e3edeb;
+  --nav-bg: rgba(255, 255, 255, 0.82);
+  --bar-bg: #e4efed;
+  --exam-bg: #fffaf0;
+  --exam-line: #f5e3b3;
+  --warn-bg: linear-gradient(120deg, #fdeeee, #fdf6f0);
+  --warn-line: #f0c9c4;
+  --solve-bg: #e0f2fe;
+  --solve-ink: #075985;
+  --done-ink: #8aa0a5;
   --teal-bg: #d7f3ee;
   --teal-ink: #0b6e62;
   --amber-bg: #fdf0d5;
@@ -26,7 +73,6 @@
   --danger-bg: #fdeaea;
   --danger-ink: #a52f2b;
   --shadow: 0 1px 2px rgba(13, 60, 56, 0.06), 0 10px 28px -14px rgba(13, 60, 56, 0.22);
-  --radius: 16px;
 }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
@@ -34,7 +80,7 @@ body {
   margin: 0;
   font-family: "Inter", "Cairo", system-ui, "Segoe UI", Tahoma, sans-serif;
   background:
-    radial-gradient(1200px 500px at 85% -10%, rgba(13, 148, 136, 0.10), transparent 60%),
+    radial-gradient(1200px 500px at 85% -10%, rgba(13, 148, 136, 0.16), transparent 60%),
     radial-gradient(900px 420px at 0% -10%, rgba(2, 132, 199, 0.10), transparent 55%),
     var(--bg);
   color: var(--ink);
@@ -62,7 +108,7 @@ h1 { font-size: 19px; margin: 0; font-weight: 800; letter-spacing: 0.2px; }
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
-#langBtn {
+#langBtn, #themeBtn {
   background: rgba(255, 255, 255, 0.16);
   border: 1px solid rgba(255, 255, 255, 0.35);
   color: #fff;
@@ -74,11 +120,12 @@ h1 { font-size: 19px; margin: 0; font-weight: 800; letter-spacing: 0.2px; }
   cursor: pointer;
   transition: background 0.15s;
 }
-#langBtn:hover { background: rgba(255, 255, 255, 0.28); }
+#langBtn:hover, #themeBtn:hover { background: rgba(255, 255, 255, 0.28); }
+#themeBtn { padding: 5px 10px; }
 nav {
   display: flex;
   gap: 4px;
-  background: rgba(255, 255, 255, 0.82);
+  background: var(--nav-bg);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--line);
@@ -100,7 +147,7 @@ nav button {
   border-radius: 12px;
   transition: background 0.15s, color 0.15s;
 }
-nav button:hover { background: #eef4f3; color: var(--ink); }
+nav button:hover { background: var(--ghost-bg); color: var(--ink); }
 nav button.on {
   background: linear-gradient(120deg, var(--primary), var(--primary-2));
   color: #fff;
@@ -126,7 +173,7 @@ input, select, textarea {
   border: 1.5px solid var(--line);
   border-radius: 10px;
   max-width: 100%;
-  background: #fbfdfd;
+  background: var(--input-bg);
   color: var(--ink);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
@@ -153,13 +200,13 @@ button.btn {
 button.btn:hover { transform: translateY(-1px); filter: brightness(1.06); }
 button.btn:active { transform: none; }
 button.ghost {
-  background: #eef4f3;
+  background: var(--ghost-bg);
   color: var(--ink);
   box-shadow: none;
   border: 1px solid var(--line);
   font-weight: 600;
 }
-button.ghost:hover { background: #e3edeb; filter: none; }
+button.ghost:hover { background: var(--ghost-hover); filter: none; }
 button.danger {
   background: var(--danger-bg);
   color: var(--danger-ink);
@@ -179,14 +226,14 @@ button.danger:hover { background: #fbdcdc; filter: none; }
 .tag.revise { background: var(--amber-bg); color: var(--amber-ink); }
 .tag.review { background: var(--violet-bg); color: var(--violet-ink); }
 .warn {
-  background: linear-gradient(120deg, #fdeeee, #fdf6f0);
-  border: 1px solid #f0c9c4;
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-line);
   border-inline-start: 4px solid var(--danger);
   color: var(--danger-ink);
   font-weight: 600;
 }
 .muted { color: var(--muted); font-size: 13px; }
-.bar { height: 9px; background: #e4efed; border-radius: 999px; overflow: hidden; margin: 10px 0 8px; }
+.bar { height: 9px; background: var(--bar-bg); border-radius: 999px; overflow: hidden; margin: 10px 0 8px; }
 .bar i {
   display: block;
   height: 100%;
@@ -198,14 +245,14 @@ button.danger:hover { background: #fbdcdc; filter: none; }
 .day .muted { font-weight: 600; }
 .today { color: var(--primary-d); }
 .today::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--primary); align-self: center; }
-.sess { display: flex; gap: 10px; align-items: center; padding: 9px 0; border-top: 1px solid #eef3f2; }
+.sess { display: flex; gap: 10px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line-soft); }
 .sess:first-of-type { border-top: 0; }
 .sess .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
 .sess b { font-weight: 700; }
 .sess .hrs { font-variant-numeric: tabular-nums; white-space: nowrap; }
-.lec { display: flex; gap: 8px; align-items: center; padding: 7px 0; border-top: 1px solid #f0f5f4; }
+.lec { display: flex; gap: 8px; align-items: center; padding: 7px 0; border-top: 1px solid var(--line-soft); }
 .lec:first-of-type { border-top: 0; }
-.lec.done span.t { text-decoration: line-through; color: #8aa0a5; }
+.lec.done span.t { text-decoration: line-through; color: var(--done-ink); }
 .grid7 { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
 .grid7 label { font-size: 13px; font-weight: 700; color: var(--muted); }
 .grid7 input { margin-top: 5px; width: 100%; }
@@ -214,7 +261,7 @@ button.danger:hover { background: #fbdcdc; filter: none; }
 .empty p { color: var(--muted); margin: 0 0 16px; line-height: 1.7; }
 .subj-head b { font-size: 15px; }
 .datechip {
-  background: #eef4f3;
+  background: var(--ghost-bg);
   border: 1px solid var(--line);
   color: var(--muted);
   border-radius: 999px;
@@ -240,16 +287,16 @@ button.danger:hover { background: #fbdcdc; filter: none; }
 .checkline { display: flex; gap: 8px; align-items: center; margin-top: 10px; font-weight: 600; font-size: 14px; }
 .checkline input { width: 18px; height: 18px; }
 
-.tag.solve { background: #e0f2fe; color: #075985; }
-.tag.clinic { background: #fdf0d5; color: #92600a; }
+.tag.solve { background: var(--solve-bg); color: var(--solve-ink); }
+.tag.clinic { background: var(--amber-bg); color: var(--amber-ink); }
 
-.examform { background: #f6faf9; border: 1px dashed var(--line); border-radius: 12px; padding: 10px; margin-top: 8px; }
-.addtask { background: #f6faf9; border: 1px dashed var(--line); border-radius: 12px; padding: 10px; margin: 10px 0; }
+.examform { background: var(--soft); border: 1px dashed var(--line); border-radius: 12px; padding: 10px; margin-top: 8px; }
+.addtask { background: var(--soft); border: 1px dashed var(--line); border-radius: 12px; padding: 10px; margin: 10px 0; }
 .addtask input { width: 100%; }
 .pick { display: flex; gap: 8px; }
 .pick button {
   flex: 1; padding: 9px 6px; border-radius: 12px; border: 1.5px solid var(--line);
-  background: #fff; font: inherit; font-size: 13px; font-weight: 700; color: var(--muted); cursor: pointer;
+  background: var(--card); font: inherit; font-size: 13px; font-weight: 700; color: var(--muted); cursor: pointer;
   transition: all 0.15s;
 }
 .pick button.on {
@@ -269,7 +316,7 @@ button.danger:hover { background: #fbdcdc; filter: none; }
 .cal-wd { text-align: center; font-size: 11px; font-weight: 800; color: var(--muted); padding: 4px 0; }
 .cell {
   min-height: 52px; border-radius: 10px; border: 1.5px solid var(--line);
-  background: #fbfdfd; padding: 4px 5px; cursor: pointer; position: relative;
+  background: var(--input-bg); padding: 4px 5px; cursor: pointer; position: relative;
   display: flex; flex-direction: column; gap: 2px; transition: border-color 0.12s, background 0.12s;
 }
 .cell:hover { border-color: var(--primary); }
@@ -280,7 +327,7 @@ button.danger:hover { background: #fbdcdc; filter: none; }
   background: linear-gradient(120deg, var(--primary), var(--primary-2)); color: #fff;
   border-radius: 50%; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;
 }
-.cell.examday { border-color: #f0b429; background: #fffaf0; }
+.cell.examday { border-color: #f0b429; background: var(--exam-bg); }
 .cell .dnum { font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .cell .exdot { font-size: 10px; line-height: 1; }
 .cell .dots { display: flex; gap: 2px; flex-wrap: wrap; }
@@ -288,7 +335,7 @@ button.danger:hover { background: #fbdcdc; filter: none; }
 .cell .chrs { font-size: 10px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
 
 button.sm { padding: 5px 12px; font-size: 13px; }
-.examrow { background: #fffaf0; border-radius: 10px; padding: 9px 10px !important; border: 1px solid #f5e3b3 !important; }
+.examrow { background: var(--exam-bg); border-radius: 10px; padding: 9px 10px !important; border: 1px solid var(--exam-line) !important; }
 
 .overlay {
   position: fixed; inset: 0; background: rgba(10, 30, 32, 0.55);
@@ -296,7 +343,7 @@ button.sm { padding: 5px 12px; font-size: 13px; }
   display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px;
 }
 .sheet {
-  background: #fff; border-radius: 20px; padding: 22px 18px; width: 100%; max-width: 400px;
+  background: var(--card); border-radius: 20px; padding: 22px 18px; width: 100%; max-width: 400px;
   box-shadow: 0 24px 60px -18px rgba(13, 60, 56, 0.45); animation: fadeUp 0.25s ease both;
 }
 .sheet input { width: 100%; margin-top: 8px; }
@@ -304,7 +351,7 @@ button.sm { padding: 5px 12px; font-size: 13px; }
 
 .yeargrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .ypick {
-  padding: 10px 4px; border-radius: 12px; border: 1.5px solid var(--line); background: #fff;
+  padding: 10px 4px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--card);
   font: inherit; font-weight: 700; font-size: 14px; color: var(--muted); cursor: pointer; transition: all 0.15s;
 }
 .ypick.on {
@@ -314,7 +361,7 @@ button.sm { padding: 5px 12px; font-size: 13px; }
 
 #toast {
   position: fixed; bottom: 18px; inset-inline: 0; margin: 0 auto; width: fit-content; max-width: 90%;
-  background: var(--ink); color: #fff; padding: 10px 18px; border-radius: 999px;
+  background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 999px;
   font-size: 14px; font-weight: 700; opacity: 0; pointer-events: none; transition: opacity 0.25s, transform 0.25s;
   transform: translateY(8px); z-index: 60;
 }
@@ -336,14 +383,14 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
 .sess.busyrow .sicon { width: 26px; height: 26px; font-size: 14px; }
 .tag.free { background: #e0f2fe; color: #075985; }
 .dayhead b { font-size: 15px; }
-.addblock { background: #f6faf9; border: 1px dashed var(--line); border-radius: 12px; padding: 10px; margin-top: 10px; }
+.addblock { background: var(--soft); border: 1px dashed var(--line); border-radius: 12px; padding: 10px; margin-top: 10px; }
 .addblock input[type="time"] { padding: 7px 9px; }
 
 /* v4: curriculum + smart warnings */
 .btn.sm { padding: 6px 12px; font-size: 12.5px; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .chip {
-  border: 1.5px solid var(--line); background: #fff; border-radius: 999px;
+  border: 1.5px solid var(--line); background: var(--card); border-radius: 999px;
   padding: 5px 11px; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ink);
   cursor: pointer; transition: all 0.15s;
 }
@@ -351,6 +398,29 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
 .chip .chipd { color: var(--muted); font-size: 11px; margin-inline-start: 4px; }
 .warnlist { margin: 8px 0 0; padding-inline-start: 20px; }
 .warnlist li { margin-top: 3px; font-size: 13.5px; }
+
+/* v6: My Day, focus mode, exam center */
+.hero { margin: 4px 2px 14px; }
+.hero-title { font-size: 20px; font-weight: 800; }
+.bigstart { width: 100%; padding: 14px; font-size: 16px; margin-bottom: 18px; border-radius: var(--radius); }
+.stats7 { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.stcol { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.stbar { height: 56px; width: 100%; max-width: 26px; background: var(--bar-bg); border-radius: 8px; display: flex; align-items: flex-end; overflow: hidden; }
+.stbar i { display: block; width: 100%; background: linear-gradient(180deg, #34d399, var(--primary)); }
+.stmin { font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; min-height: 12px; }
+.std { font-size: 11px; color: var(--muted); font-weight: 700; }
+.stcol.now .std { color: var(--primary); font-weight: 800; }
+.cdnum { font-size: 25px; font-weight: 800; margin-top: 8px; font-variant-numeric: tabular-nums; }
+.sheet.focus { max-width: 420px; }
+.ftasks { max-height: 216px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.ftask {
+  display: flex; gap: 8px; align-items: center; text-align: start; width: 100%;
+  border: 1.5px solid var(--line); background: var(--card); color: var(--ink);
+  border-radius: 12px; padding: 8px 10px; font: inherit; cursor: pointer; transition: border-color 0.15s;
+}
+.ftask.on { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.25); }
+.fphase { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.ftimer { font-size: 54px; font-weight: 800; text-align: center; margin: 10px 0 4px; font-variant-numeric: tabular-nums; letter-spacing: 2px; }
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
@@ -362,14 +432,15 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
   <div class="hrow">
     <span id="syncLbl" class="sync"></span>
     <div id="todayLbl"></div>
+    <button id="themeBtn" type="button" data-act="theme" title="theme">☀</button>
     <button id="langBtn" type="button" data-act="lang">English</button>
   </div>
 </header>
 <nav id="tabs">
-  <button data-tab="schedule" class="on">الجدول</button>
+  <button data-tab="day" class="on">يومي</button>
+  <button data-tab="schedule">الجدول</button>
+  <button data-tab="exams">الامتحانات</button>
   <button data-tab="subjects">المواد</button>
-  <button data-tab="time">وقتي</button>
-  <button data-tab="progress">التقدم</button>
   <button data-tab="profile">حسابي</button>
 </nav>
 <main id="view"></main>
@@ -991,12 +1062,129 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
     });
   }
 
+
+  /* ---------------- v6: focus mode, stats, revision planner ---------------- */
+
+  // Pomodoro presets the student picks from: 25/5 or 50/10 minutes.
+  const FOCUS_PRESETS = [
+    { focusMin: 25, breakMin: 5 },
+    { focusMin: 50, breakMin: 10 },
+  ];
+
+  // Remaining work on a task, in minutes (study + solving, or clinic work).
+  function taskRemainingMin(task) {
+    if (!task) return 0;
+    if (task.kind === 'clinic') return Math.max(0, Math.round((Number(task.workH) || 0) * 60));
+    return Math.max(0, Math.round(((Number(task.studyH) || 0) + (Number(task.solveH) || 0)) * 60));
+  }
+
+  // Deduct focused minutes from a task's remaining hours. Lecture tasks lose study
+  // time first, then solving; clinic tasks lose work hours. Never goes below zero.
+  // Returns the minutes actually deducted (can be less when the task runs out).
+  function deductFromTask(task, minutes) {
+    let rem = Math.max(0, Math.round(Number(minutes) || 0));
+    const start = rem;
+    const take = (field) => {
+      if (rem <= 0) return;
+      const cur = Math.max(0, Math.round((Number(task[field]) || 0) * 60));
+      const use = Math.min(cur, rem);
+      task[field] = Math.round((cur - use) * 10) / 600; // back to hours, minute precision
+      rem -= use;
+    };
+    if (task && task.kind === 'clinic') take('workH');
+    else if (task) { take('studyH'); take('solveH'); }
+    return start - rem;
+  }
+
+  // Aggregate the focus log for the My Day stats card.
+  // log: [{date:'YYYY-MM-DD', minutes:N}] -> today/week totals + a 7-day series.
+  function focusStats(log, today) {
+    const days = [];
+    for (let i = 6; i >= 0; i--) days.push({ date: addDays(today, -i), minutes: 0 });
+    const idx = {};
+    days.forEach((d, i) => { idx[d.date] = i; });
+    let todayMin = 0, weekMin = 0, sessions = 0;
+    (log || []).forEach((e) => {
+      const m = Math.max(0, Math.round(Number(e && e.minutes) || 0));
+      if (!m || !e || typeof e.date !== 'string') return;
+      sessions++;
+      if (idx[e.date] != null) { days[idx[e.date]].minutes += m; weekMin += m; }
+      if (e.date === today) todayMin += m;
+    });
+    return { todayMin, weekMin, days, sessions };
+  }
+
+  // The nearest upcoming exam/quiz (date + time), or null.
+  function nextExam(state, today) {
+    let best = null;
+    (state.subjects || []).forEach((raw) => {
+      const ex = raw && raw.exam && raw.exam.date ? raw.exam : null;
+      if (!ex || ex.date < today) return;
+      if (!best || ex.date < best.date || (ex.date === best.date && String(ex.time || '99') < String(best.time || '99'))) {
+        best = { subjectId: raw.id, name: raw.name, kind: ex.kind, date: ex.date, time: ex.time || '', nature: ex.nature || 'theory' };
+      }
+    });
+    return best;
+  }
+
+  // Countdown parts to a target timestamp. past=true once it has passed.
+  function countdownParts(targetMs, nowMs) {
+    let d = Math.max(0, Math.floor((targetMs - nowMs) / 1000));
+    const past = targetMs <= nowMs;
+    const days = Math.floor(d / 86400); d -= days * 86400;
+    const hours = Math.floor(d / 3600); d -= hours * 3600;
+    const minutes = Math.floor(d / 60); d -= minutes * 60;
+    return { days, hours, minutes, seconds: d, past };
+  }
+
+  // Revision planner: one entry per upcoming exam with the remaining work
+  // (open tasks + low-confidence re-revision + the pre-exam review block), the
+  // days with free capacity before it, the needed daily pace and feasibility.
+  function revisionPlan(state, today) {
+    return (state.subjects || []).map(normSubject)
+      .filter((s) => s.examDate && s.examDate >= today)
+      .map((s) => {
+        const items = [];
+        s.tasks.forEach((t) => {
+          if (t.kind === 'clinic') {
+            if (!t.done) items.push({ id: t.id, title: t.title, hours: t.workH || 2, type: 'clinic' });
+            return;
+          }
+          if (!t.done) {
+            if (t.studyH > 0) items.push({ id: t.id, title: t.title, hours: t.studyH, type: 'study' });
+            if (t.solveH > 0) items.push({ id: t.id, title: t.title, hours: t.solveH, type: 'solve' });
+          } else if (t.confidence && t.confidence <= 2) {
+            items.push({ id: t.id, title: t.title, hours: (t.studyH || 1) * 0.5, type: 'revise' });
+          }
+        });
+        items.sort((a, b) => b.hours - a.hours);
+        const reviewH = reviewHours(s.covered);
+        const hoursNeeded = Math.round((items.reduce((a, i) => a + i.hours, 0) + reviewH) * 2) / 2;
+        let cap = 0, daysAvail = 0;
+        for (let d = today; d < s.examDate; d = addDays(d, 1)) {
+          const c = capacityOn(state, d);
+          if (c > 1e-9) daysAvail++;
+          cap += c;
+        }
+        return {
+          subjectId: s.id, name: s.name, examDate: s.examDate,
+          daysLeft: diffDays(today, s.examDate),
+          items, reviewH, hoursNeeded, daysAvail,
+          perDay: daysAvail ? Math.round((hoursNeeded / daysAvail) * 2) / 2 : hoursNeeded,
+          feasible: hoursNeeded <= cap + 1e-9,
+        };
+      })
+      .sort((a, b) => a.examDate.localeCompare(b.examDate));
+  }
+
   return {
     generate, progress, warnings, addDays, weekday, diffDays, capacityOn,
     estimate, estimateDifficulty, reviewHours, normSubject, SLOT,
     STUDY_H, SOLVE_H, CLINIC_H,
     hmToMin, fmtMin, normBlock, busyOn, freeWindowsOn, gapsOn, overlapOn, blockClashes,
     BREAK_M, DAY_MIN,
+    FOCUS_PRESETS, taskRemainingMin, deductFromTask, focusStats, nextExam,
+    countdownParts, revisionPlan,
   };
 });
 
@@ -1017,7 +1205,53 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       months: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'],
       appTitle: '🦷 Dental Student Planner',
       langBtn: 'English',
-      tabs: { schedule: 'الجدول', subjects: 'المواد', time: 'وقتي', progress: 'التقدم', profile: 'حسابي' },
+      tabs: { day: 'يومي', schedule: 'الجدول', exams: 'الامتحانات', subjects: 'المواد', profile: 'حسابي' },
+      greetingAm: (n) => 'صباح الفل' + (n ? ' يا ' + n : ''),
+      greetingPm: (n) => 'مساء الفل' + (n ? ' يا ' + n : ''),
+      myDaySub: 'كل اللي عليك النهارده في مكان واحد',
+      todayProgress: 'إنجاز النهارده',
+      studiedOf: (done, plan) => 'ذاكرت ' + done + ' من ' + plan + ' النهارده',
+      studiedNoPlan: (done) => 'ذاكرت ' + done + ' النهارده',
+      startStudying: 'ابدأ المذاكرة ▶',
+      todayBusy: 'معادياتك النهارده',
+      todayStudy: 'خطة مذاكرة النهارده',
+      requiredTasks: 'المهام المطلوبة',
+      deadlinesTitle: 'مواعيد التسليم والامتحانات',
+      noDeadlines: 'مفيش مواعيد قريبة.',
+      noOpenTasks: 'مفيش مهام مفتوحة 🎉',
+      dueOn: (d) => 'تسليم ' + d,
+      statsTitle: 'إحصائيات المذاكرة',
+      statToday: (m) => 'النهارده: ' + m,
+      statWeek: (t) => 'الأسبوع ده: ' + t,
+      statSessions: (n) => n + ' جلسة تركيز',
+      focusTitle: 'وضع التركيز',
+      focusPickTask: 'اختار المهمة اللي هتذاكرها',
+      focusPickPreset: 'اختار النظام',
+      presetLabel: (f, b) => f + ' دقيقة مذاكرة + ' + b + ' دقايق بريك',
+      focusBegin: 'يلا نبدأ',
+      focusPhaseFocus: 'مذاكرة',
+      focusPhaseBreak: 'بريك',
+      focusPhaseReady: 'البريك خلص - جاهز؟',
+      focusNext: 'ابدأ الجولة الجديدة',
+      focusPause: 'وقفة',
+      focusResume: 'كمل',
+      focusStop: 'إنهاء الجلسة',
+      focusCancel: 'إلغاء',
+      focusCycles: (n) => n + ' جولة مذاكرة',
+      focusLogged: (m) => 'اتسجلت ' + m + ' دقيقة مذاكرة',
+      focusTaskDone: 'وقت المهمة خلص - لو خلصتها فعلاً علّمها من تاب المواد ✅',
+      focusNoTasks: 'مفيش مهام مفتوحة. ضيف مهمة من تاب "المواد" الأول.',
+      nextExamTitle: 'أقرب امتحان',
+      cdText: (d, h, m) => d + ' يوم و ' + h + ' ساعة و ' + m + ' دقيقة',
+      cdNow: 'الوقت عدّى',
+      examTableTitle: 'جدول الامتحانات',
+      revTitle: 'خطة المراجعة',
+      revPerDay: (h) => 'المطلوب حوالي ' + h + ' كل يوم لحد الامتحان',
+      revOk: 'وقتك كفاية ✅',
+      revTight: 'وقتك مش كفاية ⚠️',
+      revNone: 'مفيش شغل متبقي غير المراجعة العامة',
+      revTop: 'أكبر الشغل المتبقي:',
+      noExamsCenter: 'مفيش امتحانات مسجلة. ضيف امتحان لمادة من تاب "المواد".',
       today: 'النهارده',
       tomorrow: 'بكرة',
       fmtH: (h) => (h % 1 ? h.toFixed(1) : h) + ' س',
@@ -1136,7 +1370,53 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
       appTitle: '🦷 Dental Student Planner',
       langBtn: 'عربي',
-      tabs: { schedule: 'Schedule', subjects: 'Subjects', time: 'My time', progress: 'Progress', profile: 'Profile' },
+      tabs: { day: 'My Day', schedule: 'Schedule', exams: 'Exams', subjects: 'Subjects', profile: 'Profile' },
+      greetingAm: (n) => 'Good morning' + (n ? ', ' + n : ''),
+      greetingPm: (n) => 'Good evening' + (n ? ', ' + n : ''),
+      myDaySub: 'Everything on you today, in one place',
+      todayProgress: "Today's progress",
+      studiedOf: (done, plan) => 'You studied ' + done + ' of ' + plan + ' today',
+      studiedNoPlan: (done) => 'You studied ' + done + ' today',
+      startStudying: 'Start studying ▶',
+      todayBusy: "Today's commitments",
+      todayStudy: "Today's study plan",
+      requiredTasks: 'Required tasks',
+      deadlinesTitle: 'Deadlines & exams',
+      noDeadlines: 'No upcoming deadlines.',
+      noOpenTasks: 'No open tasks 🎉',
+      dueOn: (d) => 'due ' + d,
+      statsTitle: 'Study stats',
+      statToday: (m) => 'Today: ' + m,
+      statWeek: (t) => 'This week: ' + t,
+      statSessions: (n) => n + ' focus sessions',
+      focusTitle: 'Focus mode',
+      focusPickTask: 'Pick the task you will study',
+      focusPickPreset: 'Pick the rhythm',
+      presetLabel: (f, b) => f + ' min focus + ' + b + ' min break',
+      focusBegin: "Let's go",
+      focusPhaseFocus: 'Focus',
+      focusPhaseBreak: 'Break',
+      focusPhaseReady: 'Break over - ready?',
+      focusNext: 'Start next round',
+      focusPause: 'Pause',
+      focusResume: 'Resume',
+      focusStop: 'End session',
+      focusCancel: 'Cancel',
+      focusCycles: (n) => n + ' focus rounds',
+      focusLogged: (m) => m + ' minutes of study logged',
+      focusTaskDone: "The task's time is used up - if you actually finished it, mark it done in Subjects ✅",
+      focusNoTasks: 'No open tasks. Add a task from the Subjects tab first.',
+      nextExamTitle: 'Next exam',
+      cdText: (d, h, m) => d + 'd ' + h + 'h ' + m + 'm',
+      cdNow: 'Time is up',
+      examTableTitle: 'Exam schedule',
+      revTitle: 'Revision planner',
+      revPerDay: (h) => 'You need about ' + h + ' every day until the exam',
+      revOk: 'Your time covers it ✅',
+      revTight: 'Not enough time ⚠️',
+      revNone: 'Nothing left but a general review',
+      revTop: 'Biggest remaining work:',
+      noExamsCenter: 'No exams recorded. Add an exam to a subject from the Subjects tab.',
       today: 'Today',
       tomorrow: 'Tomorrow',
       fmtH: (h) => (h % 1 ? h.toFixed(1) : h) + ' h',
@@ -1268,6 +1548,8 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
     busy: {},        // weekly busy blocks per weekday 0..6: [{id,label,kind,start,end}]
     busyOnce: {},    // one-date busy blocks: {date: [{id,label,kind,start,end}]}
     overrides: {}, blocked: [], subjects: [], savedAt: 0,
+    focusLog: [],    // [{id, taskId, subjectId, date:'YYYY-MM-DD', minutes, at}]
+    theme: 'dark',   // 'dark' (default) or 'light'
   });
 
   function migrate(old) {
@@ -1302,11 +1584,23 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
   if (!state.profile) state.profile = { name: '', year: null, onboarded: false };
   if (!state.busy || typeof state.busy !== 'object') state.busy = {};
   if (!state.busyOnce || typeof state.busyOnce !== 'object') state.busyOnce = {};
+  if (!Array.isArray(state.focusLog)) state.focusLog = [];
+  if (state.theme !== 'light') state.theme = 'dark';
   const saveLocal = () => localStorage.setItem(KEY, JSON.stringify(state));
 
-  let tab = 'schedule', openSubject = null, openExam = null, taskKind = {}, authSkipped = false, toastTimer = null, timeDay = null;
-  let calCursor = todayStr().slice(0, 7);
-  let selDay = todayStr();
+  let tab = 'day', openSubject = null, openExam = null, taskKind = {}, authSkipped = false, toastTimer = null, timeDay = null;
+
+  // focus mode runtime (the running session is also persisted locally, not synced)
+  const FKEY = KEY + '.focus';
+  let focusOpen = false, focusSel = null, focusPreset = 0, focusRun = null, beepCtx = null;
+  try {
+    const fr = localStorage.getItem(FKEY);
+    if (fr) {
+      const parsed = JSON.parse(fr);
+      if (parsed && parsed.taskId && parsed.subjectId && Scheduler.FOCUS_PRESETS[parsed.preset]) focusRun = parsed;
+    }
+  } catch (e) {}
+  const persistFocus = () => { try { focusRun ? localStorage.setItem(FKEY, JSON.stringify(focusRun)) : localStorage.removeItem(FKEY); } catch (e) {} };
 
   const L = () => I18N[state.lang === 'en' ? 'en' : 'ar'];
   const subj = (id) => state.subjects.find((s) => s.id === id);
@@ -1315,6 +1609,7 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
   const clinicAllowed = () => yearNum() >= 4;
   const examOf = (s) => (s.exam && s.exam.date ? s.exam : null);
   const fmtHTxt = (h) => L().fmtH(Math.round(h * 2) / 2);
+  const fmtDur = (min) => { const m = Math.round(min); return m < 60 ? L().fmtM(m) : L().fmtH(Math.round(m / 60 * 2) / 2); };
   const fmtMin = Scheduler.fmtMin;
 
   const KIND_ICON = { class: '🏫', gym: '💪', sleep: '😴', other: '📌' };
@@ -1409,6 +1704,8 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
         if (!state.savedAt || cloudAt > state.savedAt) {
           state = Object.assign(empty(), data.state);
           if (!state.profile) state.profile = { name: '', year: null, onboarded: false };
+          if (!Array.isArray(state.focusLog)) state.focusLog = [];
+          if (state.theme !== 'light') state.theme = 'dark';
           saveLocal(); setSync('synced');
         } else pushCloud();
       } else pushCloud();
@@ -1520,13 +1817,13 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
 
   /* ---------------- views ---------------- */
 
-  function viewSchedule() {
-    const today = todayStr();
-    $('todayLbl').textContent = today;
-    let h = `<div class="row" style="margin-bottom:12px"><button class="btn grow" data-act="gen">🗓️ ${esc(L().genBtn)}</button>` +
-      (state.subjects.length || !curForYear().length ? '' : ` <button class="btn ghost" data-act="loadCur">${esc(L().loadCurBtn)}</button>`) + '</div>';
-    if (!state.subjects.length) return h + `<div class="card empty"><div class="big">🦷</div><p>${esc(L().noPlan)}</p></div>`;
+  const cdText = (targetMs) => {
+    const c = Scheduler.countdownParts(targetMs, Date.now());
+    return c.past ? L().cdNow : L().cdText(c.days, c.hours, c.minutes);
+  };
 
+  function warnCards(today) {
+    let h = '';
     Scheduler.warnings(state, today).forEach((w) => {
       const head = w.examDate && w.examDate >= today
         ? L().warnExam(w.name, w.examDate, Scheduler.diffDays(today, w.examDate), fmtHTxt(w.hoursShort))
@@ -1535,66 +1832,159 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
         w.tasks.slice(0, 3).map((t, i) => `<li>${esc(L().warnTask(i + 1, t.title, fmtHTxt(t.hours)))}</li>`).join('') +
         (w.openCount > 3 ? `<li class="muted">${esc(L().warnMore(w.openCount - 3))}</li>` : '') + '</ol></div>';
     });
+    return h;
+  }
 
+  function examRowFor(s, ex, today) {
+    return `<div class="sess examrow"><div class="grow">📝 <b>${esc(s.name)}</b> - ${esc(L().examLine(ex.kind, ex.date, ex.time, L().natureWord[ex.nature] || ex.nature))}</div></div>`;
+  }
+
+  function viewDay() {
+    const today = todayStr();
     const now = new Date();
+    const name = (state.profile.name || '').trim().split(/\s+/)[0];
+    const greet = (now.getHours() >= 4 && now.getHours() < 12 ? L().greetingAm : L().greetingPm)(name);
+    let h = `<div class="hero"><div class="grow"><b class="hero-title">${esc(greet)}</b><div class="muted">${esc(L().myDaySub)}</div></div></div>`;
+    if (!state.subjects.length) {
+      h += `<div class="card empty"><div class="big">🦷</div><p>${esc(L().noPlan)}</p></div>`;
+      if (curMissing().length) h += `<div class="card"><button class="btn" data-act="loadCur" style="width:100%">${esc(L().loadCurBtn)}</button></div>`;
+      return h;
+    }
+    h += warnCards(today);
+
     const r = Scheduler.generate(state, today, { nowMin: now.getHours() * 60 + now.getMinutes() });
+    const stats = Scheduler.focusStats(state.focusLog, today);
+    const plannedMin = Math.round(r.sessions.filter((x) => x.date === today).reduce((a, x) => a + x.hours, 0) * 60);
+    const doneTasksMin = Math.round(state.subjects.reduce((a, s) => a + s.tasks.reduce((a2, t) =>
+      a2 + (t.done && t.doneAt === today ? (t.kind === 'clinic' ? (t.workH || 0) : (t.studyH || 0) + (t.solveH || 0)) : 0), 0), 0) * 60);
+    const doneMin = stats.todayMin + doneTasksMin;
+    const pct = plannedMin > 0 ? Math.min(100, Math.round(doneMin / plannedMin * 100)) : (doneMin > 0 ? 100 : 0);
+    h += `<div class="card"><div class="row"><b class="grow">${esc(L().todayProgress)}</b><span class="tag">${pct}%</span></div>
+      <div class="bar"><i style="width:${pct}%"></i></div>
+      <div class="muted">${esc(plannedMin > 0 ? L().studiedOf(fmtDur(doneMin), fmtDur(plannedMin)) : L().studiedNoPlan(fmtDur(doneMin)))}</div></div>`;
+    h += `<button class="btn bigstart" data-act="focusOpen">${esc(L().startStudying)}</button>`;
 
-    const byDay = {}; r.sessions.forEach((s) => (byDay[s.date] = byDay[s.date] || []).push(s));
-    const examsByDay = {};
-    state.subjects.forEach((s) => { const ex = examOf(s); if (ex) examsByDay[ex.date] = examsByDay[ex.date] || { subject: s, exam: ex }; });
-
-    // calendar card
-    const [cy, cm] = calCursor.split('-').map(Number);
-    const first = calCursor + '-01';
-    const dim = new Date(cy, cm, 0).getDate();
-    const startWd = Scheduler.weekday(first);
-    h += `<div class="card"><div class="cal-head"><button class="btn ghost sm" data-act="calPrev">‹</button>
-      <b class="grow" style="text-align:center">${esc(L().months[cm - 1])} ${cy}</b>
-      <button class="btn ghost sm" data-act="calToday">${esc(L().today)}</button>
-      <button class="btn ghost sm" data-act="calNext">›</button></div><div class="cal">`;
-    L().daysShort.forEach((d) => { h += `<div class="cal-wd">${esc(d)}</div>`; });
-    for (let i = 0; i < startWd; i++) h += '<div class="cell out"></div>';
-    for (let dnum = 1; dnum <= dim; dnum++) {
-      const d = calCursor + '-' + String(dnum).padStart(2, '0');
-      const sess = byDay[d] || [];
-      const isExam = examsByDay[d];
-      const cls = 'cell' + (d === selDay ? ' sel' : '') + (d === today ? ' now' : '') + (d < today ? ' past' : '') + (isExam ? ' examday' : '');
-      const dots = sess.slice(0, 4).map((s) => `<i style="background:${colorOf(s.subjectId)}"></i>`).join('');
-      const tot = sess.reduce((a, s) => a + s.hours, 0);
-      h += `<div class="${cls}" data-act="calDay" data-d="${d}"><span class="dnum">${dnum}</span>` +
-        (isExam ? '<span class="exdot">📝</span>' : '') +
-        (dots ? `<span class="dots">${dots}</span>` : '') +
-        (tot ? `<span class="chrs">${fmtHTxt(tot)}</span>` : '') + '</div>';
-    }
-    h += '</div></div>';
-
-    // selected day sessions
-    h += `<div class="day ${selDay === today ? 'today' : ''}">${dayLabel(selDay, today)}</div><div class="card">`;
-    const sels = (byDay[selDay] || []);
-    if (examsByDay[selDay]) {
-      const e = examsByDay[selDay];
-      h += `<div class="sess examrow"><div class="grow">📝 <b>${esc(e.subject.name)}</b> - ${esc(L().examLine(e.exam.kind, e.exam.date, e.exam.time, L().natureWord[e.exam.nature] || e.exam.nature))}</div></div>`;
-    }
-    const items = [];
-    sels.forEach((s) => { const sj = subj(s.subjectId); if (sj) items.push({ m: s.startMin == null ? 1e9 : s.startMin, html: sessionRow(s, sj) }); });
-    if (selDay >= today) blocksForDate(selDay).forEach((b) => items.push({ m: b.s, html: busyRow(b) }));
-    items.sort((a, b) => a.m - b.m);
-    if (!items.length && !examsByDay[selDay]) h += `<div class="muted" style="padding:6px 2px">${esc(L().noSessDay)}</div>`;
-    items.forEach((it) => { h += it.html; });
+    // today's commitments (busy blocks)
+    const blocks = blocksForDate(today);
+    h += `<div class="day today">${esc(L().todayBusy)}</div><div class="card">`;
+    if (!blocks.length) h += `<div class="muted" style="padding:6px 2px">${esc(L().noSessDay)}</div>`;
+    blocks.forEach((b) => { h += busyRow(b); });
     h += '</div>';
 
-    // upcoming exams
-    const ups = state.subjects.filter((s) => examOf(s) && s.exam.date >= today)
-      .sort((a, b) => a.exam.date.localeCompare(b.exam.date)).slice(0, 5);
-    if (ups.length) {
-      h += `<div class="day">${esc(L().upcomingExams)}</div>`;
-      ups.forEach((s) => {
-        const ex = s.exam, dl = Scheduler.diffDays(today, ex.date);
-        h += `<div class="card pcard" style="border-inline-start-color:${colorOfS(s)}"><div class="row"><span class="sicon" style="background:${colorOfS(s)}22">${iconOf(s)}</span>
-          <div class="grow"><b>${esc(s.name)}</b><div class="muted">${esc(L().examLine(ex.kind, ex.date, ex.time, L().natureWord[ex.nature] || ex.nature))}${ex.covered ? ' · ' + esc(L().coveredShort(ex.covered)) : ''}</div></div>
-          <span class="tag">${esc(L().daysLeft(dl))}</span></div></div>`;
-      });
+    // today's study plan
+    h += `<div class="day">${esc(L().todayStudy)}</div><div class="card">`;
+    const todaySess = r.sessions.filter((x) => x.date === today);
+    if (!todaySess.length) h += `<div class="muted" style="padding:6px 2px">${esc(L().noSessDay)}</div>`;
+    todaySess.forEach((x) => { const sj = subj(x.subjectId); if (sj) h += sessionRow(x, sj); });
+    h += '</div>';
+
+    // required tasks
+    const open = [];
+    state.subjects.forEach((s) => s.tasks.forEach((t) => { if (!t.done) open.push({ s, t, rem: Scheduler.taskRemainingMin(t) }); }));
+    open.sort((a, b) => {
+      const ea = examOf(a.s), eb = examOf(b.s);
+      const da = a.t.due || (ea && ea.date) || '9999', db = b.t.due || (eb && eb.date) || '9999';
+      return da.localeCompare(db) || b.rem - a.rem;
+    });
+    h += `<div class="day">${esc(L().requiredTasks)}</div><div class="card">`;
+    if (!open.length) h += `<div class="muted" style="padding:6px 2px">${esc(L().noOpenTasks)}</div>`;
+    open.slice(0, 6).forEach(({ s, t, rem }) => {
+      h += `<div class="lec"><span class="sicon" style="background:${colorOfS(s)}22">${iconOf(s)}</span>
+        <span class="t grow">${esc(t.title)}<br><span class="muted">${esc(s.name)} · ${fmtDur(rem)}</span></span>
+        <button class="btn ghost sm" data-act="focusTask" data-s="${s.id}" data-l="${t.id}" title="${esc(L().focusTitle)}">▶</button></div>`;
+    });
+    h += '</div>';
+
+    // deadlines & exams
+    h += `<div class="day">${esc(L().deadlinesTitle)}</div><div class="card">`;
+    const dl = [];
+    state.subjects.forEach((s) => {
+      const ex = examOf(s);
+      if (ex && ex.date >= today) dl.push({ d: ex.date, html: `<div class="sess"><span class="sicon" style="background:${colorOfS(s)}22">${iconOf(s)}</span><div class="grow"><b>${esc(s.name)}</b> - ${esc(L().examLine(ex.kind, ex.date, ex.time, L().natureWord[ex.nature] || ex.nature))}</div><span class="tag">${esc(L().daysLeft(Scheduler.diffDays(today, ex.date)))}</span></div>` });
+    });
+    state.subjects.forEach((s) => s.tasks.forEach((t) => {
+      if (!t.done && t.due && t.due >= today) dl.push({ d: t.due, html: `<div class="sess"><span class="sicon" style="background:${colorOfS(s)}22">${iconOf(s)}</span><div class="grow">${esc(t.title)} <span class="muted">${esc(s.name)}</span></div><span class="tag clinic">${esc(L().dueOn(t.due.slice(5).replace('-', '/')))}</span></div>` });
+    }));
+    dl.sort((a, b) => a.d.localeCompare(b.d));
+    if (!dl.length) h += `<div class="muted" style="padding:6px 2px">${esc(L().noDeadlines)}</div>`;
+    dl.slice(0, 5).forEach((x) => { h += x.html; });
+    h += '</div>';
+
+    // study stats
+    const max = Math.max(1, ...stats.days.map((d) => d.minutes));
+    h += `<div class="day">${esc(L().statsTitle)}</div><div class="card"><div class="stats7">` +
+      stats.days.map((d) => `<div class="stcol${d.date === today ? ' now' : ''}"><span class="stmin">${d.minutes || ''}</span><div class="stbar"><i style="height:${Math.round(d.minutes / max * 100)}%"></i></div><span class="std">${esc(L().daysShort[Scheduler.weekday(d.date)])}</span></div>`).join('') +
+      `</div><div class="row" style="margin-top:10px"><span class="tag">${esc(L().statToday(fmtDur(stats.todayMin)))}</span><span class="tag">${esc(L().statWeek(fmtDur(stats.weekMin)))}</span><span class="tag">${esc(L().statSessions(stats.sessions))}</span></div></div>`;
+    return h;
+  }
+
+  function viewSchedule() {
+    const today = todayStr();
+    if (!state.subjects.length) return `<div class="card empty"><div class="big">🦷</div><p>${esc(L().noPlan)}</p></div>` + viewTime();
+    const now = new Date();
+    const r = Scheduler.generate(state, today, { nowMin: now.getHours() * 60 + now.getMinutes() });
+    const byDay = {};
+    r.sessions.forEach((s) => (byDay[s.date] = byDay[s.date] || []).push(s));
+    const examsByDay = {};
+    state.subjects.forEach((s) => { const ex = examOf(s); if (ex) examsByDay[ex.date] = { subject: s, exam: ex }; });
+    let h = '';
+    const end = Scheduler.addDays(today, 14);
+    for (let d = today; d < end; d = Scheduler.addDays(d, 1)) {
+      const sess = byDay[d] || [];
+      const tot = sess.reduce((a, s) => a + s.hours, 0);
+      h += `<div class="day ${d === today ? 'today' : ''}">${dayLabel(d, today)}${tot ? ` <span class="tag free">${fmtHTxt(tot)}</span>` : ''}</div><div class="card">`;
+      const items = [];
+      if (examsByDay[d]) {
+        const e = examsByDay[d];
+        const tm = Scheduler.hmToMin(e.exam.time);
+        items.push({ m: tm == null ? 0 : tm, html: examRowFor(e.subject, e.exam, today) });
+      }
+      blocksForDate(d).forEach((b) => items.push({ m: b.s, html: busyRow(b) }));
+      sess.forEach((s2) => { const sj = subj(s2.subjectId); if (sj) items.push({ m: s2.startMin == null ? 1e9 : s2.startMin, html: sessionRow(s2, sj) }); });
+      items.sort((a, b) => a.m - b.m);
+      if (!items.length) h += `<div class="muted" style="padding:6px 2px">${esc(L().noSessDay)}</div>`;
+      items.forEach((it) => { h += it.html; });
+      h += '</div>';
     }
+    return h + viewTime();
+  }
+
+  function viewExams() {
+    const today = todayStr();
+    const ups = state.subjects.filter((s) => examOf(s) && s.exam.date >= today).sort((a, b) => a.exam.date.localeCompare(b.exam.date));
+    if (!ups.length) return `<div class="card empty"><div class="big">📝</div><p>${esc(L().noExamsCenter)}</p></div>`;
+    const nx = Scheduler.nextExam(state, today);
+    let h = '';
+    if (nx) {
+      const target = new Date(nx.date + 'T' + (Scheduler.hmToMin(nx.time) != null ? nx.time : '09:00') + ':00').getTime();
+      const sj = subj(nx.subjectId);
+      const col = sj ? colorOfS(sj) : 'var(--primary)';
+      h += `<div class="card pcard" style="border-inline-start-color:${col}"><div class="muted">${esc(L().nextExamTitle)}</div>
+        <div class="row" style="margin-top:6px"><span class="sicon" style="background:${col}22">${sj ? iconOf(sj) : '📝'}</span>
+        <b class="grow">${esc(nx.name)}</b><span class="muted">${esc(L().examLine(nx.kind, nx.date, nx.time, L().natureWord[nx.nature] || nx.nature))}</span></div>
+        <div class="cdnum" data-cd="${target}" dir="auto">${esc(cdText(target))}</div></div>`;
+    }
+    h += `<div class="day">${esc(L().examTableTitle)}</div>`;
+    ups.forEach((s) => {
+      const ex = s.exam, dleft = Scheduler.diffDays(today, ex.date);
+      h += `<div class="card pcard" style="border-inline-start-color:${colorOfS(s)}"><div class="row"><span class="sicon" style="background:${colorOfS(s)}22">${iconOf(s)}</span>
+        <div class="grow"><b>${esc(s.name)}</b><div class="muted">${esc(L().examLine(ex.kind, ex.date, ex.time, L().natureWord[ex.nature] || ex.nature))}${ex.covered ? ' · ' + esc(L().coveredShort(ex.covered)) : ''}</div></div>
+        <span class="tag">${esc(L().daysLeft(dleft))}</span></div></div>`;
+    });
+    h += `<div class="day">${esc(L().revTitle)}</div>`;
+    Scheduler.revisionPlan(state, today).forEach((p) => {
+      const sj = subj(p.subjectId);
+      const col = sj ? colorOfS(sj) : 'var(--primary)';
+      h += `<div class="card pcard" style="border-inline-start-color:${col}">
+        <div class="row"><span class="sicon" style="background:${col}22">${sj ? iconOf(sj) : '📝'}</span><b class="grow">${esc(p.name)}</b>
+        <span class="tag ${p.feasible ? '' : 'revise'}">${esc(p.feasible ? L().revOk : L().revTight)}</span></div>
+        <div class="muted" style="margin-top:4px">${esc(L().revPerDay(fmtHTxt(p.perDay)))} · ${esc(L().daysLeft(p.daysLeft))}</div>`;
+      if (p.items.length) {
+        h += `<div class="muted" style="margin-top:8px">${esc(L().revTop)}</div>` +
+          p.items.slice(0, 3).map((it) => `<div class="lec"><span class="t grow">${esc(it.title)}</span><span class="muted hrs">${fmtHTxt(it.hours)}</span></div>`).join('');
+      } else h += `<div class="muted" style="margin-top:8px">${esc(L().revNone)}</div>`;
+      h += '</div>';
+    });
     return h;
   }
 
@@ -1645,6 +2035,9 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
         <button class="btn ghost" data-act="toggle" data-s="${s.id}">${open ? esc(L().closeBtn) : esc(L().tasksBtn(s.tasks.length))}</button>
         <button class="btn danger" data-act="delSubject" data-s="${s.id}">${esc(L().delBtn)}</button></div>`;
       if (ex) h += `<div class="muted" style="margin:2px 0 6px">${esc(L().examLine(ex.kind, ex.date, ex.time, L().natureWord[ex.nature] || ex.nature))}${ex.covered ? ' · ' + esc(L().coveredShort(ex.covered)) : ''}</div>`;
+      const doneN = s.tasks.filter((t) => t.done).length;
+      const pctS = s.tasks.length ? Math.round(doneN / s.tasks.length * 100) : 0;
+      if (s.tasks.length) h += `<div class="bar" style="margin:8px 0 6px"><i style="width:${pctS}%"></i></div><div class="muted">${esc(L().taskCount(doneN, s.tasks.length, pctS))}</div>`;
       if (exOpen) {
         h += examForm(s, 'e-' + s.id + '-');
         if (ex) h += `<button class="btn ghost" data-act="clearExam" data-s="${s.id}" style="margin-top:6px">${esc(L().clearExam)}</button>`;
@@ -1737,18 +2130,6 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
     return h + '</div>';
   }
 
-  function viewProgress() {
-    const today = todayStr();
-    if (!state.subjects.length) return `<div class="card empty"><div class="big">📚</div><p>${esc(L().addFirst)}</p></div>`;
-    return Scheduler.progress(state, today).sort((a, b) => (a.daysLeft == null ? 9e9 : a.daysLeft) - (b.daysLeft == null ? 9e9 : b.daysLeft)).map((p) => {
-      const sj = subj(p.subjectId);
-      const col = sj ? colorOfS(sj) : colorOf(p.subjectId);
-      return `<div class="card pcard" style="border-inline-start-color:${col}"><div class="row"><span class="sicon" style="background:${col}22">${sj ? iconOf(sj) : '📖'}</span><b class="grow">${esc(p.name)}</b>
-      <span class="tag">${p.daysLeft == null ? esc(L().noExamProgress) : p.daysLeft < 0 ? esc(L().examPassed) : esc(L().daysLeft(p.daysLeft))}</span></div>
-      <div class="bar"><i style="width:${p.pct}%"></i></div><div class="muted">${esc(L().taskCount(p.done, p.total, p.pct))}</div></div>`;
-    }).join('');
-  }
-
   function viewProfile() {
     const p = state.profile;
     let h = `<div class="card"><b>${esc(L().profileTitle)}</b>
@@ -1763,6 +2144,64 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
     else if (session) h += `<div class="row" style="margin-top:8px"><span class="grow">${esc(session.email || '')} <span class="sync ${syncState}">${syncState === 'synced' ? '☁️ ' + esc(L().synced) : syncState === 'syncing' ? esc(L().syncing) : syncState === 'error' ? esc(L().syncErr) : ''}</span></span><button class="btn ghost" data-act="logout">${esc(L().logoutBtn)}</button></div>`;
     else h += `<p class="muted" style="margin:8px 0 6px">${esc(L().authSub)}</p><button class="btn" data-act="showAuth">${esc(L().authTitle)}</button>`;
     return h + '</div>';
+  }
+
+  /* ---------------- focus mode (pomodoro) ---------------- */
+
+  function logFocus(sid, tid, minutes) {
+    const t = taskOf(sid, tid);
+    if (t) {
+      Scheduler.deductFromTask(t, minutes);
+      if (Scheduler.taskRemainingMin(t) <= 0) setTimeout(() => toast(L().focusTaskDone), 2400);
+    }
+    (state.focusLog = state.focusLog || []).push({ id: uid(), taskId: tid, subjectId: sid, date: todayStr(), minutes, at: Date.now() });
+    save();
+    toast(L().focusLogged(minutes));
+  }
+
+  function beep() {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      beepCtx = beepCtx || new AC();
+      const o = beepCtx.createOscillator(), g = beepCtx.createGain();
+      o.connect(g); g.connect(beepCtx.destination);
+      o.frequency.value = 880; g.gain.value = 0.07;
+      o.start(); o.stop(beepCtx.currentTime + 0.35);
+    } catch (e) {}
+  }
+
+  const mmss = (ms) => { const t = Math.max(0, Math.ceil(ms / 1000)); return String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0'); };
+
+  function updateFocusText() {
+    const el = $('focusTimer');
+    if (el && focusRun) {
+      const remain = focusRun.paused ? focusRun.remainMs : (focusRun.endsAt ? focusRun.endsAt - Date.now() : 0);
+      el.textContent = focusRun.phase === 'ready' ? '✓' : mmss(remain);
+    }
+  }
+
+  function tick() {
+    const now = Date.now();
+    if (focusRun && !focusRun.paused && (focusRun.phase === 'focus' || focusRun.phase === 'break') && focusRun.endsAt && now >= focusRun.endsAt) {
+      const p = Scheduler.FOCUS_PRESETS[focusRun.preset];
+      if (focusRun.phase === 'focus') {
+        logFocus(focusRun.subjectId, focusRun.taskId, p.focusMin);
+        focusRun.cycles = (focusRun.cycles || 0) + 1;
+        focusRun.phase = 'break';
+        focusRun.endsAt = now + p.breakMin * 60000;
+        beep();
+      } else {
+        focusRun.phase = 'ready';
+        focusRun.endsAt = 0;
+        beep();
+      }
+      persistFocus();
+      render();
+    } else {
+      if (focusRun) updateFocusText();
+      document.querySelectorAll('[data-cd]').forEach((el) => { el.textContent = cdText(+el.dataset.cd); });
+    }
   }
 
   /* ---------------- overlays ---------------- */
@@ -1789,6 +2228,44 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       L().years.forEach((y, i) => { h += `<button class="ypick ${state.profile.year === i + 1 ? 'on' : ''}" data-act="pickYear" data-y="${i + 1}">${esc(y)}</button>`; });
       h += `</div><div class="muted" style="margin-top:10px">${esc(L().uniLbl)}: <b>${esc(UNI[state.lang === 'en' ? 'en' : 'ar'])}</b></div>
         <div style="margin-top:12px"><button class="btn" data-act="onboardStart" style="width:100%">${esc(L().startBtn)}</button></div></div></div>`;
+      return h;
+    }
+    if (focusRun) {
+      const t = taskOf(focusRun.subjectId, focusRun.taskId);
+      const sj = subj(focusRun.subjectId);
+      h += `<div class="overlay"><div class="sheet focus"><b style="font-size:17px">${esc(L().focusTitle)}</b>
+        <div class="muted" style="margin-top:4px">${sj ? esc(sj.name) + (t ? ' - ' : '') : ''}${t ? esc(t.title) : ''}</div>
+        <div class="fphase"><span class="tag" id="focusPhase">${esc(focusRun.phase === 'focus' ? L().focusPhaseFocus : focusRun.phase === 'break' ? L().focusPhaseBreak : L().focusPhaseReady)}</span>
+        <span class="muted">${esc(L().focusCycles(focusRun.cycles || 0))}</span></div>
+        <div class="ftimer" id="focusTimer" dir="ltr">--:--</div>
+        <div class="row" style="margin-top:12px">`;
+      if (focusRun.phase === 'ready') h += `<button class="btn grow" data-act="focusNext">${esc(L().focusNext)}</button>`;
+      else if (focusRun.paused) h += `<button class="btn grow" data-act="focusResume">${esc(L().focusResume)}</button>`;
+      else h += `<button class="btn ghost grow" data-act="focusPause">${esc(L().focusPause)}</button>`;
+      h += `<button class="btn danger" data-act="focusStop">${esc(L().focusStop)}</button></div></div></div>`;
+    } else if (focusOpen) {
+      const open = [];
+      state.subjects.forEach((sj) => sj.tasks.forEach((t) => { if (!t.done) open.push({ sj, t, rem: Scheduler.taskRemainingMin(t) }); }));
+      open.sort((a, b) => {
+        const ea = examOf(a.sj), eb = examOf(b.sj);
+        const da = a.t.due || (ea && ea.date) || '9999', db = b.t.due || (eb && eb.date) || '9999';
+        return da.localeCompare(db) || b.rem - a.rem;
+      });
+      if (open.length && !(focusSel && taskOf(focusSel.s, focusSel.l) && !taskOf(focusSel.s, focusSel.l).done)) focusSel = { s: open[0].sj.id, l: open[0].t.id };
+      h += `<div class="overlay"><div class="sheet focus"><b style="font-size:17px">${esc(L().focusTitle)}</b>`;
+      if (!open.length) {
+        h += `<p class="muted">${esc(L().focusNoTasks)}</p><div style="margin-top:12px"><button class="btn ghost" data-act="focusClose" style="width:100%">${esc(L().focusCancel)}</button></div>`;
+      } else {
+        h += `<div class="muted" style="margin:8px 0 6px">${esc(L().focusPickTask)}</div><div class="ftasks">` +
+          open.slice(0, 8).map(({ sj, t, rem }) => `<button class="ftask ${focusSel && focusSel.l === t.id ? 'on' : ''}" data-act="pickFTask" data-s="${sj.id}" data-l="${t.id}">
+            <span class="sicon" style="background:${colorOfS(sj)}22">${iconOf(sj)}</span>
+            <span class="grow"><b>${esc(t.title)}</b><br><span class="muted">${esc(sj.name)} · ${fmtDur(rem)}</span></span></button>`).join('') + '</div>';
+        h += `<div class="muted" style="margin:10px 0 6px">${esc(L().focusPickPreset)}</div><div class="pick">` +
+          Scheduler.FOCUS_PRESETS.map((pr, i) => `<button class="${focusPreset === i ? 'on' : ''}" data-act="pickFPreset" data-i="${i}">🍅 ${esc(L().presetLabel(pr.focusMin, pr.breakMin))}</button>`).join('') + '</div>';
+        h += `<div class="row" style="margin-top:12px"><button class="btn grow" data-act="focusBegin">${esc(L().focusBegin)}</button>
+          <button class="btn ghost" data-act="focusClose">${esc(L().focusCancel)}</button></div>`;
+      }
+      h += '</div></div>';
     }
     return h;
   }
@@ -1799,23 +2276,22 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
     const l = L();
     document.documentElement.lang = state.lang === 'en' ? 'en' : 'ar';
     document.documentElement.dir = l.dir;
+    document.documentElement.dataset.theme = state.theme === 'light' ? 'light' : '';
     $('appTitle').textContent = l.appTitle;
     $('langBtn').textContent = l.langBtn;
+    $('themeBtn').textContent = state.theme === 'light' ? '☾' : '☀';
     document.querySelectorAll('#tabs button').forEach((b) => { b.textContent = l.tabs[b.dataset.tab]; });
   }
 
   function render() {
+    if (focusRun && !taskOf(focusRun.subjectId, focusRun.taskId)) { focusRun = null; persistFocus(); }
     applyChrome();
+    $('todayLbl').textContent = todayStr();
     document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
-    $('view').innerHTML = { schedule: viewSchedule, subjects: viewSubjects, time: viewTime, progress: viewProgress, profile: viewProfile }[tab]();
+    $('view').innerHTML = { day: viewDay, schedule: viewSchedule, exams: viewExams, subjects: viewSubjects, profile: viewProfile }[tab]();
     $('overlays').innerHTML = overlays();
+    if (focusRun) updateFocusText();
   }
-
-  const shiftCal = (n) => {
-    let [y, m] = calCursor.split('-').map(Number);
-    m += n; while (m > 12) { m -= 12; y++; } while (m < 1) { m += 12; y--; }
-    calCursor = y + '-' + String(m).padStart(2, '0');
-  };
 
   function estChipText(sid) {
     const title = ($('tt-' + sid) || {}).value || '';
@@ -1839,7 +2315,7 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
     const t = e.target, a = t.dataset && t.dataset.act;
     if (t.id === 'nHasExam') { $('nExamBox').classList.toggle('hidden', !t.checked); return; }
     if (!a) return;
-    if (a === 'check') { const x = taskOf(t.dataset.s, t.dataset.l); x.done = t.checked; if (!t.checked) x.confidence = 0; }
+    if (a === 'check') { const x = taskOf(t.dataset.s, t.dataset.l); x.done = t.checked; if (t.checked) x.doneAt = todayStr(); else { x.confidence = 0; delete x.doneAt; } }
     else if (a === 'conf') taskOf(t.dataset.s, t.dataset.l).confidence = +t.value;
     else if (a === 'tdiff') { /* difficulty select re-renders chip */ const el = $('est-' + t.dataset.s); if (el) el.textContent = estChipText(t.dataset.s); return; }
     else return;
@@ -1852,11 +2328,32 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
     const a = t.dataset.act, s = t.dataset.s, l = t.dataset.l;
 
     if (a === 'lang') { state.lang = state.lang === 'en' ? 'ar' : 'en'; save(); return render(); }
-    if (a === 'gen') { selDay = todayStr(); calCursor = selDay.slice(0, 7); render(); return toast(L().madePlan); }
-    if (a === 'calPrev') { shiftCal(-1); return render(); }
-    if (a === 'calNext') { shiftCal(1); return render(); }
-    if (a === 'calToday') { calCursor = todayStr().slice(0, 7); selDay = todayStr(); return render(); }
-    if (a === 'calDay') { selDay = t.dataset.d; return render(); }
+    if (a === 'theme') { state.theme = state.theme === 'light' ? 'dark' : 'light'; save(); return render(); }
+    if (a === 'focusOpen') { focusOpen = true; return render(); }
+    if (a === 'focusTask') { focusSel = { s, l }; focusOpen = true; return render(); }
+    if (a === 'focusClose') { focusOpen = false; return render(); }
+    if (a === 'pickFTask') { focusSel = { s, l }; return render(); }
+    if (a === 'pickFPreset') { focusPreset = +t.dataset.i || 0; return render(); }
+    if (a === 'focusBegin') {
+      if (!focusSel || !taskOf(focusSel.s, focusSel.l)) return render();
+      focusRun = { subjectId: focusSel.s, taskId: focusSel.l, preset: focusPreset, phase: 'focus', endsAt: Date.now() + Scheduler.FOCUS_PRESETS[focusPreset].focusMin * 60000, remainMs: 0, paused: false, cycles: 0 };
+      focusOpen = false; persistFocus(); beep(); return render();
+    }
+    if (a === 'focusNext') {
+      if (!focusRun) return render();
+      focusRun.phase = 'focus'; focusRun.endsAt = Date.now() + Scheduler.FOCUS_PRESETS[focusRun.preset].focusMin * 60000; focusRun.paused = false;
+      persistFocus(); return render();
+    }
+    if (a === 'focusPause') { if (focusRun && !focusRun.paused) { focusRun.remainMs = Math.max(0, focusRun.endsAt - Date.now()); focusRun.paused = true; persistFocus(); } return render(); }
+    if (a === 'focusResume') { if (focusRun && focusRun.paused) { focusRun.endsAt = Date.now() + focusRun.remainMs; focusRun.paused = false; persistFocus(); } return render(); }
+    if (a === 'focusStop') {
+      if (focusRun && focusRun.phase === 'focus') {
+        const remain = focusRun.paused ? focusRun.remainMs : Math.max(0, focusRun.endsAt - Date.now());
+        const elapsed = Math.floor((Scheduler.FOCUS_PRESETS[focusRun.preset].focusMin * 60000 - remain) / 60000);
+        if (elapsed >= 1) logFocus(focusRun.subjectId, focusRun.taskId, elapsed);
+      }
+      focusRun = null; focusOpen = false; persistFocus(); return render();
+    }
     if (a === 'addCur') { addFromCur(t.dataset.code); return; }
     if (a === 'loadCur') { loadCur(); return; }
     if (a === 'toggleDay') { timeDay = timeDay === +t.dataset.i ? null : +t.dataset.i; return render(); }
@@ -1953,7 +2450,7 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       save(); return render();
     }
     if (a === 'delTask') { const sj = subj(s); sj.tasks = sj.tasks.filter((x) => x.id !== l); save(); return render(); }
-    if (a === 'done') { const x = taskOf(s, l); if (x) x.done = true; save(); return render(); }
+    if (a === 'done') { const x = taskOf(s, l); if (x) { x.done = true; x.doneAt = todayStr(); } save(); return render(); }
     if (a === 'addOverride') { const d = $('oDate').value, hv = $('oHours').value; if (!d || hv === '') return; state.overrides[d] = Math.max(0, +hv); save(); return render(); }
     if (a === 'delOverride') { delete state.overrides[t.dataset.d]; save(); return render(); }
   });
@@ -1962,9 +2459,10 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
     if (!document.hidden && session && Date.now() - lastPull > 30000) loadCloud().then(render);
   });
 
-  window.__planner = { get state() { return state; }, loadCur, render, get session() { return session; } };
+  window.__planner = { get state() { return state; }, loadCur, render, tick, get focusRun() { return focusRun; }, get session() { return session; } };
   render();
   initCloud();
+  setInterval(tick, 500);
 })();
 </script>
 </body>
