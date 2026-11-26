@@ -324,6 +324,19 @@ button.sm { padding: 5px 12px; font-size: 13px; }
 .subj-head b { flex: 1 1 100%; margin-bottom: 4px; }
 .subj-head .btn { padding: 7px 13px; font-size: 12.5px; }
 @media (min-width: 640px) { .subj-head b { flex: 1 1 auto; margin-bottom: 0; } }
+
+/* v4: curriculum + smart warnings */
+.btn.sm { padding: 6px 12px; font-size: 12.5px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.chip {
+  border: 1.5px solid var(--line); background: #fff; border-radius: 999px;
+  padding: 5px 11px; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ink);
+  cursor: pointer; transition: all 0.15s;
+}
+.chip:hover { border-color: var(--primary); color: var(--primary-d); }
+.chip .chipd { color: var(--muted); font-size: 11px; margin-inline-start: 4px; }
+.warnlist { margin: 8px 0 0; padding-inline-start: 20px; }
+.warnlist li { margin-top: 3px; font-size: 13.5px; }
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
@@ -349,6 +362,199 @@ button.sm { padding: 5px 12px; font-size: 13px; }
 <div id="overlays"></div>
 <div id="toast"></div>
 <script>(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.Curriculum = factory();
+})(this, function () {
+  // Curriculum of the Faculty of Dentistry, Cairo University (Qasr Al-Ainy), main stream.
+  // Subject lists per year: SOURCED from the official student guide 2025/2024
+  // (dentistry.cu.edu.eg, "دليل الطلاب 2025"), codes from the same guide.
+  // src: 'guide' = official guide. Topic lists: src 'est' = estimated from the standard
+  // Egyptian dental-school syllabus; the faculty does not publish official chapter lists,
+  // so topics are suggestions, not the official lecture plan.
+  // diff: 1 easy, 2 medium, 3 hard (estimated).
+
+  const Y2_TOPICS = {
+    OBID2: [
+      { ar: 'تكوين الوجه والفم', en: 'Development of face and oral cavity', d: 2 },
+      { ar: 'تكوين الأسنان', en: 'Tooth development (odontogenesis)', d: 2 },
+      { ar: 'تركيب المينا', en: 'Enamel structure', d: 3 },
+      { ar: 'تركيب العاج', en: 'Dentin structure', d: 2 },
+      { ar: 'لب السن', en: 'Dental pulp', d: 2 },
+      { ar: 'الملاط السني', en: 'Cementum', d: 1 },
+      { ar: 'رباط ما حول السن', en: 'Periodontal ligament', d: 2 },
+      { ar: 'العظم السنخي', en: 'Alveolar bone', d: 2 },
+      { ar: 'الغشاء المخاطي للفم', en: 'Oral mucosa', d: 2 },
+      { ar: 'الغدد اللعابية', en: 'Salivary glands', d: 2 },
+      { ar: 'بزوغ الأسنان وتساقطها', en: 'Tooth eruption and shedding', d: 1 },
+      { ar: 'المفصل الصدغي الفكي', en: 'Temporomandibular joint (TMJ)', d: 2 },
+    ],
+    DMAD2: [
+      { ar: 'مقدمة وخواص المواد', en: 'Introduction and properties of materials', d: 1 },
+      { ar: 'مواد الطبعات', en: 'Impression materials', d: 2 },
+      { ar: 'منتجات الجبس', en: 'Gypsum products', d: 1 },
+      { ar: 'الشموع السنية', en: 'Dental waxes', d: 1 },
+      { ar: 'الأسمنتات السنية', en: 'Dental cements', d: 2 },
+      { ar: 'الأملجم', en: 'Dental amalgam', d: 2 },
+      { ar: 'الحشوات الضوئية والربط', en: 'Composite resins and bonding', d: 3 },
+      { ar: 'البوليمرات في طب الأسنان', en: 'Polymers in dentistry', d: 2 },
+      { ar: 'السيراميك السني', en: 'Dental ceramics', d: 2 },
+      { ar: 'المعادن والسبائك والصب', en: 'Metals, alloys and casting', d: 3 },
+    ],
+    GPAM2: [
+      { ar: 'إصابة الخلية وموتها', en: 'Cell injury and cell death', d: 2 },
+      { ar: 'الالتهاب الحاد والمزمن', en: 'Acute and chronic inflammation', d: 2 },
+      { ar: 'إصلاح الأنسجة والالتئام', en: 'Tissue repair and healing', d: 2 },
+      { ar: 'اضطرابات الدورة الدموية', en: 'Hemodynamic disorders (thrombosis, embolism, infarction)', d: 3 },
+      { ar: 'الأورام', en: 'Neoplasia', d: 3 },
+      { ar: 'المناعة والحساسية المفرطة', en: 'Immunity and hypersensitivity', d: 3 },
+      { ar: 'الأمراض الوراثية', en: 'Genetic disorders', d: 2 },
+      { ar: 'الأمراض البيئية والتغذوية', en: 'Environmental and nutritional diseases', d: 1 },
+      { ar: 'العدوى العامة', en: 'General infectious diseases', d: 2 },
+    ],
+    GMEM2: [
+      { ar: 'أمراض القلب والضغط', en: 'Cardiology (hypertension, ischemic heart disease, rheumatic fever)', d: 3 },
+      { ar: 'أمراض الصدر', en: 'Respiratory diseases (asthma, COPD, pneumonia, TB)', d: 2 },
+      { ar: 'أمراض الجهاز الهضمي والكبد', en: 'GIT and liver diseases (peptic ulcer, hepatitis)', d: 2 },
+      { ar: 'الغدد الصماء والسكر', en: 'Endocrinology (diabetes, thyroid)', d: 3 },
+      { ar: 'أمراض الدم', en: 'Hematology (anemias, bleeding disorders)', d: 2 },
+      { ar: 'الأمراض المعدية', en: 'Infectious diseases and fever', d: 2 },
+      { ar: 'أساسيات الأمراض العصبية', en: 'Neurology essentials (stroke, facial nerve)', d: 3 },
+      { ar: 'الأمراض الجلدية الشائعة', en: 'Common skin diseases', d: 2 },
+    ],
+    PHAM2: [
+      { ar: 'مقدمة علم الأدوية', en: 'General pharmacology (pharmacokinetics and dynamics)', d: 2 },
+      { ar: 'أدوية الجهاز العصبي الذاتي', en: 'Autonomic nervous system drugs', d: 3 },
+      { ar: 'المسكنات ومضادات الالتهاب', en: 'Analgesics and NSAIDs', d: 3 },
+      { ar: 'أدوية الجهاز العصبي المركزي والمخدر الموضعي', en: 'CNS drugs and local anesthetics', d: 3 },
+      { ar: 'أدوية القلب والدورة الدموية', en: 'Cardiovascular drugs', d: 3 },
+      { ar: 'المضادات الحيوية', en: 'Antimicrobials and antibiotics', d: 3 },
+      { ar: 'أدوية الغدد الصماء والكورتيزون', en: 'Endocrine drugs and corticosteroids', d: 2 },
+      { ar: 'العلاج الكيميائي وأدوية متنوعة', en: 'Chemotherapy and miscellaneous drugs', d: 2 },
+    ],
+    MIBM2: [
+      { ar: 'مقدمة وتركيب البكتيريا', en: 'Introduction and bacterial structure', d: 1 },
+      { ar: 'التعقيم والتطهير', en: 'Sterilization and disinfection', d: 1 },
+      { ar: 'البكتيريا موجبة الجرام', en: 'Gram-positive bacteria', d: 2 },
+      { ar: 'البكتيريا سالبة الجرام', en: 'Gram-negative bacteria', d: 2 },
+      { ar: 'الدرن واللولبيات', en: 'Mycobacteria and spirochetes', d: 2 },
+      { ar: 'الفيروسات', en: 'Virology (hepatitis, HIV, herpes)', d: 3 },
+      { ar: 'الفطريات', en: 'Mycology', d: 2 },
+      { ar: 'المناعة', en: 'Immunology', d: 3 },
+      { ar: 'ميكروبيولوجيا الفم والبلاك', en: 'Oral microbiology and dental plaque', d: 2 },
+    ],
+    UEN002: [
+      { ar: 'مقدمة ريادة الأعمال', en: 'Introduction to entrepreneurship', d: 1 },
+      { ar: 'الفكرة والفرصة', en: 'Business idea and opportunity', d: 1 },
+      { ar: 'نموذج العمل التجاري', en: 'Business model canvas', d: 1 },
+      { ar: 'أساسيات التسويق', en: 'Marketing basics', d: 1 },
+      { ar: 'دراسة الجدوى والتمويل', en: 'Feasibility study and finance', d: 2 },
+      { ar: 'خطة العمل', en: 'Business plan', d: 1 },
+    ],
+  };
+
+  const S = (code, ar, en, diff, topics, aliases) => ({ code, ar, en, diff, src: 'guide', topics: topics || null, aliases: aliases || [] });
+
+  const YEARS = {
+    1: [
+      S('GANM-1', 'تشريح عام', 'General Anatomy', 3, null, ['anatomy', 'تشريح']),
+      S('GHSM-1', 'هيستولوجيا عامة', 'General Histology', 2, null, ['histology', 'هستولوجي', 'هيستولوجيا']),
+      S('GPHM-1', 'فسيولوجيا عامة', 'General Physiology', 3, null, ['physiology', 'فسيولوجيا', 'فسيولوجي']),
+      S('BCHM-1', 'كيمياء حيوية', 'Biochemistry', 3, null, ['biochemistry', 'كيمياء']),
+      S('HDED-1', 'تشريح وظيفي للأسنان', 'Dental Anatomy and Physiology', 2, null, ['dental anatomy', 'تشريح الاسنان', 'تشريح وظيفي', 'dentition']),
+      S('SDE I-1', 'التفكير النقدي وتنمية مهارات I', 'Critical Thinking and Skills Development I', 1, null, ['critical thinking', 'تفكير نقدي', 'مهارات']),
+      S('Univ102', 'القضايا المجتمعية', 'Community Issues', 1, null, ['community', 'قضايا']),
+    ],
+    2: [
+      S('OBID-2', 'بيولوجيا الفم والأسنان', 'Oral Biology', 2, Y2_TOPICS.OBID2, ['oral biology', 'oral histology', 'oral bio', 'بيولوجيا', 'هيستولوجي الفم', 'هستولوجي الفم', 'اورال']),
+      S('DMAD-2', 'المواد الحيوية لطب الأسنان', 'Dental Biomaterials', 2, Y2_TOPICS.DMAD2, ['biomaterials', 'materials', 'المواد الحيوية', 'بيوماتيريالز', 'ماتيريالز', 'خواص المواد', 'مواد']),
+      S('GPAM-2', 'باثولوجيا عامة', 'General Pathology', 3, Y2_TOPICS.GPAM2, ['pathology', 'باثولوجيا', 'باثولوجي', 'باثو']),
+      S('GMEM-2', 'أمراض باطنة وجلدية وتناسلية', 'General Medicine, Skin and Venereal Diseases', 3, Y2_TOPICS.GMEM2, ['medicine', 'باطنة', 'ميديسن', 'امراض باطنة', 'جلدية']),
+      S('PHAM-2', 'الأقربازين', 'Pharmacology', 3, Y2_TOPICS.PHAM2, ['pharmacology', 'الاقربازين', 'فارماكولوجي', 'فارماك', 'ادوية', 'pharma']),
+      S('MIBM-2', 'ميكروبيولوجي', 'Microbiology', 2, Y2_TOPICS.MIBM2, ['microbiology', 'ميكروبيولوجي', 'ميكروب', 'ميكرو', 'micro']),
+      S('UEN002', 'ريادة أعمال', 'Entrepreneurship', 1, Y2_TOPICS.UEN002, ['entrepreneurship', 'ريادة']),
+    ],
+    3: [
+      S('OPTD-3', 'تكنولوجيا العلاج التحفظي للأسنان', 'Operative Dentistry Technology', 3, null, ['operative', 'تحفظي', 'اوبرتيف']),
+      S('PRTD-3', 'تكنولوجيا الاستعاضة الصناعية لطب الأسنان', 'Removable Prosthodontics Technology', 3, null, ['removable', 'استعاضة', 'بروسثو', 'prosth']),
+      S('CRTD-3', 'تكنولوجيا الاستعاضات السنية المثبتة', 'Fixed Prosthodontics Technology', 3, null, ['fixed', 'مثبتة', 'تركيبات']),
+      S('GSUM-3', 'الجراحة العامة وأنف وأذن وحنجرة ورمد', 'General Surgery, ENT and Ophthalmology', 3, null, ['surgery', 'جراحة عامة', 'انف', 'رمد']),
+      S('ORAD-3', 'أشعة الفم والوجه والفكين', 'Oral and Maxillofacial Radiology', 2, null, ['radiology', 'اشعة', 'راديولوجي']),
+      S('OMPD-3', 'باثولوجيا الفم والوجه والفكين', 'Oral and Maxillofacial Pathology', 3, null, ['oral pathology', 'باثولوجيا الفم']),
+      S('SDE II-3', 'تنمية مهارات II', 'Skills Development II', 1, null, ['skills', 'مهارات']),
+      S('SDE III-3', 'مكافحة العدوى وسلامة المرضى', 'Infection Control and Patient Safety', 1, null, ['infection', 'عدوي']),
+    ],
+    4: [
+      S('OMED-4', 'طب الفم والتشخيص', 'Oral Medicine and Diagnosis', 2, null, ['oral medicine', 'طب الفم', 'تشخيص']),
+      S('PERD-4', 'أمراض اللثة', 'Periodontology', 2, null, ['periodontology', 'perio', 'لثة', 'بيريو']),
+      S('ORTD-4', 'تقويم الأسنان', 'Orthodontics', 3, null, ['orthodontics', 'تقويم', 'اورثو']),
+      S('OMSD-4', 'جراحة الفم والوجه والفكين', 'Oral and Maxillofacial Surgery', 3, null, ['maxillofacial', 'جراحة الفم', 'جراحة']),
+      S('ORAD-4', 'أشعة الفم والوجه والفكين', 'Oral and Maxillofacial Radiology', 2, null, ['radiology', 'اشعة']),
+      S('OPRD-4', 'العلاج التحفظي للأسنان', 'Operative Dentistry', 3, null, ['operative', 'تحفظي']),
+      S('PROD-4', 'الاستعاضة الصناعية لطب الأسنان', 'Removable Prosthodontics', 3, null, ['removable', 'استعاضة']),
+      S('CRWD-4', 'الاستعاضات السنية المثبتة', 'Fixed Prosthodontics', 3, null, ['fixed', 'مثبتة']),
+      S('ENDD-4', 'علاج الجذور', 'Endodontics', 3, null, ['endodontics', 'جذور', 'عصب', 'اندو']),
+    ],
+    5: [
+      S('OMED-5', 'طب الفم', 'Oral Medicine', 2, null, ['oral medicine', 'طب الفم']),
+      S('PERD-5', 'أمراض اللثة', 'Periodontology', 2, null, ['periodontology', 'لثة']),
+      S('OMSD-5', 'جراحة الفم والوجه والفكين', 'Oral and Maxillofacial Surgery', 3, null, ['maxillofacial', 'جراحة']),
+      S('PEDD-5', 'طب أسنان الأطفال والصحة العامة للفم والأسنان', 'Pediatric Dentistry and Community Oral Health', 2, null, ['pediatric', 'pedodontics', 'اطفال', 'بيدو']),
+      S('OPRD-5', 'العلاج التحفظي للأسنان', 'Operative Dentistry', 3, null, ['operative', 'تحفظي']),
+      S('PROD-5', 'الاستعاضة الصناعية لطب الأسنان', 'Removable Prosthodontics', 3, null, ['removable', 'استعاضة']),
+      S('CRWD-5', 'الاستعاضات السنية المثبتة', 'Fixed Prosthodontics', 3, null, ['fixed', 'مثبتة']),
+      S('ENDD-5', 'علاج الجذور', 'Endodontics', 3, null, ['endodontics', 'جذور', 'اندو']),
+    ],
+  };
+
+  const norm = (s) => String(s || '')
+    .toLowerCase()
+    .replace(/[ً-ْ]/g, '')
+    .replace(/[أإآ]/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/ى/g, 'ي')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const all = () => Object.keys(YEARS).reduce((acc, y) => acc.concat(YEARS[y]), []);
+
+  // Find the curriculum entry matching a subject name (any language, common student aliases) or a code.
+  function find(name, code) {
+    if (code) {
+      const byCode = all().find((c) => c.code === code);
+      if (byCode) return byCode;
+    }
+    const n = norm(name);
+    if (!n) return null;
+    const list = all();
+    // exact match on any known name/alias wins
+    let hit = list.find((c) => [c.ar, c.en].concat(c.aliases || []).map(norm).some((a) => a && a === n));
+    if (hit) return hit;
+    // otherwise containment, preferring the longest (most specific) alias
+    let best = null, bestLen = 0;
+    list.forEach((c) => {
+      [c.ar, c.en].concat(c.aliases || []).map(norm).forEach((a) => {
+        if (!a) return;
+        if ((n.length > 3 && a.includes(n)) || (a.length > 3 && n.includes(a))) {
+          const spec = Math.min(a.length, n.length);
+          if (spec > bestLen) { best = c; bestLen = spec; }
+        }
+      });
+    });
+    return best;
+  }
+
+  function subjectsForYear(y) { return YEARS[y] || []; }
+
+  // Topics for a subject identified by name/code; [] when none are estimated for it.
+  function topicsFor(name, code) {
+    const c = find(name, code);
+    return c && c.topics ? c.topics : [];
+  }
+
+  return { YEARS, find, subjectsForYear, topicsFor, norm };
+});
+
+(function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.Scheduler = factory();
 })(this, function () {
@@ -386,9 +592,9 @@ button.sm { padding: 5px 12px; font-size: 13px; }
     'مقدم', 'تعريف', 'تاريخ', 'مصطلح', 'اساسيات', 'نظره عامه',
   ].map(norm);
 
-  const STUDY_H = [1, 2, 3];       // study hours by difficulty 1..3
-  const SOLVE_H = [0.5, 1, 1.5];   // moderate solving/question time
-  const CLINIC_H = [2, 4, 6];      // clinic/lab work hours
+  const STUDY_H = [1, 2, 3];          // study hours per chapter by difficulty 1..3
+  const SOLVE_H = [10, 20, 30].map((m) => m / 60); // solving/question time: 10-30 minutes
+  const CLINIC_H = [2, 4, 6];         // clinic/lab work hours
 
   function estimateDifficulty(title) {
     const t = norm(title);
@@ -526,11 +732,13 @@ button.sm { padding: 5px 12px; font-size: 13px; }
           review = true; // spare time: general review of the nearest exam
         } else break;
         let lectureId = null, title = '', type = 'review';
+        let hrs = SLOT;
         if (!review) {
           const it = items[pick.id].find((i) => i.rem > 1e-9 && (!i.due || i.due > d));
+          hrs = Math.min(SLOT, it.rem); // a short piece (e.g. 10 min solving) shows its real length
           it.rem -= SLOT; lectureId = it.t.id; title = it.t.title; type = it.type;
         }
-        push(d, pick.id, lectureId, title, type, SLOT);
+        push(d, pick.id, lectureId, title, type, hrs);
         lastPick = pick.id;
         todayH[pick.id] = (todayH[pick.id] || 0) + SLOT;
         slots--;
@@ -542,6 +750,41 @@ button.sm { padding: 5px 12px; font-size: 13px; }
       .map((s) => ({ subjectId: s.id, hours: Math.max(0, +remaining(s).toFixed(2)) }))
       .filter((x) => x.hours > 1e-9);
     return { sessions, deficits };
+  }
+
+  /**
+   * Smart overload warnings: for every subject whose work does not fit before its
+   * deadline, name the exam date and the specific open tasks in priority order
+   * (biggest remaining block first), so the student knows exactly what to start with.
+   * Returns [{subjectId, name, examDate, hoursShort, openCount, tasks:[{id,title,hours,type}]}].
+   */
+  function warnings(state, today) {
+    const r = generate(state, today);
+    if (!r.deficits.length) return [];
+    const byId = {};
+    (state.subjects || []).map(normSubject).forEach((s) => { byId[s.id] = s; });
+    return r.deficits.map((d) => {
+      const s = byId[d.subjectId];
+      if (!s) return null;
+      const open = [];
+      s.tasks.forEach((t) => {
+        if (t.kind === 'clinic') {
+          if (!t.done) open.push({ id: t.id, title: t.title, hours: t.workH || 2, type: 'clinic' });
+          return;
+        }
+        if (!t.done) {
+          if (t.studyH > 0) open.push({ id: t.id, title: t.title, hours: t.studyH, type: 'study' });
+          if (t.solveH > 0) open.push({ id: t.id, title: t.title, hours: t.solveH, type: 'solve' });
+        } else if (t.confidence && t.confidence <= 2) {
+          open.push({ id: t.id, title: t.title, hours: (t.studyH || 1) * 0.5, type: 'revise' });
+        }
+      });
+      open.sort((a, b) => b.hours - a.hours);
+      return {
+        subjectId: s.id, name: s.name, examDate: s.examDate,
+        hoursShort: d.hours, openCount: open.length, tasks: open.slice(0, 5),
+      };
+    }).filter(Boolean);
   }
 
   function progress(state, today) {
@@ -558,8 +801,9 @@ button.sm { padding: 5px 12px; font-size: 13px; }
   }
 
   return {
-    generate, progress, addDays, weekday, diffDays, capacityOn,
+    generate, progress, warnings, addDays, weekday, diffDays, capacityOn,
     estimate, estimateDifficulty, reviewHours, normSubject, SLOT,
+    STUDY_H, SOLVE_H, CLINIC_H,
   };
 });
 
@@ -584,13 +828,21 @@ button.sm { padding: 5px 12px; font-size: 13px; }
       today: 'النهارده',
       tomorrow: 'بكرة',
       fmtH: (h) => (h % 1 ? h.toFixed(1) : h) + ' س',
+      fmtM: (m) => m + ' د',
       genBtn: 'اعمل الجدول',
       madePlan: 'الجدول اتحدث',
-      deficit: (name, hours) => '⚠️ ' + name + ': ناقصك ' + hours + ' قبل الامتحان. زوّد وقتك المتاح أو قلل المهام.',
-      noPlan: 'لسه مفيش مواد. ضيف مادة ومهامها من تاب "المواد"، أو حمّل مثال يناير.',
-      seedBtn: 'حمّل مثال يناير',
-      seedBtnShort: 'مثال يناير',
-      seedConfirm: 'ده هيستبدل المواد الحالية. تكمل؟',
+      warnExam: (name, date, days, hours) => '⚠️ امتحانك في ' + name + ' يوم ' + date + ' (فاضل ' + days + ' يوم) وناقصك حوالي ' + hours + ' مذاكرة قبله. ابدأ بـ:',
+      warnNoDate: (name, hours) => '⚠️ ' + name + ': ناقصك حوالي ' + hours + ' مذاكرة ولسه محددتش امتحان. ابدأ بـ:',
+      warnTask: (i, title, hours) => i + ') ' + title + ' (' + hours + ')',
+      warnMore: (n) => 'و ' + n + ' مهمة تانية وراهم',
+      noPlan: 'لسه مفيش مواد. حمّل مواد فرقتك الرسمية من الزرار تحت، أو ضيف مادة بنفسك من تاب "المواد".',
+      curTitle: 'مواد فرقتك الرسمية',
+      curSub: 'من دليل الكلية الرسمي 2025 · ضيف المادة وبعدين حدد امتحانها ومهامها بنفسك',
+      addCurBtn: 'ضيف',
+      loadCurBtn: 'حمّل مواد فرقتك',
+      curAllAdded: 'كل مواد فرقتك اتضافت ✅',
+      topicsTitle: 'عناوين مقترحة من المنهج المعتاد (تقديري، مش رسمي):',
+      estBadge: 'تقديري',
       noSessDay: 'مفيش مذاكرة في اليوم ده.',
       upcomingExams: 'الامتحانات الجاية',
       tagSolve: 'حل',
@@ -672,16 +924,6 @@ button.sm { padding: 5px 12px; font-size: 13px; }
       pickYear: 'اختار فرقتك',
       startBtn: 'يلا نبدأ',
       needProfile: 'اكتب اسمك واختار فرقتك',
-      seedSubjects: [
-        ['هيستولوجي الفم', '2027-01-09', 'exam', 'theory', 8],
-        ['فارماكولوجي', '2027-01-10', 'exam', 'theory', 12],
-        ['بيوماتيريالز', '2027-01-11', 'quiz', 'practical', 4],
-        ['ميكروبيولوجي', '2027-01-13', 'exam', 'theory', 10],
-        ['ريادة أعمال', '2027-01-17', 'quiz', 'theory', 6],
-        ['باثولوجي', '2027-01-18', 'exam', 'theory', 10],
-        ['ميديسن', '2027-01-20', 'exam', 'theory', 12],
-      ],
-      lecN: (i) => 'محاضرة ' + i,
     },
     en: {
       dir: 'ltr',
@@ -694,13 +936,21 @@ button.sm { padding: 5px 12px; font-size: 13px; }
       today: 'Today',
       tomorrow: 'Tomorrow',
       fmtH: (h) => (h % 1 ? h.toFixed(1) : h) + ' h',
+      fmtM: (m) => m + ' min',
       genBtn: 'Build my schedule',
       madePlan: 'Schedule updated',
-      deficit: (name, hours) => '⚠️ ' + name + ': you are short ' + hours + ' before the exam. Add available time or reduce tasks.',
-      noPlan: 'No subjects yet. Add a subject and its tasks from the Subjects tab, or load the January example.',
-      seedBtn: 'Load January example',
-      seedBtnShort: 'January example',
-      seedConfirm: 'This will replace your current subjects. Continue?',
+      warnExam: (name, date, days, hours) => '⚠️ Your ' + name + ' exam is on ' + date + ' (' + days + ' days left) and you are short about ' + hours + ' of work before it. Start with:',
+      warnNoDate: (name, hours) => '⚠️ ' + name + ': you are short about ' + hours + ' of work and no exam is set yet. Start with:',
+      warnTask: (i, title, hours) => i + ') ' + title + ' (' + hours + ')',
+      warnMore: (n) => 'and ' + n + ' more after these',
+      noPlan: 'No subjects yet. Load your official year subjects with the button below, or add one yourself from the Subjects tab.',
+      curTitle: 'Your official year subjects',
+      curSub: 'From the official 2025 student guide - add a subject, then set its exam and tasks yourself',
+      addCurBtn: 'Add',
+      loadCurBtn: 'Load my year subjects',
+      curAllAdded: 'All your year subjects are added ✅',
+      topicsTitle: 'Suggested topics from the standard syllabus (estimated, not official):',
+      estBadge: 'est.',
       noSessDay: 'No study on this day.',
       upcomingExams: 'Upcoming exams',
       tagSolve: 'Solving',
@@ -782,16 +1032,6 @@ button.sm { padding: 5px 12px; font-size: 13px; }
       pickYear: 'Pick your year',
       startBtn: "Let's start",
       needProfile: 'Enter your name and pick your year',
-      seedSubjects: [
-        ['Oral Histology', '2027-01-09', 'exam', 'theory', 8],
-        ['Pharmacology', '2027-01-10', 'exam', 'theory', 12],
-        ['Biomaterials', '2027-01-11', 'quiz', 'practical', 4],
-        ['Microbiology', '2027-01-13', 'exam', 'theory', 10],
-        ['Entrepreneurship', '2027-01-17', 'quiz', 'theory', 6],
-        ['Pathology', '2027-01-18', 'exam', 'theory', 10],
-        ['Medicine', '2027-01-20', 'exam', 'theory', 12],
-      ],
-      lecN: (i) => 'Lecture ' + i,
     },
   };
 
@@ -929,28 +1169,46 @@ button.sm { padding: 5px 12px; font-size: 13px; }
     session = null; authSkipped = false; setSync(''); render();
   }
 
-  /* ---------------- seeds / shared ---------------- */
-  function mkTask(title, kind, diff) {
+  /* ---------------- tasks / curriculum ---------------- */
+  function mkTask(title, kind, diff, src) {
     const est = Scheduler.estimate(title, kind);
     const d = diff || est.difficulty;
-    const scale = (arr) => arr[d - 1];
     return {
       id: uid(), kind, title, difficulty: d,
-      studyH: kind === 'clinic' ? 0 : scale([1, 2, 3]),
-      solveH: kind === 'clinic' ? 0 : scale([0.5, 1, 1.5]),
-      workH: kind === 'clinic' ? scale([2, 4, 6]) : 0,
-      due: null, done: false, confidence: 0,
+      studyH: kind === 'clinic' ? 0 : Scheduler.STUDY_H[d - 1],
+      solveH: kind === 'clinic' ? 0 : Scheduler.SOLVE_H[d - 1],
+      workH: kind === 'clinic' ? Scheduler.CLINIC_H[d - 1] : 0,
+      due: null, done: false, confidence: 0, src: src || '',
     };
   }
 
-  function seed() {
-    state.subjects = L().seedSubjects.map((s) => ({
-      id: uid(), name: s[0],
-      exam: { kind: s[2], date: s[1], time: '10:00', nature: s[3], covered: s[4] },
-      tasks: Array.from({ length: s[4] }, (_, i) => mkTask(L().lecN(i + 1), 'lecture')),
-    }));
-    state.availability = [2, 2, 4, 5, 2.5, 3.5, 1]; // Sun..Sat
+  // Official curriculum entries for the student's year that are not added yet.
+  const curForYear = () => (yearNum() >= 1 && yearNum() <= 5 ? Curriculum.subjectsForYear(yearNum()) : []);
+  const curMissing = () => curForYear().filter((c) => !state.subjects.some((s) => (s.code && s.code === c.code) || Curriculum.find(s.name, s.code) === c));
+  const curName = (c) => (state.lang === 'en' ? c.en : c.ar);
+
+  function addFromCur(code) {
+    const c = curForYear().find((x) => x.code === code);
+    if (!c || state.subjects.some((s) => s.code === code)) return;
+    state.subjects.push({ id: uid(), name: curName(c), code: c.code, exam: null, tasks: [] });
     save(); render();
+  }
+
+  function loadCur() {
+    curMissing().forEach((c) => {
+      state.subjects.push({ id: uid(), name: curName(c), code: c.code, exam: null, tasks: [] });
+    });
+    save(); render();
+  }
+
+  // Estimated topic suggestions for a subject: topics not already among its tasks.
+  function topicSugg(sj) {
+    const tps = Curriculum.topicsFor(sj.name, sj.code);
+    return tps.map((tp, i) => Object.assign({ _i: i }, tp))
+      .filter((tp) => !sj.tasks.some((t) => {
+        const n = Curriculum.norm(t.title);
+        return n === Curriculum.norm(tp.ar) || n === Curriculum.norm(tp.en);
+      }));
   }
 
   const dayLabel = (d, today) => {
@@ -985,11 +1243,19 @@ button.sm { padding: 5px 12px; font-size: 13px; }
     const today = todayStr();
     $('todayLbl').textContent = today;
     let h = `<div class="row" style="margin-bottom:12px"><button class="btn grow" data-act="gen">🗓️ ${esc(L().genBtn)}</button>` +
-      (state.subjects.length ? '' : ` <button class="btn ghost" data-act="seed">${esc(L().seedBtn)}</button>`) + '</div>';
+      (state.subjects.length || !curForYear().length ? '' : ` <button class="btn ghost" data-act="loadCur">${esc(L().loadCurBtn)}</button>`) + '</div>';
     if (!state.subjects.length) return h + `<div class="card empty"><div class="big">🦷</div><p>${esc(L().noPlan)}</p></div>`;
 
+    Scheduler.warnings(state, today).forEach((w) => {
+      const head = w.examDate && w.examDate >= today
+        ? L().warnExam(w.name, w.examDate, Scheduler.diffDays(today, w.examDate), fmtHTxt(w.hoursShort))
+        : L().warnNoDate(w.name, fmtHTxt(w.hoursShort));
+      h += `<div class="card warn"><div>${esc(head)}</div><ol class="warnlist">` +
+        w.tasks.slice(0, 3).map((t, i) => `<li>${esc(L().warnTask(i + 1, t.title, fmtHTxt(t.hours)))}</li>`).join('') +
+        (w.openCount > 3 ? `<li class="muted">${esc(L().warnMore(w.openCount - 3))}</li>` : '') + '</ol></div>';
+    });
+
     const r = Scheduler.generate(state, today);
-    r.deficits.forEach((d) => { const s = subj(d.subjectId); if (s) h += `<div class="card warn">${esc(L().deficit(s.name, fmtHTxt(d.hours)))}</div>`; });
 
     const byDay = {}; r.sessions.forEach((s) => (byDay[s.date] = byDay[s.date] || []).push(s));
     const examsByDay = {};
@@ -1061,7 +1327,20 @@ button.sm { padding: 5px 12px; font-size: 13px; }
   }
 
   function viewSubjects() {
-    let h = `<div class="card"><b>${esc(L().addSubjectTitle)}</b>
+    let h = '';
+    const missing = curMissing();
+    if (curForYear().length) {
+      h += `<div class="card"><b>${esc(L().curTitle)}</b><div class="muted" style="margin-top:4px">${esc(L().curSub)}</div>`;
+      if (!missing.length) h += `<div class="muted" style="margin-top:8px">${esc(L().curAllAdded)}</div>`;
+      missing.forEach((c) => {
+        h += `<div class="row" style="margin-top:8px"><i class="dot" style="background:${colorOf(c.code)}"></i>
+          <span class="grow"><b>${esc(curName(c))}</b> <span class="muted">${esc(L().diff[c.diff - 1])} · ${esc(L().estBadge)}</span></span>
+          <button class="btn sm" data-act="addCur" data-code="${esc(c.code)}">${esc(L().addCurBtn)}</button></div>`;
+      });
+      if (missing.length > 1) h += `<div style="margin-top:10px"><button class="btn ghost" data-act="loadCur">${esc(L().loadCurBtn)}</button></div>`;
+      h += '</div>';
+    }
+    h += `<div class="card"><b>${esc(L().addSubjectTitle)}</b>
       <div class="row" style="margin-top:8px"><input id="nName" placeholder="${esc(L().subjNamePh)}" class="grow">
       <button class="btn" data-act="addSubject">${esc(L().addBtn)}</button></div>
       <label class="checkline"><input type="checkbox" id="nHasExam"> ${esc(L().hasExamQ)}</label>
@@ -1069,8 +1348,7 @@ button.sm { padding: 5px 12px; font-size: 13px; }
         <select id="nKind"><option value="exam">${esc(L().kindExam)}</option><option value="quiz">${esc(L().kindQuiz)}</option></select>
         <select id="nNature"><option value="theory">${esc(L().natureTheory)}</option><option value="practical">${esc(L().naturePractical)}</option></select>
         <input id="nCov" type="number" min="1" max="60" placeholder="${esc(L().coveredPh)}" style="width:110px"></div>
-        <div class="row" style="margin-top:8px"><input id="nDate" type="date" class="grow"><input id="nTime" type="time"></div></div>
-      <div style="margin-top:8px"><button class="btn ghost" data-act="seed">${esc(L().seedBtnShort)}</button></div></div>`;
+        <div class="row" style="margin-top:8px"><input id="nDate" type="date" class="grow"><input id="nTime" type="time"></div></div></div>`;
 
     state.subjects.forEach((s) => {
       const open = openSubject === s.id, exOpen = openExam === s.id, ex = examOf(s);
@@ -1101,11 +1379,19 @@ button.sm { padding: 5px 12px; font-size: 13px; }
             <select id="td-${s.id}" data-act="tdiff" data-s="${s.id}"><option value="0">${esc(L().estAuto)}</option>
               <option value="1">${esc(L().diff[0])}</option><option value="2">${esc(L().diff[1])}</option><option value="3">${esc(L().diff[2])}</option></select>
             ${k === 'clinic' ? `<input id="tdue-${s.id}" type="date" title="${esc(L().duePh)}">` : ''}
-            <button class="btn" data-act="addTask" data-s="${s.id}">${esc(L().addTaskBtn)}</button></div></div>`;
+            <button class="btn" data-act="addTask" data-s="${s.id}">${esc(L().addTaskBtn)}</button></div>`;
+        const sugg = k === 'lecture' ? topicSugg(s).slice(0, 8) : [];
+        if (sugg.length) {
+          h += `<div class="muted" style="margin-top:8px">${esc(L().topicsTitle)}</div><div class="chips">` +
+            sugg.map((tp) => `<button class="chip" data-act="addTopic" data-s="${s.id}" data-i="${tp._i}">${esc(state.lang === 'en' ? tp.en : tp.ar)} <span class="chipd">${esc(L().diff[tp.d - 1])}</span></button>`).join('') +
+            '</div>';
+        }
+        h += '</div>';
         s.tasks.forEach((t) => {
-          const estTxt = t.kind === 'clinic'
+          const estTxt = (t.kind === 'clinic'
             ? L().estClinic(L().diff[t.difficulty - 1] || '', fmtHTxt(t.workH))
-            : L().estLec(L().diff[t.difficulty - 1] || '', fmtHTxt(t.studyH), fmtHTxt(t.solveH));
+            : L().estLec(L().diff[t.difficulty - 1] || '', fmtHTxt(t.studyH), L().fmtM(Math.round(t.solveH * 60)))) +
+            (t.src === 'est' ? ' · ' + L().estBadge : '');
           h += `<div class="lec ${t.done ? 'done' : ''}"><input type="checkbox" data-act="check" data-s="${s.id}" data-l="${t.id}" ${t.done ? 'checked' : ''}>
             <span class="t grow">${t.kind === 'clinic' ? '🦷 ' : '📖 '}${esc(t.title)}<br><span class="muted">${esc(estTxt)}</span></span>
             ${t.done && t.kind === 'lecture' ? `<select data-act="conf" data-s="${s.id}" data-l="${t.id}"><option value="0">${esc(L().confPh)}</option>${[1, 2, 3, 4, 5].map((n) => `<option value="${n}" ${t.confidence === n ? 'selected' : ''}>${n}/5</option>`).join('')}</select>` : ''}
@@ -1208,8 +1494,8 @@ button.sm { padding: 5px 12px; font-size: 13px; }
     if (!title.trim()) return '';
     const sel = $('td-' + sid);
     const d = sel && +sel.value ? +sel.value : Scheduler.estimateDifficulty(title);
-    if (k === 'clinic') return L().estClinic(L().diff[d - 1], fmtHTxt([2, 4, 6][d - 1]));
-    return L().estLec(L().diff[d - 1], fmtHTxt([1, 2, 3][d - 1]), fmtHTxt([0.5, 1, 1.5][d - 1]));
+    if (k === 'clinic') return L().estClinic(L().diff[d - 1], fmtHTxt(Scheduler.CLINIC_H[d - 1]));
+    return L().estLec(L().diff[d - 1], fmtHTxt(Scheduler.STUDY_H[d - 1]), L().fmtM(Math.round(Scheduler.SOLVE_H[d - 1] * 60)));
   }
 
   /* ---------------- events ---------------- */
@@ -1243,7 +1529,17 @@ button.sm { padding: 5px 12px; font-size: 13px; }
     if (a === 'calNext') { shiftCal(1); return render(); }
     if (a === 'calToday') { calCursor = todayStr().slice(0, 7); selDay = todayStr(); return render(); }
     if (a === 'calDay') { selDay = t.dataset.d; return render(); }
-    if (a === 'seed') { if (!state.subjects.length || confirm(L().seedConfirm)) seed(); return; }
+    if (a === 'addCur') { addFromCur(t.dataset.code); return; }
+    if (a === 'loadCur') { loadCur(); return; }
+    if (a === 'addTopic') {
+      const sj = subj(s);
+      if (!sj) return;
+      const tp = Curriculum.topicsFor(sj.name, sj.code)[+t.dataset.i];
+      if (!tp) return;
+      const task = mkTask(state.lang === 'en' ? tp.en : tp.ar, 'lecture', tp.d, 'est');
+      sj.tasks.push(task);
+      save(); return render();
+    }
     if (a === 'pickYear') {
       const nEl = $('oName') || $('pName');
       if (nEl) state.profile.name = nEl.value.trim(); // re-render wipes the input
@@ -1311,7 +1607,7 @@ button.sm { padding: 5px 12px; font-size: 13px; }
     if (!document.hidden && session && Date.now() - lastPull > 30000) loadCloud().then(render);
   });
 
-  window.__planner = { get state() { return state; }, seed, render, get session() { return session; } };
+  window.__planner = { get state() { return state; }, loadCur, render, get session() { return session; } };
   render();
   initCloud();
 })();
