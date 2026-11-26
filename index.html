@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Dental Exam Planner</title>
+<title>Dental Planner</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -231,12 +231,109 @@ button.danger:hover { background: #fbdcdc; filter: none; }
   nav button { flex: 0 1 150px; }
   h1 { font-size: 21px; }
 }
+
+/* ---- v3 additions ---- */
+.sync { font-size: 12px; font-weight: 700; color: #d7f3ee; min-width: 0; }
+.sync.synced { color: #bbf7d0; }
+.sync.error { color: #fecaca; }
+.hidden { display: none; }
+.checkline { display: flex; gap: 8px; align-items: center; margin-top: 10px; font-weight: 600; font-size: 14px; }
+.checkline input { width: 18px; height: 18px; }
+
+.tag.solve { background: #e0f2fe; color: #075985; }
+.tag.clinic { background: #fdf0d5; color: #92600a; }
+
+.examform { background: #f6faf9; border: 1px dashed var(--line); border-radius: 12px; padding: 10px; margin-top: 8px; }
+.addtask { background: #f6faf9; border: 1px dashed var(--line); border-radius: 12px; padding: 10px; margin: 10px 0; }
+.addtask input { width: 100%; }
+.pick { display: flex; gap: 8px; }
+.pick button {
+  flex: 1; padding: 9px 6px; border-radius: 12px; border: 1.5px solid var(--line);
+  background: #fff; font: inherit; font-size: 13px; font-weight: 700; color: var(--muted); cursor: pointer;
+  transition: all 0.15s;
+}
+.pick button.on {
+  background: linear-gradient(120deg, var(--primary), var(--primary-2));
+  color: #fff; border-color: transparent;
+  box-shadow: 0 4px 12px -4px rgba(13, 148, 136, 0.55);
+}
+.pick button:disabled { opacity: 0.55; cursor: not-allowed; }
+.estchip {
+  font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px;
+  background: var(--teal-bg); color: var(--teal-ink); min-height: 14px;
+}
+.estchip:empty { display: none; }
+
+.cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 10px; }
+.cal-head { display: flex; align-items: center; gap: 6px; }
+.cal-wd { text-align: center; font-size: 11px; font-weight: 800; color: var(--muted); padding: 4px 0; }
+.cell {
+  min-height: 52px; border-radius: 10px; border: 1.5px solid var(--line);
+  background: #fbfdfd; padding: 4px 5px; cursor: pointer; position: relative;
+  display: flex; flex-direction: column; gap: 2px; transition: border-color 0.12s, background 0.12s;
+}
+.cell:hover { border-color: var(--primary); }
+.cell.out { background: transparent; border: 0; cursor: default; }
+.cell.past { opacity: 0.45; }
+.cell.sel { border-color: var(--primary); background: var(--teal-bg); box-shadow: 0 0 0 2px rgba(13,148,136,0.25); }
+.cell.now .dnum {
+  background: linear-gradient(120deg, var(--primary), var(--primary-2)); color: #fff;
+  border-radius: 50%; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;
+}
+.cell.examday { border-color: #f0b429; background: #fffaf0; }
+.cell .dnum { font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.cell .exdot { font-size: 10px; line-height: 1; }
+.cell .dots { display: flex; gap: 2px; flex-wrap: wrap; }
+.cell .dots i { width: 7px; height: 7px; border-radius: 50%; display: block; }
+.cell .chrs { font-size: 10px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+button.sm { padding: 5px 12px; font-size: 13px; }
+.examrow { background: #fffaf0; border-radius: 10px; padding: 9px 10px !important; border: 1px solid #f5e3b3 !important; }
+
+.overlay {
+  position: fixed; inset: 0; background: rgba(10, 30, 32, 0.55);
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px;
+}
+.sheet {
+  background: #fff; border-radius: 20px; padding: 22px 18px; width: 100%; max-width: 400px;
+  box-shadow: 0 24px 60px -18px rgba(13, 60, 56, 0.45); animation: fadeUp 0.25s ease both;
+}
+.sheet input { width: 100%; margin-top: 8px; }
+.linklike { background: none; border: 0; color: var(--primary-d); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: underline; }
+
+.yeargrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.ypick {
+  padding: 10px 4px; border-radius: 12px; border: 1.5px solid var(--line); background: #fff;
+  font: inherit; font-weight: 700; font-size: 14px; color: var(--muted); cursor: pointer; transition: all 0.15s;
+}
+.ypick.on {
+  background: linear-gradient(120deg, var(--primary), var(--primary-2)); color: #fff; border-color: transparent;
+  box-shadow: 0 4px 12px -4px rgba(13, 148, 136, 0.55);
+}
+
+#toast {
+  position: fixed; bottom: 18px; inset-inline: 0; margin: 0 auto; width: fit-content; max-width: 90%;
+  background: var(--ink); color: #fff; padding: 10px 18px; border-radius: 999px;
+  font-size: 14px; font-weight: 700; opacity: 0; pointer-events: none; transition: opacity 0.25s, transform 0.25s;
+  transform: translateY(8px); z-index: 60;
+}
+#toast.show { opacity: 1; transform: none; }
+
+/* subject card header: keep the name on its own line at narrow widths */
+.subj-head b { flex: 1 1 100%; margin-bottom: 4px; }
+.subj-head .btn { padding: 7px 13px; font-size: 12.5px; }
+@media (min-width: 640px) { .subj-head b { flex: 1 1 auto; margin-bottom: 0; } }
 </style>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 </head>
 <body>
 <header>
-  <h1 id="appTitle">🦷 Dental Exam Planner</h1>
+  <h1 id="appTitle">🦷 Dental Planner</h1>
   <div class="hrow">
+    <span id="syncLbl" class="sync"></span>
     <div id="todayLbl"></div>
     <button id="langBtn" type="button" data-act="lang">English</button>
   </div>
@@ -244,10 +341,13 @@ button.danger:hover { background: #fbdcdc; filter: none; }
 <nav id="tabs">
   <button data-tab="schedule" class="on">الجدول</button>
   <button data-tab="subjects">المواد</button>
-  <button data-tab="time">الوقت المتاح</button>
+  <button data-tab="time">وقتي</button>
   <button data-tab="progress">التقدم</button>
+  <button data-tab="profile">حسابي</button>
 </nav>
 <main id="view"></main>
+<div id="overlays"></div>
+<div id="toast"></div>
 <script>(function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.Scheduler = factory();
@@ -261,12 +361,75 @@ button.danger:hover { background: #fbdcdc; filter: none; }
   const weekday = (d) => new Date(parse(d)).getUTCDay(); // 0 = Sunday
   const diffDays = (a, b) => Math.round((parse(b) - parse(a)) / 864e5);
 
-  // Remaining work (hours) for one lecture. Done lectures with low confidence need a half-length revision.
-  function lectureWork(l) {
-    const h = Number(l.hours) || 1;
-    if (!l.done) return { hours: h, type: 'study' };
-    if (l.confidence && l.confidence <= 2) return { hours: h * 0.5, type: 'revise' };
-    return { hours: 0, type: 'none' };
+  /* ---------------- rule-based difficulty / time estimation ---------------- */
+
+  // Normalize Arabic + Latin text so keyword matching is stable.
+  const norm = (s) => String(s || '')
+    .toLowerCase()
+    .replace(/[ً-ْ]/g, '') // Arabic diacritics
+    .replace(/[أإآ]/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/ى/g, 'ي');
+
+  const HARD_KW = [
+    'anatom', 'nerve', 'nervous', 'plexus', 'surg', 'pharmac', 'pathol', 'biochem',
+    'physiol', 'microbi', 'implant', 'endodont', 'orthodont', 'occlus', 'prosthod',
+    'periodont', 'maxillofac', 'tumor', 'tumour', 'syndrome', 'trauma', 'radiol',
+    'anesthe', 'salivary', 'tmj',
+    'تشريح', 'عصب', 'ضفيره', 'جراح', 'ادويه', 'فارماك', 'باثول', 'امراض', 'فسيول',
+    'كيمياء حيويه', 'ميكروب', 'زراعه', 'حشو عصب', 'تقويم', 'تركيبات', 'ورم', 'سرطان',
+    'متلازم', 'اشعه', 'تخدير', 'لعاب',
+  ].map(norm);
+
+  const EASY_KW = [
+    'intro', 'overview', 'definit', 'terminolog', 'histor', 'orientation', 'basic',
+    'مقدم', 'تعريف', 'تاريخ', 'مصطلح', 'اساسيات', 'نظره عامه',
+  ].map(norm);
+
+  const STUDY_H = [1, 2, 3];       // study hours by difficulty 1..3
+  const SOLVE_H = [0.5, 1, 1.5];   // moderate solving/question time
+  const CLINIC_H = [2, 4, 6];      // clinic/lab work hours
+
+  function estimateDifficulty(title) {
+    const t = norm(title);
+    if (EASY_KW.some((k) => t.includes(k))) return 1;
+    if (HARD_KW.some((k) => t.includes(k))) return 3;
+    return 2;
+  }
+
+  // kind: 'lecture' (study + solving) or 'clinic' (work only)
+  function estimate(title, kind) {
+    const d = estimateDifficulty(title);
+    if (kind === 'clinic') return { difficulty: d, studyH: 0, solveH: 0, workH: CLINIC_H[d - 1] };
+    return { difficulty: d, studyH: STUDY_H[d - 1], solveH: SOLVE_H[d - 1], workH: 0 };
+  }
+
+  // Review block before an exam/quiz: scales with covered lectures, capped at 4h.
+  function reviewHours(covered) {
+    let n = Number(covered) || 0;
+    if (n <= 0) n = 1;
+    return Math.min(4, Math.max(1.5, Math.round(n * 0.5 / SLOT) * SLOT));
+  }
+
+  /* ---------------- shape normalization (v1/v2 -> v3) ---------------- */
+
+  function normSubject(s) {
+    const examDate = s.examDate || (s.exam && s.exam.date) || null;
+    let covered = s.exam && s.exam.covered ? Number(s.exam.covered) : 0;
+    const tasks = s.tasks
+      ? s.tasks.map((t) => ({
+          id: t.id, title: t.title, kind: t.kind === 'clinic' ? 'clinic' : 'lecture',
+          studyH: t.studyH != null ? Number(t.studyH) : (Number(t.hours) || 1),
+          solveH: t.kind === 'clinic' ? 0 : (t.solveH != null ? Number(t.solveH) : 0),
+          workH: t.kind === 'clinic' ? (t.workH != null ? Number(t.workH) : 2) : 0,
+          due: t.due || null, done: !!t.done, confidence: t.confidence || 0,
+        }))
+      : (s.lectures || []).map((l) => ({
+          id: l.id, title: l.title, kind: 'lecture', studyH: Number(l.hours) || 1,
+          solveH: 0, workH: 0, due: null, done: !!l.done, confidence: l.confidence || 0,
+        }));
+    if (!covered) covered = tasks.filter((t) => t.kind === 'lecture').length;
+    return { id: s.id, name: s.name, weight: Number(s.weight) || 2, examDate, covered, tasks };
   }
 
   function capacityOn(state, d) {
@@ -276,186 +439,359 @@ button.danger:hover { background: #fbdcdc; filter: none; }
   }
 
   /**
-   * state: { subjects:[{id,name,examDate,weight,lectures:[{id,title,hours,done,confidence}]}],
+   * state: { subjects:[{id,name, examDate|exam:{date,covered}, weight, lectures|tasks}],
    *          availability:[7 numbers Sun..Sat], overrides:{date:hours}, blocked:[dates] }
-   * returns { sessions:[{date,subjectId,lectureId,title,type,hours}], deficits:[{subjectId,hours}] }
+   * Sessions: {date,subjectId,lectureId,title,type,hours}
+   *   type: study | solve | clinic | revise | examreview | review
    */
   function generate(state, today) {
-    const subjects = (state.subjects || []).filter((s) => s.examDate && s.examDate >= today);
-    if (!subjects.length) return { sessions: [], deficits: [] };
-    const last = subjects.reduce((m, s) => (s.examDate > m ? s.examDate : m), today);
+    const subs = (state.subjects || []).map(normSubject);
+    const active = subs.filter((s) => (s.examDate ? s.examDate >= today : s.tasks.some((t) => !t.done)));
+    if (!active.length) return { sessions: [], deficits: [] };
+
+    let last = today;
+    active.forEach((s) => { if (s.examDate && s.examDate >= today && s.examDate > last) last = s.examDate; });
+    active.forEach((s) => s.tasks.forEach((t) => { if (t.due && t.due >= today && t.due > last) last = t.due; }));
+    if (last === today) last = addDays(today, 15); // no deadlines: plan two weeks ahead
     const days = [];
     for (let d = today; d < last; d = addDays(d, 1)) days.push(d);
     const cap = days.map((d) => capacityOn(state, d));
-
-    const items = {}; // subjectId -> work items
-    subjects.forEach((s) => {
-      items[s.id] = [];
-      const lecs = s.lectures || [];
-      lecs.forEach((l) => { const w = lectureWork(l); if (w.type === 'study') items[s.id].push({ l, rem: w.hours, type: 'study' }); });
-      lecs.forEach((l) => { const w = lectureWork(l); if (w.type === 'revise') items[s.id].push({ l, rem: w.hours, type: 'revise' }); });
-    });
-    const remaining = (s) => items[s.id].reduce((a, i) => a + i.rem, 0);
-    const examIdx = (s) => days.indexOf(s.examDate) >= 0 ? days.indexOf(s.examDate) : days.length;
+    const idx = {}; days.forEach((d, i) => (idx[d] = i));
 
     const sessions = [];
+    const push = (date, subjectId, lectureId, title, type, hours) => {
+      const prev = sessions.find((x) => x.date === date && x.subjectId === subjectId && x.lectureId === lectureId && x.type === type);
+      if (prev) prev.hours += hours;
+      else sessions.push({ date, subjectId, lectureId, title, type, hours });
+    };
+
+    // 1) reserve one review block on the last open day before each exam/quiz
+    active.filter((s) => s.examDate && s.examDate > today)
+      .sort((a, b) => a.examDate.localeCompare(b.examDate))
+      .forEach((s) => {
+        const want = reviewHours(s.covered);
+        for (let d = addDays(s.examDate, -1); d >= today; d = addDays(d, -1)) {
+          const i = idx[d];
+          if (i == null || cap[i] < SLOT) continue;
+          const take = Math.min(want, Math.floor(cap[i] / SLOT) * SLOT);
+          if (take < SLOT) continue;
+          push(d, s.id, null, '', 'examreview', take);
+          cap[i] -= take;
+          break;
+        }
+      });
+
+    // 2) work items: lecture -> study then solving; clinic -> work; low confidence -> revision
+    const items = {};
+    active.forEach((s) => {
+      const list = [];
+      s.tasks.forEach((t) => {
+        if (t.kind === 'clinic') {
+          if (!t.done) list.push({ t, rem: t.workH || 2, type: 'clinic', due: t.due || s.examDate || null });
+          return;
+        }
+        if (!t.done) {
+          if (t.studyH > 0) list.push({ t, rem: t.studyH, type: 'study', due: s.examDate });
+          if (t.solveH > 0) list.push({ t, rem: t.solveH, type: 'solve', due: s.examDate });
+        } else if (t.confidence && t.confidence <= 2) {
+          list.push({ t, rem: (t.studyH || 1) * 0.5, type: 'revise', due: s.examDate });
+        }
+      });
+      items[s.id] = list;
+    });
+    const remaining = (s) => items[s.id].reduce((a, i) => a + i.rem, 0);
+    const deadlineOf = (s) => (s.examDate && s.examDate >= today ? s.examDate : last);
+    const capBefore = (deadline, fromI) => {
+      let c = 0;
+      for (let i = fromI; i < days.length && days[i] < deadline; i++) c += cap[i];
+      return c;
+    };
+
     days.forEach((d, di) => {
       let slots = Math.round(cap[di] / SLOT);
-      const today_h = {}; let lastPick = null;
+      const todayH = {}; let lastPick = null;
       while (slots > 0) {
-        const open = subjects.filter((s) => s.examDate > d);
-        const needy = open.filter((s) => remaining(s) > 1e-9);
+        const open = active.filter((s) => deadlineOf(s) > d);
+        const needy = open.filter((s) => items[s.id].some((i) => i.rem > 1e-9 && (!i.due || i.due > d)));
         let pick = null, review = false;
         if (needy.length) {
-          const score = (s) => {
-            let c = slots * SLOT; // capacity left today
-            for (let i = di + 1; i < Math.min(examIdx(s), days.length); i++) c += cap[i];
-            return (Number(s.weight) || 2) * remaining(s) / Math.max(c, SLOT);
-          };
-          let pool = needy.filter((s) => (today_h[s.id] || 0) < MAX_PER_SUBJECT);
+          const score = (s) => s.weight * remaining(s) / Math.max(capBefore(deadlineOf(s), di), SLOT);
+          let pool = needy.filter((s) => (todayH[s.id] || 0) < MAX_PER_SUBJECT);
           if (!pool.length) pool = needy;
-          const sticky = (s) => score(s) * (s.id === lastPick ? 1.25 : 1); // keep working on the same subject to avoid hopping
-          pool.sort((a, b) => sticky(b) - sticky(a) || a.examDate.localeCompare(b.examDate));
+          const sticky = (s) => score(s) * (s.id === lastPick ? 1.25 : 1);
+          pool.sort((a, b) => sticky(b) - sticky(a) || deadlineOf(a).localeCompare(deadlineOf(b)));
           pick = pool[0];
-        } else if (open.length) {
-          open.sort((a, b) => a.examDate.localeCompare(b.examDate));
-          pick = open[0]; review = true; // all work done: spend spare time on general review of the nearest exam
+        } else if (open.some((s) => s.examDate && s.examDate > d)) {
+          pick = open.filter((s) => s.examDate && s.examDate > d).sort((a, b) => a.examDate.localeCompare(b.examDate))[0];
+          review = true; // spare time: general review of the nearest exam
         } else break;
-        let lectureId = null, title = 'مراجعة عامة', type = 'review';
+        let lectureId = null, title = '', type = 'review';
         if (!review) {
-          const it = items[pick.id].find((i) => i.rem > 1e-9);
-          it.rem -= SLOT; lectureId = it.l.id; title = it.l.title; type = it.type;
+          const it = items[pick.id].find((i) => i.rem > 1e-9 && (!i.due || i.due > d));
+          it.rem -= SLOT; lectureId = it.t.id; title = it.t.title; type = it.type;
         }
-        const prev = sessions.find((x) => x.date === d && x.subjectId === pick.id && x.lectureId === lectureId && x.type === type);
-        if (prev) prev.hours += SLOT;
-        else sessions.push({ date: d, subjectId: pick.id, lectureId, title, type, hours: SLOT });
+        push(d, pick.id, lectureId, title, type, SLOT);
         lastPick = pick.id;
-        today_h[pick.id] = (today_h[pick.id] || 0) + SLOT;
+        todayH[pick.id] = (todayH[pick.id] || 0) + SLOT;
         slots--;
       }
     });
-    const deficits = subjects.map((s) => ({ subjectId: s.id, hours: Math.max(0, +remaining(s).toFixed(2)) })).filter((x) => x.hours > 1e-9);
+
+    sessions.sort((a, b) => a.date.localeCompare(b.date));
+    const deficits = active
+      .map((s) => ({ subjectId: s.id, hours: Math.max(0, +remaining(s).toFixed(2)) }))
+      .filter((x) => x.hours > 1e-9);
     return { sessions, deficits };
   }
 
   function progress(state, today) {
-    return (state.subjects || []).map((s) => {
-      const lecs = s.lectures || [];
-      const done = lecs.filter((l) => l.done).length;
-      return { subjectId: s.id, name: s.name, total: lecs.length, done,
-        pct: lecs.length ? Math.round((done / lecs.length) * 100) : 0,
-        daysLeft: s.examDate ? diffDays(today, s.examDate) : null };
+    return (state.subjects || []).map((raw) => {
+      const s = normSubject(raw);
+      const total = s.tasks.length;
+      const done = s.tasks.filter((t) => t.done).length;
+      return {
+        subjectId: s.id, name: s.name, total, done,
+        pct: total ? Math.round((done / total) * 100) : 0,
+        daysLeft: s.examDate ? diffDays(today, s.examDate) : null,
+      };
     });
   }
 
-  return { generate, progress, addDays, weekday, diffDays, capacityOn, SLOT };
+  return {
+    generate, progress, addDays, weekday, diffDays, capacityOn,
+    estimate, estimateDifficulty, reviewHours, normSubject, SLOT,
+  };
 });
 
 (function () {
-  const KEY = 'dental-exam-planner.v1';
+  const KEY = 'dental-exam-planner.v3';
+  const OLD_KEYS = ['dental-exam-planner.v2', 'dental-exam-planner.v1'];
+
+  /* ---- Backend config (public web client values, safe to ship in the page) ---- */
+  const FIREBASE_CONFIG = { apiKey: 'AIzaSyCoAn_ZO-wNV0qWzkQDHJ2ZmxXzkD0tSss', authDomain: 'dental-student-planner.firebaseapp.com', projectId: 'dental-student-planner', appId: '1:152191158765:web:9fb371c66fb6d403a23fe4' };
+
+  const UNI = { ar: 'طب أسنان القصر العيني - جامعة القاهرة', en: 'Qasr Al-Ainy Dentistry, Cairo University' };
 
   const I18N = {
     ar: {
       dir: 'rtl',
       days: ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'],
-      appTitle: '🦷 مخطط امتحانات الأسنان',
+      daysShort: ['أحد', 'اتنين', 'تلات', 'اربع', 'خميس', 'جمعة', 'سبت'],
+      months: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'],
+      appTitle: '🦷 مخطط الأسنان',
       langBtn: 'English',
-      tabs: { schedule: 'الجدول', subjects: 'المواد', time: 'الوقت المتاح', progress: 'التقدم' },
+      tabs: { schedule: 'الجدول', subjects: 'المواد', time: 'وقتي', progress: 'التقدم', profile: 'حسابي' },
       today: 'النهارده',
       tomorrow: 'بكرة',
       fmtH: (h) => (h % 1 ? h.toFixed(1) : h) + ' س',
-      noSubjects: 'لسه مفيش مواد. روح تاب "المواد" وضيف مادة، أو حمّل مثال امتحانات يناير.',
+      genBtn: 'اعمل الجدول',
+      madePlan: 'الجدول اتحدث',
+      deficit: (name, hours) => '⚠️ ' + name + ': ناقصك ' + hours + ' قبل الامتحان. زوّد وقتك المتاح أو قلل المهام.',
+      noPlan: 'لسه مفيش مواد. ضيف مادة ومهامها من تاب "المواد"، أو حمّل مثال يناير.',
       seedBtn: 'حمّل مثال يناير',
-      deficit: (name, hours) => '⚠️ ' + name + ': ناقصك ' + hours + ' قبل الامتحان. زوّد الوقت المتاح أو شيل محاضرات.',
-      noSessions: 'مفيش جلسات مذاكرة. اتأكد من الوقت المتاح ومن إن تواريخ الامتحانات لسه جاية.',
-      first14: 'بيظهر أول 14 يوم بس. الباقي بيتحدث مع تقدمك.',
-      doneBtn: 'خلصت',
+      seedBtnShort: 'مثال يناير',
+      seedConfirm: 'ده هيستبدل المواد الحالية. تكمل؟',
+      noSessDay: 'مفيش مذاكرة في اليوم ده.',
+      upcomingExams: 'الامتحانات الجاية',
+      tagSolve: 'حل',
       tagRevise: 'مراجعة تانية',
       tagReview: 'مراجعة',
+      tagExamReview: 'مراجعة قبل الامتحان',
+      tagClinic: 'شغل عيادة',
       generalReview: 'مراجعة عامة',
+      examReviewTitle: 'مراجعة قبل الامتحان',
+      doneBtn: 'خلصت',
+      examWord: { exam: 'امتحان', quiz: 'كويز' },
+      natureWord: { theory: 'نظري', practical: 'عملي' },
+      examLine: (k, d, t, n) => I18N.ar.examWord[k] + ' ' + n + ' يوم ' + d + (t ? ' الساعة ' + t : ''),
+      daysLeft: (n) => 'فاضل ' + n + ' يوم',
+      examPassed: 'الامتحان عدّى',
       addSubjectTitle: 'إضافة مادة',
       subjNamePh: 'اسم المادة',
-      diff: ['سهلة', 'عادية', 'صعبة'],
-      lecsPh: 'المحاضرات، واحدة في كل سطر (اختياري). ممكن تكتب الساعات بعد علامة | مثل: محاضرة 1 | 2',
+      hasExamQ: 'عليه امتحان أو كويز؟',
+      kindExam: 'امتحان',
+      kindQuiz: 'كويز',
+      natureTheory: 'نظري',
+      naturePractical: 'عملي',
+      coveredPh: 'كام محاضرة داخلة؟',
+      coveredShort: (n) => n + ' محاضرة داخلة',
       addBtn: 'إضافة',
-      seedBtnShort: 'مثال يناير',
-      lecturesBtn: (n) => 'المحاضرات (' + n + ')',
+      needName: 'اكتب اسم المادة الأول',
+      needExam: 'حدد نوع الامتحان وتاريخه',
+      tasksBtn: (n) => 'المهام (' + n + ')',
       closeBtn: 'اقفل',
       delBtn: 'حذف',
-      confidencePh: 'ثقتي؟',
-      newLecPh: 'محاضرة جديدة',
+      delConfirm: 'تحذف المادة بكل مهامها؟',
+      editExam: 'تعديل الامتحان',
+      clearExam: 'شيل الامتحان',
+      noExamYet: 'مفيش امتحان مسجل',
+      addTaskTitle: 'إضافة مهمة',
+      kindLecture: 'مذاكرة محاضرة',
+      kindClinic: 'تسليم شغل عيادة',
+      clinicLocked: 'شغل العيادة بيبدأ من سنة رابعة',
+      taskTitlePh: 'اسم المحاضرة أو الشغل',
+      estAuto: 'تلقائي',
+      diff: ['سهلة', 'عادية', 'صعبة'],
+      estLec: (d, st, so) => d + ' · مذاكرة ' + st + ' + حل ' + so,
+      estClinic: (d, w) => d + ' · شغل ' + w,
+      duePh: 'ميعاد التسليم (اختياري)',
+      addTaskBtn: 'ضيف',
+      needTask: 'اكتب اسم المهمة الأول',
+      confPh: 'ثقتي؟',
       availTitle: 'ساعات المذاكرة المتاحة في كل يوم',
       overrideTitle: 'يوم مختلف أو مقفول',
       hoursPh: 'ساعات (0 = مقفول)',
       saveBtn: 'حفظ',
       addFirst: 'ضيف مواد الأول.',
-      examPassed: 'الامتحان عدّى',
-      daysLeft: (n) => 'فاضل ' + n + ' يوم',
-      lecCount: (done, total, pct) => done + '/' + total + ' محاضرة (' + pct + '%)',
-      seedConfirm: 'ده هيستبدل المواد الحالية. تكمل؟',
-      needNameDate: 'اكتب اسم المادة وتاريخ الامتحان',
-      delConfirm: 'تحذف المادة؟',
-      lecN: (i) => 'محاضرة ' + i,
+      taskCount: (done, total, pct) => done + '/' + total + ' مهمة (' + pct + '%)',
+      noExamProgress: 'مفيش امتحان محدد',
+      profileTitle: 'بياناتي',
+      nameLbl: 'الاسم',
+      yearLbl: 'الفرقة الدراسية',
+      years: ['أولى', 'تانية', 'تالتة', 'رابعة', 'خامسة', 'امتياز'],
+      uniLbl: 'الجامعة',
+      savedOk: 'اتحفظ',
+      accountSec: 'الحساب والمزامنة',
+      localMode: 'الحسابات لسه مش متفعلة، فبياناتك بتتحفظ على الجهاز ده بس.',
+      logoutBtn: 'تسجيل خروج',
+      syncing: 'بيترفع...',
+      synced: 'متزامن',
+      syncErr: 'في مشكلة في المزامنة',
+      authTitle: 'تسجيل الدخول',
+      authSub: 'سجّل عشان تقدمك يتحفظ وتفتحه من أي جهاز',
+      emailPh: 'الإيميل',
+      passPh: 'الباسورد',
+      loginBtn: 'دخول',
+      signupBtn: 'حساب جديد',
+      skipBtn: 'كمل من غير حساب',
+      fillBoth: 'اكتب الإيميل والباسورد',
+      authWait: 'ثانية...',
+      welcomeTitle: 'أهلًا بيك في مخطط الأسنان',
+      welcomeSub: 'قولنا عنك شوية عشان نظبطلك الجدول',
+      yourNamePh: 'اسمك',
+      pickYear: 'اختار فرقتك',
+      startBtn: 'يلا نبدأ',
+      needProfile: 'اكتب اسمك واختار فرقتك',
       seedSubjects: [
-        ['هيستولوجي الفم', '2027-01-09', 2, 8],
-        ['فارماكولوجي', '2027-01-10', 3, 12],
-        ['بيوماتيريالز', '2027-01-11', 2, 8],
-        ['ميكروبيولوجي', '2027-01-13', 2, 10],
-        ['ريادة أعمال', '2027-01-17', 1, 6],
-        ['باثولوجي', '2027-01-18', 2, 10],
-        ['ميديسن', '2027-01-20', 3, 12],
+        ['هيستولوجي الفم', '2027-01-09', 'exam', 'theory', 8],
+        ['فارماكولوجي', '2027-01-10', 'exam', 'theory', 12],
+        ['بيوماتيريالز', '2027-01-11', 'quiz', 'practical', 4],
+        ['ميكروبيولوجي', '2027-01-13', 'exam', 'theory', 10],
+        ['ريادة أعمال', '2027-01-17', 'quiz', 'theory', 6],
+        ['باثولوجي', '2027-01-18', 'exam', 'theory', 10],
+        ['ميديسن', '2027-01-20', 'exam', 'theory', 12],
       ],
+      lecN: (i) => 'محاضرة ' + i,
     },
     en: {
       dir: 'ltr',
       days: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-      appTitle: '🦷 Dental Exam Planner',
+      daysShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+      months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+      appTitle: '🦷 Dental Planner',
       langBtn: 'عربي',
-      tabs: { schedule: 'Schedule', subjects: 'Subjects', time: 'Available time', progress: 'Progress' },
+      tabs: { schedule: 'Schedule', subjects: 'Subjects', time: 'My time', progress: 'Progress', profile: 'Profile' },
       today: 'Today',
       tomorrow: 'Tomorrow',
       fmtH: (h) => (h % 1 ? h.toFixed(1) : h) + ' h',
-      noSubjects: 'No subjects yet. Go to the Subjects tab and add one, or load the January exams example.',
+      genBtn: 'Build my schedule',
+      madePlan: 'Schedule updated',
+      deficit: (name, hours) => '⚠️ ' + name + ': you are short ' + hours + ' before the exam. Add available time or reduce tasks.',
+      noPlan: 'No subjects yet. Add a subject and its tasks from the Subjects tab, or load the January example.',
       seedBtn: 'Load January example',
-      deficit: (name, hours) => '⚠️ ' + name + ': you are short ' + hours + ' before the exam. Add available time or remove lectures.',
-      noSessions: 'No study sessions. Check your available time and that exam dates are still ahead.',
-      first14: 'Only the first 14 days are shown. The rest updates as you progress.',
-      doneBtn: 'Done',
+      seedBtnShort: 'January example',
+      seedConfirm: 'This will replace your current subjects. Continue?',
+      noSessDay: 'No study on this day.',
+      upcomingExams: 'Upcoming exams',
+      tagSolve: 'Solving',
       tagRevise: 'Re-revise',
       tagReview: 'Review',
+      tagExamReview: 'Pre-exam review',
+      tagClinic: 'Clinic work',
       generalReview: 'General review',
+      examReviewTitle: 'Pre-exam review',
+      doneBtn: 'Done',
+      examWord: { exam: 'Exam', quiz: 'Quiz' },
+      natureWord: { theory: 'theory', practical: 'practical' },
+      examLine: (k, d, t, n) => I18N.en.examWord[k] + ' (' + n + ') on ' + d + (t ? ' at ' + t : ''),
+      daysLeft: (n) => n + ' days left',
+      examPassed: 'Exam passed',
       addSubjectTitle: 'Add a subject',
       subjNamePh: 'Subject name',
-      diff: ['Easy', 'Medium', 'Hard'],
-      lecsPh: 'Lectures, one per line (optional). You can write the hours after a | like: Lecture 1 | 2',
+      hasExamQ: 'Has an exam or quiz?',
+      kindExam: 'Exam',
+      kindQuiz: 'Quiz',
+      natureTheory: 'Theory',
+      naturePractical: 'Practical',
+      coveredPh: 'How many lectures?',
+      coveredShort: (n) => n + ' lectures covered',
       addBtn: 'Add',
-      seedBtnShort: 'January example',
-      lecturesBtn: (n) => 'Lectures (' + n + ')',
+      needName: 'Enter the subject name first',
+      needExam: 'Set the exam type and date',
+      tasksBtn: (n) => 'Tasks (' + n + ')',
       closeBtn: 'Close',
       delBtn: 'Delete',
-      confidencePh: 'Confidence?',
-      newLecPh: 'New lecture',
+      delConfirm: 'Delete this subject with all its tasks?',
+      editExam: 'Edit exam',
+      clearExam: 'Remove exam',
+      noExamYet: 'No exam set',
+      addTaskTitle: 'Add a task',
+      kindLecture: 'Study a lecture',
+      kindClinic: 'Clinic work delivery',
+      clinicLocked: 'Clinic work unlocks from 4th year',
+      taskTitlePh: 'Lecture or work name',
+      estAuto: 'Auto',
+      diff: ['Easy', 'Medium', 'Hard'],
+      estLec: (d, st, so) => d + ' · study ' + st + ' + solving ' + so,
+      estClinic: (d, w) => d + ' · work ' + w,
+      duePh: 'Delivery date (optional)',
+      addTaskBtn: 'Add',
+      needTask: 'Enter the task name first',
+      confPh: 'Confidence?',
       availTitle: 'Available study hours per day',
       overrideTitle: 'A different or blocked day',
       hoursPh: 'Hours (0 = blocked)',
       saveBtn: 'Save',
       addFirst: 'Add subjects first.',
-      examPassed: 'Exam passed',
-      daysLeft: (n) => n + ' days left',
-      lecCount: (done, total, pct) => done + '/' + total + ' lectures (' + pct + '%)',
-      seedConfirm: 'This will replace your current subjects. Continue?',
-      needNameDate: 'Enter the subject name and exam date',
-      delConfirm: 'Delete this subject?',
-      lecN: (i) => 'Lecture ' + i,
+      taskCount: (done, total, pct) => done + '/' + total + ' tasks (' + pct + '%)',
+      noExamProgress: 'No exam set',
+      profileTitle: 'My profile',
+      nameLbl: 'Name',
+      yearLbl: 'Academic year',
+      years: ['1st', '2nd', '3rd', '4th', '5th', 'Internship'],
+      uniLbl: 'University',
+      savedOk: 'Saved',
+      accountSec: 'Account & sync',
+      localMode: 'Accounts are not set up yet, so your data is saved on this device only.',
+      logoutBtn: 'Log out',
+      syncing: 'Syncing...',
+      synced: 'Synced',
+      syncErr: 'Sync problem',
+      authTitle: 'Sign in',
+      authSub: 'Sign in so your progress is saved and opens on any device',
+      emailPh: 'Email',
+      passPh: 'Password',
+      loginBtn: 'Sign in',
+      signupBtn: 'Create account',
+      skipBtn: 'Continue without an account',
+      fillBoth: 'Enter the email and password',
+      authWait: 'One moment...',
+      welcomeTitle: 'Welcome to Dental Planner',
+      welcomeSub: 'Tell us a bit about you so we can tune the schedule',
+      yourNamePh: 'Your name',
+      pickYear: 'Pick your year',
+      startBtn: "Let's start",
+      needProfile: 'Enter your name and pick your year',
       seedSubjects: [
-        ['Oral Histology', '2027-01-09', 2, 8],
-        ['Pharmacology', '2027-01-10', 3, 12],
-        ['Biomaterials', '2027-01-11', 2, 8],
-        ['Microbiology', '2027-01-13', 2, 10],
-        ['Entrepreneurship', '2027-01-17', 1, 6],
-        ['Pathology', '2027-01-18', 2, 10],
-        ['Medicine', '2027-01-20', 3, 12],
+        ['Oral Histology', '2027-01-09', 'exam', 'theory', 8],
+        ['Pharmacology', '2027-01-10', 'exam', 'theory', 12],
+        ['Biomaterials', '2027-01-11', 'quiz', 'practical', 4],
+        ['Microbiology', '2027-01-13', 'exam', 'theory', 10],
+        ['Entrepreneurship', '2027-01-17', 'quiz', 'theory', 6],
+        ['Pathology', '2027-01-18', 'exam', 'theory', 10],
+        ['Medicine', '2027-01-20', 'exam', 'theory', 12],
       ],
+      lecN: (i) => 'Lecture ' + i,
     },
   };
 
@@ -469,71 +805,312 @@ button.danger:hover { background: #fbdcdc; filter: none; }
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const uid = () => Math.random().toString(36).slice(2, 9);
   const todayStr = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
-  const empty = () => ({ subjects: [], availability: [2, 2, 2, 2, 2, 2, 2], overrides: {}, blocked: [], lang: 'ar' });
+  const $ = (id) => document.getElementById(id);
+
+  const empty = () => ({
+    version: 3, lang: 'ar',
+    profile: { name: '', year: null, onboarded: false },
+    availability: [2, 2, 2, 2, 2, 2, 2],
+    overrides: {}, blocked: [], subjects: [], savedAt: 0,
+  });
+
+  function migrate(old) {
+    const st = empty();
+    st.lang = old.lang === 'en' ? 'en' : 'ar';
+    if (Array.isArray(old.availability) && old.availability.length === 7) st.availability = old.availability.map((x) => Math.max(0, Number(x) || 0));
+    st.overrides = old.overrides || {};
+    st.blocked = old.blocked || [];
+    st.subjects = (old.subjects || []).map((s) => ({
+      id: s.id || uid(), name: s.name || '?',
+      exam: s.examDate ? { kind: 'exam', date: s.examDate, time: '', nature: 'theory', covered: (s.lectures || []).length } : null,
+      tasks: (s.lectures || []).map((l) => ({
+        id: l.id || uid(), kind: 'lecture', title: l.title || '?', difficulty: 2,
+        studyH: Number(l.hours) || 1, solveH: 0.5, workH: 0,
+        due: null, done: !!l.done, confidence: l.confidence || 0,
+      })),
+    }));
+    return st;
+  }
+
   let state;
-  try { state = Object.assign(empty(), JSON.parse(localStorage.getItem(KEY)) || {}); } catch (e) { state = empty(); }
-  const save = () => localStorage.setItem(KEY, JSON.stringify(state));
-  let tab = 'schedule', openSubject = null;
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) state = Object.assign(empty(), JSON.parse(raw));
+    else {
+      state = empty();
+      for (const k of OLD_KEYS) {
+        const o = localStorage.getItem(k);
+        if (o) { try { state = migrate(JSON.parse(o)); } catch (e) {} break; }
+      }
+    }
+  } catch (e) { state = empty(); }
+  if (!state.profile) state.profile = { name: '', year: null, onboarded: false };
+  const saveLocal = () => localStorage.setItem(KEY, JSON.stringify(state));
+
+  let tab = 'schedule', openSubject = null, openExam = null, taskKind = {}, authSkipped = false, toastTimer = null;
+  let calCursor = todayStr().slice(0, 7);
+  let selDay = todayStr();
 
   const L = () => I18N[state.lang === 'en' ? 'en' : 'ar'];
+  const subj = (id) => state.subjects.find((s) => s.id === id);
+  const taskOf = (sid, tid) => { const s = subj(sid); return s && s.tasks.find((t) => t.id === tid); };
+  const yearNum = () => Number(state.profile.year) || 0;
+  const clinicAllowed = () => yearNum() >= 4;
+  const examOf = (s) => (s.exam && s.exam.date ? s.exam : null);
+  const fmtHTxt = (h) => L().fmtH(Math.round(h * 2) / 2);
+
+  /* ---------------- cloud (Firebase Auth + Firestore) ---------------- */
+  let fbAuth = null, fbDb = null, session = null, pushTimer = null, lastPull = 0, syncState = '';
+  const cloudEnabled = () => !!(FIREBASE_CONFIG.apiKey && window.firebase && window.firebase.initializeApp);
+  const setSync = (s) => { syncState = s; const el = $('syncLbl'); if (el) { el.textContent = s ? ({ syncing: L().syncing, synced: L().synced, error: L().syncErr }[s]) : ''; el.className = 'sync ' + s; } };
+
+  function save() {
+    state.savedAt = Date.now();
+    saveLocal();
+    if (session && fbDb) {
+      setSync('syncing');
+      clearTimeout(pushTimer);
+      pushTimer = setTimeout(pushCloud, 1200);
+    }
+  }
+
+  async function pushCloud() {
+    if (!session || !fbDb) return;
+    try {
+      await fbDb.collection('planner_states').doc(session.uid).set({ state, updatedAt: Date.now() });
+      setSync('synced');
+    } catch (e) { setSync('error'); }
+  }
+
+  async function loadCloud() {
+    if (!session || !fbDb) return;
+    lastPull = Date.now();
+    try {
+      const doc = await fbDb.collection('planner_states').doc(session.uid).get();
+      const data = doc.exists ? doc.data() : null;
+      if (data && data.state && data.state.version) {
+        const cloudAt = Number(data.updatedAt) || 0;
+        if (!state.savedAt || cloudAt > state.savedAt) {
+          state = Object.assign(empty(), data.state);
+          if (!state.profile) state.profile = { name: '', year: null, onboarded: false };
+          saveLocal(); setSync('synced');
+        } else pushCloud();
+      } else pushCloud();
+    } catch (e) { setSync('error'); }
+  }
+
+  function initCloud() {
+    if (!cloudEnabled()) return;
+    try {
+      window.firebase.initializeApp(FIREBASE_CONFIG);
+      fbAuth = window.firebase.auth();
+      fbDb = window.firebase.firestore();
+      fbAuth.onAuthStateChanged(async (u) => {
+        session = u || null;
+        if (session) await loadCloud();
+        render();
+      });
+    } catch (e) { /* offline: stay local */ }
+  }
+
+  async function doAuth(mode) {
+    const email = $('aEmail').value.trim(), pass = $('aPass').value;
+    if (!email || !pass) return alert(L().fillBoth);
+    $('authMsg').textContent = L().authWait;
+    try {
+      if (mode === 'up') await fbAuth.createUserWithEmailAndPassword(email, pass);
+      else await fbAuth.signInWithEmailAndPassword(email, pass);
+      // onAuthStateChanged picks the session up, loads cloud state and re-renders
+    } catch (e) { $('authMsg').textContent = String(e && e.message || e); }
+  }
+
+  async function doLogout() {
+    try { if (fbAuth) await fbAuth.signOut(); } catch (e) {}
+    session = null; authSkipped = false; setSync(''); render();
+  }
+
+  /* ---------------- seeds / shared ---------------- */
+  function mkTask(title, kind, diff) {
+    const est = Scheduler.estimate(title, kind);
+    const d = diff || est.difficulty;
+    const scale = (arr) => arr[d - 1];
+    return {
+      id: uid(), kind, title, difficulty: d,
+      studyH: kind === 'clinic' ? 0 : scale([1, 2, 3]),
+      solveH: kind === 'clinic' ? 0 : scale([0.5, 1, 1.5]),
+      workH: kind === 'clinic' ? scale([2, 4, 6]) : 0,
+      due: null, done: false, confidence: 0,
+    };
+  }
 
   function seed() {
-    const mk = (name, examDate, weight, n) => ({ id: uid(), name, examDate, weight, lectures: Array.from({ length: n }, (_, i) => ({ id: uid(), title: L().lecN(i + 1), hours: 1.5, done: false, confidence: 0 })) });
-    state.subjects = L().seedSubjects.map((s) => mk(s[0], s[1], s[2], s[3]));
+    state.subjects = L().seedSubjects.map((s) => ({
+      id: uid(), name: s[0],
+      exam: { kind: s[2], date: s[1], time: '10:00', nature: s[3], covered: s[4] },
+      tasks: Array.from({ length: s[4] }, (_, i) => mkTask(L().lecN(i + 1), 'lecture')),
+    }));
     state.availability = [2, 2, 4, 5, 2.5, 3.5, 1]; // Sun..Sat
     save(); render();
   }
 
-  const subj = (id) => state.subjects.find((s) => s.id === id);
   const dayLabel = (d, today) => {
     const diff = Scheduler.diffDays(today, d);
     return (diff === 0 ? L().today : diff === 1 ? L().tomorrow : L().days[Scheduler.weekday(d)]) + ' ' + d.slice(5).replace('-', '/');
   };
 
+  function toast(msg) {
+    let el = $('toast');
+    el.textContent = msg; el.className = 'show';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.className = ''; }, 2200);
+  }
+
+  const sessionTag = (s) =>
+    s.type === 'solve' ? `<span class="tag solve">${esc(L().tagSolve)}</span>`
+    : s.type === 'revise' ? `<span class="tag revise">${esc(L().tagRevise)}</span>`
+    : s.type === 'review' ? `<span class="tag review">${esc(L().tagReview)}</span>`
+    : s.type === 'examreview' ? `<span class="tag review">${esc(L().tagExamReview)}</span>`
+    : s.type === 'clinic' ? `<span class="tag clinic">${esc(L().tagClinic)}</span>` : '';
+
+  function sessionRow(s, sj) {
+    const title = s.type === 'review' ? L().generalReview : s.type === 'examreview' ? L().examReviewTitle : s.title;
+    const doneable = s.lectureId && (s.type === 'study' || s.type === 'solve' || s.type === 'clinic');
+    return `<div class="sess"><i class="dot" style="background:${colorOf(sj.id)}"></i><div class="grow"><b>${esc(sj.name)}</b> - ${esc(title)} ${sessionTag(s)}</div><span class="muted hrs">${fmtHTxt(s.hours)}</span>` +
+      (doneable ? `<button class="btn ghost" data-act="done" data-s="${sj.id}" data-l="${s.lectureId}">${esc(L().doneBtn)}</button>` : '') + '</div>';
+  }
+
+  /* ---------------- views ---------------- */
+
   function viewSchedule() {
     const today = todayStr();
-    document.getElementById('todayLbl').textContent = today;
-    if (!state.subjects.length) return `<div class="card empty"><div class="big">🦷</div><p>${esc(L().noSubjects)}</p><button class="btn" data-act="seed">${esc(L().seedBtn)}</button></div>`;
+    $('todayLbl').textContent = today;
+    let h = `<div class="row" style="margin-bottom:12px"><button class="btn grow" data-act="gen">🗓️ ${esc(L().genBtn)}</button>` +
+      (state.subjects.length ? '' : ` <button class="btn ghost" data-act="seed">${esc(L().seedBtn)}</button>`) + '</div>';
+    if (!state.subjects.length) return h + `<div class="card empty"><div class="big">🦷</div><p>${esc(L().noPlan)}</p></div>`;
+
     const r = Scheduler.generate(state, today);
-    let h = '';
-    r.deficits.forEach((d) => { h += `<div class="card warn">${esc(L().deficit(subj(d.subjectId).name, L().fmtH(d.hours)))}</div>`; });
+    r.deficits.forEach((d) => { const s = subj(d.subjectId); if (s) h += `<div class="card warn">${esc(L().deficit(s.name, fmtHTxt(d.hours)))}</div>`; });
+
     const byDay = {}; r.sessions.forEach((s) => (byDay[s.date] = byDay[s.date] || []).push(s));
-    const dates = Object.keys(byDay).sort().slice(0, 14);
-    if (!dates.length) h += `<div class="card empty"><div class="big">📭</div><p>${esc(L().noSessions)}</p></div>`;
-    dates.forEach((d) => {
-      const tot = byDay[d].reduce((a, s) => a + s.hours, 0);
-      h += `<div class="day ${d === today ? 'today' : ''}">${dayLabel(d, today)} <span class="muted">(${L().fmtH(tot)})</span></div><div class="card">`;
-      byDay[d].forEach((s) => {
-        const sj = subj(s.subjectId);
-        const tag = s.type === 'revise' ? `<span class="tag revise">${esc(L().tagRevise)}</span>` : s.type === 'review' ? `<span class="tag review">${esc(L().tagReview)}</span>` : '';
-        h += `<div class="sess"><i class="dot" style="background:${colorOf(sj.id)}"></i><div class="grow"><b>${esc(sj.name)}</b> - ${esc(s.type === 'review' ? L().generalReview : s.title)} ${tag}</div><span class="muted hrs">${L().fmtH(s.hours)}</span>` +
-          (s.lectureId && s.type === 'study' ? `<button class="btn ghost" data-act="done" data-s="${sj.id}" data-l="${s.lectureId}">${esc(L().doneBtn)}</button>` : '') + '</div>';
+    const examsByDay = {};
+    state.subjects.forEach((s) => { const ex = examOf(s); if (ex) examsByDay[ex.date] = examsByDay[ex.date] || { subject: s, exam: ex }; });
+
+    // calendar card
+    const [cy, cm] = calCursor.split('-').map(Number);
+    const first = calCursor + '-01';
+    const dim = new Date(cy, cm, 0).getDate();
+    const startWd = Scheduler.weekday(first);
+    h += `<div class="card"><div class="cal-head"><button class="btn ghost sm" data-act="calPrev">‹</button>
+      <b class="grow" style="text-align:center">${esc(L().months[cm - 1])} ${cy}</b>
+      <button class="btn ghost sm" data-act="calToday">${esc(L().today)}</button>
+      <button class="btn ghost sm" data-act="calNext">›</button></div><div class="cal">`;
+    L().daysShort.forEach((d) => { h += `<div class="cal-wd">${esc(d)}</div>`; });
+    for (let i = 0; i < startWd; i++) h += '<div class="cell out"></div>';
+    for (let dnum = 1; dnum <= dim; dnum++) {
+      const d = calCursor + '-' + String(dnum).padStart(2, '0');
+      const sess = byDay[d] || [];
+      const isExam = examsByDay[d];
+      const cls = 'cell' + (d === selDay ? ' sel' : '') + (d === today ? ' now' : '') + (d < today ? ' past' : '') + (isExam ? ' examday' : '');
+      const dots = sess.slice(0, 4).map((s) => `<i style="background:${colorOf(s.subjectId)}"></i>`).join('');
+      const tot = sess.reduce((a, s) => a + s.hours, 0);
+      h += `<div class="${cls}" data-act="calDay" data-d="${d}"><span class="dnum">${dnum}</span>` +
+        (isExam ? '<span class="exdot">📝</span>' : '') +
+        (dots ? `<span class="dots">${dots}</span>` : '') +
+        (tot ? `<span class="chrs">${fmtHTxt(tot)}</span>` : '') + '</div>';
+    }
+    h += '</div></div>';
+
+    // selected day sessions
+    h += `<div class="day ${selDay === today ? 'today' : ''}">${dayLabel(selDay, today)}</div><div class="card">`;
+    const sels = (byDay[selDay] || []);
+    if (examsByDay[selDay]) {
+      const e = examsByDay[selDay];
+      h += `<div class="sess examrow"><div class="grow">📝 <b>${esc(e.subject.name)}</b> - ${esc(L().examLine(e.exam.kind, e.exam.date, e.exam.time, L().natureWord[e.exam.nature] || e.exam.nature))}</div></div>`;
+    }
+    if (!sels.length && !examsByDay[selDay]) h += `<div class="muted" style="padding:6px 2px">${esc(L().noSessDay)}</div>`;
+    sels.forEach((s) => { const sj = subj(s.subjectId); if (sj) h += sessionRow(s, sj); });
+    h += '</div>';
+
+    // upcoming exams
+    const ups = state.subjects.filter((s) => examOf(s) && s.exam.date >= today)
+      .sort((a, b) => a.exam.date.localeCompare(b.exam.date)).slice(0, 5);
+    if (ups.length) {
+      h += `<div class="day">${esc(L().upcomingExams)}</div>`;
+      ups.forEach((s) => {
+        const ex = s.exam, dl = Scheduler.diffDays(today, ex.date);
+        h += `<div class="card pcard" style="border-inline-start-color:${colorOf(s.id)}"><div class="row"><i class="dot" style="background:${colorOf(s.id)}"></i>
+          <div class="grow"><b>${esc(s.name)}</b><div class="muted">${esc(L().examLine(ex.kind, ex.date, ex.time, L().natureWord[ex.nature] || ex.nature))}${ex.covered ? ' · ' + esc(L().coveredShort(ex.covered)) : ''}</div></div>
+          <span class="tag">${esc(L().daysLeft(dl))}</span></div></div>`;
       });
-      h += '</div>';
-    });
-    if (Object.keys(byDay).length > 14) h += `<div class="muted">${esc(L().first14)}</div>`;
+    }
     return h;
   }
 
+  function examForm(s, prefix) {
+    const ex = examOf(s) || { kind: 'exam', date: '', time: '', nature: 'theory', covered: (s.tasks || []).filter((t) => t.kind === 'lecture').length };
+    return `<div class="examform">
+      <div class="row"><select id="${prefix}Kind">
+        <option value="exam" ${ex.kind === 'exam' ? 'selected' : ''}>${esc(L().kindExam)}</option>
+        <option value="quiz" ${ex.kind === 'quiz' ? 'selected' : ''}>${esc(L().kindQuiz)}</option></select>
+      <select id="${prefix}Nature">
+        <option value="theory" ${ex.nature === 'theory' ? 'selected' : ''}>${esc(L().natureTheory)}</option>
+        <option value="practical" ${ex.nature === 'practical' ? 'selected' : ''}>${esc(L().naturePractical)}</option></select>
+      <input id="${prefix}Cov" type="number" min="1" max="60" placeholder="${esc(L().coveredPh)}" value="${ex.covered || ''}" style="width:110px"></div>
+      <div class="row" style="margin-top:8px"><input id="${prefix}Date" type="date" value="${esc(ex.date || '')}" class="grow"><input id="${prefix}Time" type="time" value="${esc(ex.time || '')}">
+      <button class="btn" data-act="saveExam" data-s="${s.id}">${esc(L().saveBtn)}</button></div></div>`;
+  }
+
   function viewSubjects() {
-    let h = `<div class="card"><b>${esc(L().addSubjectTitle)}</b><div class="row" style="margin-top:8px">
-      <input id="nName" placeholder="${esc(L().subjNamePh)}" class="grow"><input id="nDate" type="date">
-      <select id="nW"><option value="1">${esc(L().diff[0])}</option><option value="2" selected>${esc(L().diff[1])}</option><option value="3">${esc(L().diff[2])}</option></select></div>
-      <textarea id="nLecs" placeholder="${esc(L().lecsPh)}"></textarea>
-      <button class="btn" data-act="addSubject">${esc(L().addBtn)}</button> <button class="btn ghost" data-act="seed">${esc(L().seedBtnShort)}</button></div>`;
+    let h = `<div class="card"><b>${esc(L().addSubjectTitle)}</b>
+      <div class="row" style="margin-top:8px"><input id="nName" placeholder="${esc(L().subjNamePh)}" class="grow">
+      <button class="btn" data-act="addSubject">${esc(L().addBtn)}</button></div>
+      <label class="checkline"><input type="checkbox" id="nHasExam"> ${esc(L().hasExamQ)}</label>
+      <div id="nExamBox" class="hidden"><div class="row" style="margin-top:6px">
+        <select id="nKind"><option value="exam">${esc(L().kindExam)}</option><option value="quiz">${esc(L().kindQuiz)}</option></select>
+        <select id="nNature"><option value="theory">${esc(L().natureTheory)}</option><option value="practical">${esc(L().naturePractical)}</option></select>
+        <input id="nCov" type="number" min="1" max="60" placeholder="${esc(L().coveredPh)}" style="width:110px"></div>
+        <div class="row" style="margin-top:8px"><input id="nDate" type="date" class="grow"><input id="nTime" type="time"></div></div>
+      <div style="margin-top:8px"><button class="btn ghost" data-act="seed">${esc(L().seedBtnShort)}</button></div></div>`;
+
     state.subjects.forEach((s) => {
-      const open = openSubject === s.id;
-      h += `<div class="card pcard" style="border-inline-start-color:${colorOf(s.id)}"><div class="row subj-head"><b class="grow">${esc(s.name)}</b><span class="datechip">${esc(s.examDate)}</span>
-        <button class="btn ghost" data-act="toggle" data-s="${s.id}">${open ? esc(L().closeBtn) : esc(L().lecturesBtn(s.lectures.length))}</button>
+      const open = openSubject === s.id, exOpen = openExam === s.id, ex = examOf(s);
+      h += `<div class="card pcard" style="border-inline-start-color:${colorOf(s.id)}"><div class="row subj-head">
+        <b class="grow">${esc(s.name)}</b>
+        ${ex ? `<span class="datechip">${esc(ex.date)}${ex.time ? ' ' + esc(ex.time) : ''}</span>` : `<span class="muted">${esc(L().noExamYet)}</span>`}
+        <button class="btn ghost" data-act="toggleExam" data-s="${s.id}">${exOpen ? esc(L().closeBtn) : esc(L().editExam)}</button>
+        <button class="btn ghost" data-act="toggle" data-s="${s.id}">${open ? esc(L().closeBtn) : esc(L().tasksBtn(s.tasks.length))}</button>
         <button class="btn danger" data-act="delSubject" data-s="${s.id}">${esc(L().delBtn)}</button></div>`;
+      if (ex) h += `<div class="muted" style="margin:2px 0 6px">${esc(L().examLine(ex.kind, ex.date, ex.time, L().natureWord[ex.nature] || ex.nature))}${ex.covered ? ' · ' + esc(L().coveredShort(ex.covered)) : ''}</div>`;
+      if (exOpen) {
+        h += examForm(s, 'e-' + s.id + '-');
+        if (ex) h += `<button class="btn ghost" data-act="clearExam" data-s="${s.id}" style="margin-top:6px">${esc(L().clearExam)}</button>`;
+      }
       if (open) {
-        s.lectures.forEach((l) => {
-          h += `<div class="lec ${l.done ? 'done' : ''}"><input type="checkbox" data-act="check" data-s="${s.id}" data-l="${l.id}" ${l.done ? 'checked' : ''}>
-            <span class="t grow">${esc(l.title)} <span class="muted">${L().fmtH(l.hours)}</span></span>
-            ${l.done ? `<select data-act="conf" data-s="${s.id}" data-l="${l.id}"><option value="0">${esc(L().confidencePh)}</option>${[1, 2, 3, 4, 5].map((n) => `<option value="${n}" ${l.confidence === n ? 'selected' : ''}>${n}/5</option>`).join('')}</select>` : ''}
-            <button class="btn ghost" data-act="delLec" data-s="${s.id}" data-l="${l.id}">x</button></div>`;
+        const k = taskKind[s.id] || 'lecture';
+        h += `<div class="addtask"><b>${esc(L().addTaskTitle)}</b>
+          <div class="pick" style="margin:8px 0">
+            <button class="${k === 'lecture' ? 'on' : ''}" data-act="pickKind" data-s="${s.id}" data-k="lecture">📖 ${esc(L().kindLecture)}</button>
+            ${clinicAllowed()
+              ? `<button class="${k === 'clinic' ? 'on' : ''}" data-act="pickKind" data-s="${s.id}" data-k="clinic">🦷 ${esc(L().kindClinic)}</button>`
+              : `<button disabled title="${esc(L().clinicLocked)}">🔒 ${esc(L().kindClinic)}</button>`}
+          </div>
+          ${clinicAllowed() ? '' : `<div class="muted" style="margin-bottom:6px">${esc(L().clinicLocked)}</div>`}
+          <input id="tt-${s.id}" placeholder="${esc(L().taskTitlePh)}" data-est="${s.id}">
+          <div class="row" style="margin-top:8px">
+            <span id="est-${s.id}" class="estchip"></span>
+            <select id="td-${s.id}" data-act="tdiff" data-s="${s.id}"><option value="0">${esc(L().estAuto)}</option>
+              <option value="1">${esc(L().diff[0])}</option><option value="2">${esc(L().diff[1])}</option><option value="3">${esc(L().diff[2])}</option></select>
+            ${k === 'clinic' ? `<input id="tdue-${s.id}" type="date" title="${esc(L().duePh)}">` : ''}
+            <button class="btn" data-act="addTask" data-s="${s.id}">${esc(L().addTaskBtn)}</button></div></div>`;
+        s.tasks.forEach((t) => {
+          const estTxt = t.kind === 'clinic'
+            ? L().estClinic(L().diff[t.difficulty - 1] || '', fmtHTxt(t.workH))
+            : L().estLec(L().diff[t.difficulty - 1] || '', fmtHTxt(t.studyH), fmtHTxt(t.solveH));
+          h += `<div class="lec ${t.done ? 'done' : ''}"><input type="checkbox" data-act="check" data-s="${s.id}" data-l="${t.id}" ${t.done ? 'checked' : ''}>
+            <span class="t grow">${t.kind === 'clinic' ? '🦷 ' : '📖 '}${esc(t.title)}<br><span class="muted">${esc(estTxt)}</span></span>
+            ${t.done && t.kind === 'lecture' ? `<select data-act="conf" data-s="${s.id}" data-l="${t.id}"><option value="0">${esc(L().confPh)}</option>${[1, 2, 3, 4, 5].map((n) => `<option value="${n}" ${t.confidence === n ? 'selected' : ''}>${n}/5</option>`).join('')}</select>` : ''}
+            <button class="btn ghost" data-act="delTask" data-s="${s.id}" data-l="${t.id}">x</button></div>`;
         });
-        h += `<div class="row" style="margin-top:8px"><input id="al-${s.id}" placeholder="${esc(L().newLecPh)}" class="grow"><input id="ah-${s.id}" type="number" step="0.5" min="0.5" value="1" style="width:76px"><button class="btn" data-act="addLec" data-s="${s.id}">+</button></div>`;
       }
       h += '</div>';
     });
@@ -544,73 +1121,199 @@ button.danger:hover { background: #fbdcdc; filter: none; }
     let h = `<div class="card"><b>${esc(L().availTitle)}</b><div class="grid7" style="margin-top:10px">`;
     L().days.forEach((n, i) => { h += `<label>${n}<input type="number" min="0" max="16" step="0.5" data-act="avail" data-i="${i}" value="${state.availability[i]}"></label>`; });
     h += `</div></div><div class="card"><b>${esc(L().overrideTitle)}</b><div class="row" style="margin-top:10px"><input id="oDate" type="date"><input id="oHours" type="number" min="0" step="0.5" placeholder="${esc(L().hoursPh)}" style="width:160px"><button class="btn" data-act="addOverride">${esc(L().saveBtn)}</button></div>`;
-    const ov = Object.keys(state.overrides).sort();
-    ov.forEach((d) => { h += `<div class="row" style="margin-top:8px"><span class="grow">${d}: ${L().fmtH(state.overrides[d])}</span><button class="btn ghost" data-act="delOverride" data-d="${d}">x</button></div>`; });
+    Object.keys(state.overrides).sort().forEach((d) => { h += `<div class="row" style="margin-top:8px"><span class="grow">${d}: ${fmtHTxt(state.overrides[d])}</span><button class="btn ghost" data-act="delOverride" data-d="${d}">x</button></div>`; });
     return h + '</div>';
   }
 
   function viewProgress() {
     const today = todayStr();
     if (!state.subjects.length) return `<div class="card empty"><div class="big">📚</div><p>${esc(L().addFirst)}</p></div>`;
-    return Scheduler.progress(state, today).sort((a, b) => (a.daysLeft ?? 9e9) - (b.daysLeft ?? 9e9)).map((p) =>
-      `<div class="card pcard" style="border-inline-start-color:${colorOf(p.subjectId)}"><div class="row"><b class="grow">${esc(p.name)}</b><span class="tag">${p.daysLeft < 0 ? esc(L().examPassed) : esc(L().daysLeft(p.daysLeft))}</span></div>
-      <div class="bar"><i style="width:${p.pct}%"></i></div><div class="muted">${esc(L().lecCount(p.done, p.total, p.pct))}</div></div>`).join('');
+    return Scheduler.progress(state, today).sort((a, b) => (a.daysLeft == null ? 9e9 : a.daysLeft) - (b.daysLeft == null ? 9e9 : b.daysLeft)).map((p) =>
+      `<div class="card pcard" style="border-inline-start-color:${colorOf(p.subjectId)}"><div class="row"><b class="grow">${esc(p.name)}</b>
+      <span class="tag">${p.daysLeft == null ? esc(L().noExamProgress) : p.daysLeft < 0 ? esc(L().examPassed) : esc(L().daysLeft(p.daysLeft))}</span></div>
+      <div class="bar"><i style="width:${p.pct}%"></i></div><div class="muted">${esc(L().taskCount(p.done, p.total, p.pct))}</div></div>`).join('');
   }
+
+  function viewProfile() {
+    const p = state.profile;
+    let h = `<div class="card"><b>${esc(L().profileTitle)}</b>
+      <div class="row" style="margin-top:10px"><label class="muted">${esc(L().nameLbl)}</label><input id="pName" class="grow" value="${esc(p.name || '')}"></div>
+      <div style="margin-top:10px"><label class="muted">${esc(L().yearLbl)}</label><div class="yeargrid" style="margin-top:6px">`;
+    L().years.forEach((y, i) => { h += `<button class="ypick ${p.year === i + 1 ? 'on' : ''}" data-act="pickYear" data-y="${i + 1}">${esc(y)}</button>`; });
+    h += `</div></div>
+      <div class="row" style="margin-top:10px"><label class="muted">${esc(L().uniLbl)}</label><span class="grow"><b>${esc(UNI[state.lang === 'en' ? 'en' : 'ar'])}</b></span></div>
+      <div style="margin-top:10px"><button class="btn" data-act="saveProfile">${esc(L().saveBtn)}</button></div></div>`;
+    h += `<div class="card"><b>${esc(L().accountSec)}</b>`;
+    if (!cloudEnabled()) h += `<p class="muted" style="margin:8px 0 0">${esc(L().localMode)}</p>`;
+    else if (session) h += `<div class="row" style="margin-top:8px"><span class="grow">${esc(session.email || '')} <span class="sync ${syncState}">${syncState === 'synced' ? '☁️ ' + esc(L().synced) : syncState === 'syncing' ? esc(L().syncing) : syncState === 'error' ? esc(L().syncErr) : ''}</span></span><button class="btn ghost" data-act="logout">${esc(L().logoutBtn)}</button></div>`;
+    else h += `<p class="muted" style="margin:8px 0 6px">${esc(L().authSub)}</p><button class="btn" data-act="showAuth">${esc(L().authTitle)}</button>`;
+    return h + '</div>';
+  }
+
+  /* ---------------- overlays ---------------- */
+
+  function overlays() {
+    let h = '';
+    if (cloudEnabled() && !session && !authSkipped) {
+      h += `<div class="overlay"><div class="sheet"><b style="font-size:17px">${esc(L().authTitle)}</b>
+        <p class="muted">${esc(L().authSub)}</p>
+        <input id="aEmail" type="email" placeholder="${esc(L().emailPh)}" dir="ltr">
+        <input id="aPass" type="password" placeholder="${esc(L().passPh)}" dir="ltr">
+        <div id="authMsg" class="muted" style="min-height:18px;margin-top:6px"></div>
+        <div class="row" style="margin-top:8px"><button class="btn grow" data-act="authLogin">${esc(L().loginBtn)}</button>
+        <button class="btn ghost grow" data-act="authSignup">${esc(L().signupBtn)}</button></div>
+        <div style="text-align:center;margin-top:10px"><button class="linklike" data-act="authSkip">${esc(L().skipBtn)}</button></div></div></div>`;
+      return h;
+    }
+    if (!state.profile.onboarded) {
+      h += `<div class="overlay"><div class="sheet"><b style="font-size:17px">${esc(L().welcomeTitle)}</b>
+        <p class="muted">${esc(L().welcomeSub)}</p>
+        <input id="oName" placeholder="${esc(L().yourNamePh)}" value="${esc(state.profile.name || '')}">
+        <div class="muted" style="margin:10px 0 6px">${esc(L().pickYear)}</div>
+        <div class="yeargrid">`;
+      L().years.forEach((y, i) => { h += `<button class="ypick ${state.profile.year === i + 1 ? 'on' : ''}" data-act="pickYear" data-y="${i + 1}">${esc(y)}</button>`; });
+      h += `</div><div class="muted" style="margin-top:10px">${esc(L().uniLbl)}: <b>${esc(UNI[state.lang === 'en' ? 'en' : 'ar'])}</b></div>
+        <div style="margin-top:12px"><button class="btn" data-act="onboardStart" style="width:100%">${esc(L().startBtn)}</button></div></div></div>`;
+    }
+    return h;
+  }
+
+  /* ---------------- chrome / render ---------------- */
 
   function applyChrome() {
     const l = L();
     document.documentElement.lang = state.lang === 'en' ? 'en' : 'ar';
     document.documentElement.dir = l.dir;
-    document.getElementById('appTitle').textContent = l.appTitle;
-    document.getElementById('langBtn').textContent = l.langBtn;
+    $('appTitle').textContent = l.appTitle;
+    $('langBtn').textContent = l.langBtn;
     document.querySelectorAll('#tabs button').forEach((b) => { b.textContent = l.tabs[b.dataset.tab]; });
   }
 
   function render() {
     applyChrome();
     document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
-    document.getElementById('view').innerHTML = { schedule: viewSchedule, subjects: viewSubjects, time: viewTime, progress: viewProgress }[tab]();
+    $('view').innerHTML = { schedule: viewSchedule, subjects: viewSubjects, time: viewTime, progress: viewProgress, profile: viewProfile }[tab]();
+    $('overlays').innerHTML = overlays();
   }
 
-  const lecOf = (sid, lid) => subj(sid).lectures.find((l) => l.id === lid);
-  const $ = (id) => document.getElementById(id);
-  function parseLecs(text) {
-    return text.split('\n').map((x) => x.trim()).filter(Boolean).map((line) => {
-      const [t, h] = line.split('|'); const hrs = parseFloat(h);
-      return { id: uid(), title: t.trim(), hours: hrs > 0 ? hrs : 1, done: false, confidence: 0 };
-    });
+  const shiftCal = (n) => {
+    let [y, m] = calCursor.split('-').map(Number);
+    m += n; while (m > 12) { m -= 12; y++; } while (m < 1) { m += 12; y--; }
+    calCursor = y + '-' + String(m).padStart(2, '0');
+  };
+
+  function estChipText(sid) {
+    const title = ($('tt-' + sid) || {}).value || '';
+    const k = taskKind[sid] || 'lecture';
+    if (!title.trim()) return '';
+    const sel = $('td-' + sid);
+    const d = sel && +sel.value ? +sel.value : Scheduler.estimateDifficulty(title);
+    if (k === 'clinic') return L().estClinic(L().diff[d - 1], fmtHTxt([2, 4, 6][d - 1]));
+    return L().estLec(L().diff[d - 1], fmtHTxt([1, 2, 3][d - 1]), fmtHTxt([0.5, 1, 1.5][d - 1]));
   }
+
+  /* ---------------- events ---------------- */
+
+  document.addEventListener('input', (e) => {
+    const t = e.target;
+    if (t.dataset && t.dataset.est) { const el = $('est-' + t.dataset.est); if (el) el.textContent = estChipText(t.dataset.est); }
+    if (t.id === 'nHasExam') $('nExamBox').classList.toggle('hidden', !t.checked);
+  });
+
+  document.addEventListener('change', (e) => {
+    const t = e.target, a = t.dataset && t.dataset.act;
+    if (t.id === 'nHasExam') { $('nExamBox').classList.toggle('hidden', !t.checked); return; }
+    if (!a) return;
+    if (a === 'check') { const x = taskOf(t.dataset.s, t.dataset.l); x.done = t.checked; if (!t.checked) x.confidence = 0; }
+    else if (a === 'conf') taskOf(t.dataset.s, t.dataset.l).confidence = +t.value;
+    else if (a === 'avail') { const v = parseFloat(t.value); state.availability[+t.dataset.i] = v >= 0 ? v : 0; }
+    else if (a === 'tdiff') { /* difficulty select re-renders chip */ const el = $('est-' + t.dataset.s); if (el) el.textContent = estChipText(t.dataset.s); return; }
+    else return;
+    save(); render();
+  });
 
   document.addEventListener('click', (e) => {
     const t = e.target.closest('[data-tab],[data-act]'); if (!t) return;
     if (t.dataset.tab) { tab = t.dataset.tab; return render(); }
     const a = t.dataset.act, s = t.dataset.s, l = t.dataset.l;
-    if (a === 'lang') { state.lang = state.lang === 'en' ? 'ar' : 'en'; save(); render(); return; }
+
+    if (a === 'lang') { state.lang = state.lang === 'en' ? 'ar' : 'en'; save(); return render(); }
+    if (a === 'gen') { selDay = todayStr(); calCursor = selDay.slice(0, 7); render(); return toast(L().madePlan); }
+    if (a === 'calPrev') { shiftCal(-1); return render(); }
+    if (a === 'calNext') { shiftCal(1); return render(); }
+    if (a === 'calToday') { calCursor = todayStr().slice(0, 7); selDay = todayStr(); return render(); }
+    if (a === 'calDay') { selDay = t.dataset.d; return render(); }
     if (a === 'seed') { if (!state.subjects.length || confirm(L().seedConfirm)) seed(); return; }
+    if (a === 'pickYear') {
+      const nEl = $('oName') || $('pName');
+      if (nEl) state.profile.name = nEl.value.trim(); // re-render wipes the input
+      state.profile.year = +t.dataset.y; save(); return render();
+    }
+    if (a === 'onboardStart') {
+      const name = ($('oName') || {}).value || '';
+      if (!name.trim() || !state.profile.year) return alert(L().needProfile);
+      state.profile.name = name.trim(); state.profile.onboarded = true;
+      save(); return render();
+    }
+    if (a === 'saveProfile') {
+      state.profile.name = ($('pName').value || '').trim();
+      state.profile.onboarded = true;
+      save(); toast(L().savedOk); return render();
+    }
+    if (a === 'authLogin') return doAuth('in');
+    if (a === 'authSignup') return doAuth('up');
+    if (a === 'authSkip') { authSkipped = true; return render(); }
+    if (a === 'showAuth') { authSkipped = false; return render(); }
+    if (a === 'logout') return doLogout();
+
     if (a === 'addSubject') {
-      const name = $('nName').value.trim(), date = $('nDate').value;
-      if (!name || !date) return alert(L().needNameDate);
-      state.subjects.push({ id: uid(), name, examDate: date, weight: +$('nW').value, lectures: parseLecs($('nLecs').value) });
-    } else if (a === 'toggle') openSubject = openSubject === s ? null : s;
-    else if (a === 'delSubject') { if (!confirm(L().delConfirm)) return; state.subjects = state.subjects.filter((x) => x.id !== s); }
-    else if (a === 'done') { const x = lecOf(s, l); x.done = true; }
-    else if (a === 'delLec') subj(s).lectures = subj(s).lectures.filter((x) => x.id !== l);
-    else if (a === 'addLec') { const n = $('al-' + s).value.trim(); if (!n) return; subj(s).lectures.push({ id: uid(), title: n, hours: parseFloat($('ah-' + s).value) || 1, done: false, confidence: 0 }); }
-    else if (a === 'addOverride') { const d = $('oDate').value, hv = $('oHours').value; if (!d || hv === '') return; state.overrides[d] = Math.max(0, +hv); }
-    else if (a === 'delOverride') delete state.overrides[t.dataset.d];
-    else return;
-    save(); render();
+      const name = $('nName').value.trim();
+      if (!name) return alert(L().needName);
+      const hasExam = $('nHasExam').checked;
+      let exam = null;
+      if (hasExam) {
+        const date = $('nDate').value;
+        if (!date) return alert(L().needExam);
+        exam = { kind: $('nKind').value, date, time: $('nTime').value || '', nature: $('nNature').value, covered: +$('nCov').value || 0 };
+      }
+      state.subjects.push({ id: uid(), name, exam, tasks: [] });
+      save(); return render();
+    }
+    if (a === 'toggle') { openSubject = openSubject === s ? null : s; return render(); }
+    if (a === 'toggleExam') { openExam = openExam === s ? null : s; return render(); }
+    if (a === 'delSubject') { if (!confirm(L().delConfirm)) return; state.subjects = state.subjects.filter((x) => x.id !== s); save(); return render(); }
+    if (a === 'saveExam') {
+      const p = 'e-' + s + '-';
+      const date = $(p + 'Date').value;
+      if (!date) return alert(L().needExam);
+      subj(s).exam = { kind: $(p + 'Kind').value, date, time: $(p + 'Time').value || '', nature: $(p + 'Nature').value, covered: +$(p + 'Cov').value || 0 };
+      save(); return render();
+    }
+    if (a === 'clearExam') { subj(s).exam = null; save(); return render(); }
+    if (a === 'pickKind') { taskKind[s] = t.dataset.k; return render(); }
+    if (a === 'addTask') {
+      const sj = subj(s), title = $('tt-' + s).value.trim();
+      if (!title) return alert(L().needTask);
+      const k = taskKind[s] || 'lecture';
+      const d = +$('td-' + s).value || 0;
+      const task = mkTask(title, k, d || null);
+      if (k === 'clinic') task.due = ($('tdue-' + s) || {}).value || null;
+      sj.tasks.push(task);
+      save(); return render();
+    }
+    if (a === 'delTask') { const sj = subj(s); sj.tasks = sj.tasks.filter((x) => x.id !== l); save(); return render(); }
+    if (a === 'done') { const x = taskOf(s, l); if (x) x.done = true; save(); return render(); }
+    if (a === 'addOverride') { const d = $('oDate').value, hv = $('oHours').value; if (!d || hv === '') return; state.overrides[d] = Math.max(0, +hv); save(); return render(); }
+    if (a === 'delOverride') { delete state.overrides[t.dataset.d]; save(); return render(); }
   });
-  document.addEventListener('change', (e) => {
-    const t = e.target, a = t.dataset.act; if (!a) return;
-    if (a === 'check') { const x = lecOf(t.dataset.s, t.dataset.l); x.done = t.checked; if (!t.checked) x.confidence = 0; }
-    else if (a === 'conf') lecOf(t.dataset.s, t.dataset.l).confidence = +t.value;
-    else if (a === 'avail') { const v = parseFloat(t.value); state.availability[+t.dataset.i] = v >= 0 ? v : 0; }
-    else return;
-    save(); render();
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && session && Date.now() - lastPull > 30000) loadCloud().then(render);
   });
-  window.__planner = { get state() { return state; }, seed, render };
+
+  window.__planner = { get state() { return state; }, seed, render, get session() { return session; } };
   render();
+  initCloud();
 })();
 </script>
 </body>
