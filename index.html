@@ -4,29 +4,243 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Dental Exam Planner</title>
-<style>*{box-sizing:border-box}body{margin:0;font-family:system-ui,"Segoe UI",Tahoma,sans-serif;background:#f4f7fb;color:#1c2733}
-header{background:#0b6e8a;color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center}
-h1{font-size:18px;margin:0}nav{display:flex;background:#fff;border-bottom:1px solid #d9e2ec;position:sticky;top:0}
-nav button{flex:1;padding:12px 4px;border:0;background:none;font-size:15px;cursor:pointer;border-bottom:3px solid transparent}
-nav button.on{border-color:#0b6e8a;color:#0b6e8a;font-weight:700}
-main{max-width:760px;margin:0 auto;padding:14px}
-.card{background:#fff;border-radius:10px;padding:12px;margin-bottom:10px;box-shadow:0 1px 3px #0001}
-.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.grow{flex:1}
-input,select,textarea{font:inherit;padding:8px;border:1px solid #c5d0dc;border-radius:6px;max-width:100%}
-textarea{width:100%;min-height:70px}button.btn{background:#0b6e8a;color:#fff;border:0;border-radius:6px;padding:8px 14px;font:inherit;cursor:pointer}
-button.ghost{background:#e8eef4;color:#1c2733}button.danger{background:#c0392b}
-.tag{font-size:12px;padding:2px 8px;border-radius:10px;background:#e1f0f5;color:#0b6e8a}
-.tag.revise{background:#fff1d6;color:#8a5a00}.tag.review{background:#ece6f7;color:#5b3f9b}
-.warn{background:#fdecea;border:1px solid #e6a7a0;color:#8c2a20}.muted{color:#6b7a89;font-size:13px}
-.bar{height:10px;background:#e3eaf1;border-radius:6px;overflow:hidden}.bar i{display:block;height:100%;background:#2e9e6b}
-.day{font-weight:700;margin:14px 0 6px}.today{color:#0b6e8a}
-.sess{display:flex;gap:8px;align-items:center;padding:6px 0;border-top:1px solid #eef2f6}.sess:first-of-type{border-top:0}
-.lec{display:flex;gap:6px;align-items:center;padding:4px 0}.lec.done span.t{text-decoration:line-through;color:#8795a3}
-.grid7{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>:root {
+  --bg: #eef4f3;
+  --card: #ffffff;
+  --ink: #12262b;
+  --muted: #5d7379;
+  --line: #dce8e6;
+  --primary: #0d9488;
+  --primary-d: #0f766e;
+  --primary-2: #0284c7;
+  --teal-bg: #d7f3ee;
+  --teal-ink: #0b6e62;
+  --amber-bg: #fdf0d5;
+  --amber-ink: #92600a;
+  --violet-bg: #ece7fb;
+  --violet-ink: #5b3fa8;
+  --danger: #d64545;
+  --danger-bg: #fdeaea;
+  --danger-ink: #a52f2b;
+  --shadow: 0 1px 2px rgba(13, 60, 56, 0.06), 0 10px 28px -14px rgba(13, 60, 56, 0.22);
+  --radius: 16px;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  font-family: "Inter", "Cairo", system-ui, "Segoe UI", Tahoma, sans-serif;
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(13, 148, 136, 0.10), transparent 60%),
+    radial-gradient(900px 420px at 0% -10%, rgba(2, 132, 199, 0.10), transparent 55%),
+    var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+}
+header {
+  background: linear-gradient(120deg, var(--primary-d), var(--primary) 55%, var(--primary-2));
+  color: #fff;
+  padding: 14px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  box-shadow: 0 6px 20px -10px rgba(13, 60, 56, 0.5);
+}
+h1 { font-size: 19px; margin: 0; font-weight: 800; letter-spacing: 0.2px; }
+.hrow { display: flex; gap: 8px; align-items: center; }
+#todayLbl {
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+#langBtn {
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #fff;
+  padding: 5px 14px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+#langBtn:hover { background: rgba(255, 255, 255, 0.28); }
+nav {
+  display: flex;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  padding: 6px;
+}
+nav button {
+  flex: 1;
+  padding: 9px 4px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 12px;
+  transition: background 0.15s, color 0.15s;
+}
+nav button:hover { background: #eef4f3; color: var(--ink); }
+nav button.on {
+  background: linear-gradient(120deg, var(--primary), var(--primary-2));
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 4px 12px -4px rgba(13, 148, 136, 0.55);
+}
+main { max-width: 780px; margin: 0 auto; padding: 16px 14px 40px; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow);
+  animation: fadeUp 0.25s ease both;
+}
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.grow { flex: 1; min-width: 0; }
+input, select, textarea {
+  font: inherit;
+  padding: 9px 11px;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  max-width: 100%;
+  background: #fbfdfd;
+  color: var(--ink);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.16);
+}
+textarea { width: 100%; min-height: 74px; resize: vertical; margin: 10px 0; }
+input[type="checkbox"] { accent-color: var(--primary); width: 18px; height: 18px; cursor: pointer; }
+input[type="date"] { font-variant-numeric: tabular-nums; }
+button.btn {
+  background: linear-gradient(120deg, var(--primary), var(--primary-2));
+  color: #fff;
+  border: 0;
+  border-radius: 999px;
+  padding: 9px 18px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px -5px rgba(13, 148, 136, 0.6);
+  transition: transform 0.12s, box-shadow 0.12s, filter 0.12s;
+}
+button.btn:hover { transform: translateY(-1px); filter: brightness(1.06); }
+button.btn:active { transform: none; }
+button.ghost {
+  background: #eef4f3;
+  color: var(--ink);
+  box-shadow: none;
+  border: 1px solid var(--line);
+  font-weight: 600;
+}
+button.ghost:hover { background: #e3edeb; filter: none; }
+button.danger {
+  background: var(--danger-bg);
+  color: var(--danger-ink);
+  box-shadow: none;
+  font-weight: 700;
+}
+button.danger:hover { background: #fbdcdc; filter: none; }
+.tag {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--teal-bg);
+  color: var(--teal-ink);
+  white-space: nowrap;
+}
+.tag.revise { background: var(--amber-bg); color: var(--amber-ink); }
+.tag.review { background: var(--violet-bg); color: var(--violet-ink); }
+.warn {
+  background: linear-gradient(120deg, #fdeeee, #fdf6f0);
+  border: 1px solid #f0c9c4;
+  border-inline-start: 4px solid var(--danger);
+  color: var(--danger-ink);
+  font-weight: 600;
+}
+.muted { color: var(--muted); font-size: 13px; }
+.bar { height: 9px; background: #e4efed; border-radius: 999px; overflow: hidden; margin: 10px 0 8px; }
+.bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #34d399, var(--primary));
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+.day { font-weight: 800; font-size: 15px; margin: 18px 2px 8px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.day .muted { font-weight: 600; }
+.today { color: var(--primary-d); }
+.today::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--primary); align-self: center; }
+.sess { display: flex; gap: 10px; align-items: center; padding: 9px 0; border-top: 1px solid #eef3f2; }
+.sess:first-of-type { border-top: 0; }
+.sess .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.sess b { font-weight: 700; }
+.sess .hrs { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.lec { display: flex; gap: 8px; align-items: center; padding: 7px 0; border-top: 1px solid #f0f5f4; }
+.lec:first-of-type { border-top: 0; }
+.lec.done span.t { text-decoration: line-through; color: #8aa0a5; }
+.grid7 { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
+.grid7 label { font-size: 13px; font-weight: 700; color: var(--muted); }
+.grid7 input { margin-top: 5px; width: 100%; }
+.empty { text-align: center; padding: 34px 18px; }
+.empty .big { font-size: 42px; margin-bottom: 10px; }
+.empty p { color: var(--muted); margin: 0 0 16px; line-height: 1.7; }
+.subj-head b { font-size: 15px; }
+.datechip {
+  background: #eef4f3;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.pcard { border-inline-start: 4px solid var(--primary); }
+@media (min-width: 640px) {
+  main { padding: 22px 20px 48px; }
+  nav { justify-content: center; }
+  nav button { flex: 0 1 150px; }
+  h1 { font-size: 21px; }
+}
 </style>
 </head>
 <body>
-<header><h1>🦷 Dental Exam Planner</h1><div id="todayLbl"></div></header>
+<header>
+  <h1 id="appTitle">🦷 Dental Exam Planner</h1>
+  <div class="hrow">
+    <div id="todayLbl"></div>
+    <button id="langBtn" type="button" data-act="lang">English</button>
+  </div>
+</header>
 <nav id="tabs">
   <button data-tab="schedule" class="on">الجدول</button>
   <button data-tab="subjects">المواد</button>
@@ -139,74 +353,187 @@ button.ghost{background:#e8eef4;color:#1c2733}button.danger{background:#c0392b}
 
 (function () {
   const KEY = 'dental-exam-planner.v1';
-  const DAYS = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربع', 'الخميس', 'الجمعة', 'السبت'];
+
+  const I18N = {
+    ar: {
+      dir: 'rtl',
+      days: ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'],
+      appTitle: '🦷 مخطط امتحانات الأسنان',
+      langBtn: 'English',
+      tabs: { schedule: 'الجدول', subjects: 'المواد', time: 'الوقت المتاح', progress: 'التقدم' },
+      today: 'النهارده',
+      tomorrow: 'بكرة',
+      fmtH: (h) => (h % 1 ? h.toFixed(1) : h) + ' س',
+      noSubjects: 'لسه مفيش مواد. روح تاب "المواد" وضيف مادة، أو حمّل مثال امتحانات يناير.',
+      seedBtn: 'حمّل مثال يناير',
+      deficit: (name, hours) => '⚠️ ' + name + ': ناقصك ' + hours + ' قبل الامتحان. زوّد الوقت المتاح أو شيل محاضرات.',
+      noSessions: 'مفيش جلسات مذاكرة. اتأكد من الوقت المتاح ومن إن تواريخ الامتحانات لسه جاية.',
+      first14: 'بيظهر أول 14 يوم بس. الباقي بيتحدث مع تقدمك.',
+      doneBtn: 'خلصت',
+      tagRevise: 'مراجعة تانية',
+      tagReview: 'مراجعة',
+      generalReview: 'مراجعة عامة',
+      addSubjectTitle: 'إضافة مادة',
+      subjNamePh: 'اسم المادة',
+      diff: ['سهلة', 'عادية', 'صعبة'],
+      lecsPh: 'المحاضرات، واحدة في كل سطر (اختياري). ممكن تكتب الساعات بعد علامة | مثل: محاضرة 1 | 2',
+      addBtn: 'إضافة',
+      seedBtnShort: 'مثال يناير',
+      lecturesBtn: (n) => 'المحاضرات (' + n + ')',
+      closeBtn: 'اقفل',
+      delBtn: 'حذف',
+      confidencePh: 'ثقتي؟',
+      newLecPh: 'محاضرة جديدة',
+      availTitle: 'ساعات المذاكرة المتاحة في كل يوم',
+      overrideTitle: 'يوم مختلف أو مقفول',
+      hoursPh: 'ساعات (0 = مقفول)',
+      saveBtn: 'حفظ',
+      addFirst: 'ضيف مواد الأول.',
+      examPassed: 'الامتحان عدّى',
+      daysLeft: (n) => 'فاضل ' + n + ' يوم',
+      lecCount: (done, total, pct) => done + '/' + total + ' محاضرة (' + pct + '%)',
+      seedConfirm: 'ده هيستبدل المواد الحالية. تكمل؟',
+      needNameDate: 'اكتب اسم المادة وتاريخ الامتحان',
+      delConfirm: 'تحذف المادة؟',
+      lecN: (i) => 'محاضرة ' + i,
+      seedSubjects: [
+        ['هيستولوجي الفم', '2027-01-09', 2, 8],
+        ['فارماكولوجي', '2027-01-10', 3, 12],
+        ['بيوماتيريالز', '2027-01-11', 2, 8],
+        ['ميكروبيولوجي', '2027-01-13', 2, 10],
+        ['ريادة أعمال', '2027-01-17', 1, 6],
+        ['باثولوجي', '2027-01-18', 2, 10],
+        ['ميديسن', '2027-01-20', 3, 12],
+      ],
+    },
+    en: {
+      dir: 'ltr',
+      days: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+      appTitle: '🦷 Dental Exam Planner',
+      langBtn: 'عربي',
+      tabs: { schedule: 'Schedule', subjects: 'Subjects', time: 'Available time', progress: 'Progress' },
+      today: 'Today',
+      tomorrow: 'Tomorrow',
+      fmtH: (h) => (h % 1 ? h.toFixed(1) : h) + ' h',
+      noSubjects: 'No subjects yet. Go to the Subjects tab and add one, or load the January exams example.',
+      seedBtn: 'Load January example',
+      deficit: (name, hours) => '⚠️ ' + name + ': you are short ' + hours + ' before the exam. Add available time or remove lectures.',
+      noSessions: 'No study sessions. Check your available time and that exam dates are still ahead.',
+      first14: 'Only the first 14 days are shown. The rest updates as you progress.',
+      doneBtn: 'Done',
+      tagRevise: 'Re-revise',
+      tagReview: 'Review',
+      generalReview: 'General review',
+      addSubjectTitle: 'Add a subject',
+      subjNamePh: 'Subject name',
+      diff: ['Easy', 'Medium', 'Hard'],
+      lecsPh: 'Lectures, one per line (optional). You can write the hours after a | like: Lecture 1 | 2',
+      addBtn: 'Add',
+      seedBtnShort: 'January example',
+      lecturesBtn: (n) => 'Lectures (' + n + ')',
+      closeBtn: 'Close',
+      delBtn: 'Delete',
+      confidencePh: 'Confidence?',
+      newLecPh: 'New lecture',
+      availTitle: 'Available study hours per day',
+      overrideTitle: 'A different or blocked day',
+      hoursPh: 'Hours (0 = blocked)',
+      saveBtn: 'Save',
+      addFirst: 'Add subjects first.',
+      examPassed: 'Exam passed',
+      daysLeft: (n) => n + ' days left',
+      lecCount: (done, total, pct) => done + '/' + total + ' lectures (' + pct + '%)',
+      seedConfirm: 'This will replace your current subjects. Continue?',
+      needNameDate: 'Enter the subject name and exam date',
+      delConfirm: 'Delete this subject?',
+      lecN: (i) => 'Lecture ' + i,
+      seedSubjects: [
+        ['Oral Histology', '2027-01-09', 2, 8],
+        ['Pharmacology', '2027-01-10', 3, 12],
+        ['Biomaterials', '2027-01-11', 2, 8],
+        ['Microbiology', '2027-01-13', 2, 10],
+        ['Entrepreneurship', '2027-01-17', 1, 6],
+        ['Pathology', '2027-01-18', 2, 10],
+        ['Medicine', '2027-01-20', 3, 12],
+      ],
+    },
+  };
+
+  const PALETTE = ['#0d9488', '#7c3aed', '#ea580c', '#0284c7', '#db2777', '#65a30d', '#d97706', '#dc2626'];
+  const colorOf = (id) => {
+    let h = 0;
+    for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+    return PALETTE[h % PALETTE.length];
+  };
+
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const uid = () => Math.random().toString(36).slice(2, 9);
   const todayStr = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
-  const empty = () => ({ subjects: [], availability: [2, 2, 2, 2, 2, 2, 2], overrides: {}, blocked: [] });
-  let state; try { state = JSON.parse(localStorage.getItem(KEY)) || empty(); } catch (e) { state = empty(); }
+  const empty = () => ({ subjects: [], availability: [2, 2, 2, 2, 2, 2, 2], overrides: {}, blocked: [], lang: 'ar' });
+  let state;
+  try { state = Object.assign(empty(), JSON.parse(localStorage.getItem(KEY)) || {}); } catch (e) { state = empty(); }
   const save = () => localStorage.setItem(KEY, JSON.stringify(state));
   let tab = 'schedule', openSubject = null;
 
+  const L = () => I18N[state.lang === 'en' ? 'en' : 'ar'];
+
   function seed() {
-    const mk = (name, examDate, weight, n) => ({ id: uid(), name, examDate, weight, lectures: Array.from({ length: n }, (_, i) => ({ id: uid(), title: 'Lecture ' + (i + 1), hours: 1.5, done: false, confidence: 0 })) });
-    state.subjects = [mk('Oral Histology', '2027-01-09', 2, 8), mk('Pharmacology', '2027-01-10', 3, 12), mk('Biomaterials', '2027-01-11', 2, 8),
-      mk('Microbiology', '2027-01-13', 2, 10), mk('Entrepreneurship', '2027-01-17', 1, 6), mk('Pathology', '2027-01-18', 2, 10), mk('Medicine', '2027-01-20', 3, 12)];
+    const mk = (name, examDate, weight, n) => ({ id: uid(), name, examDate, weight, lectures: Array.from({ length: n }, (_, i) => ({ id: uid(), title: L().lecN(i + 1), hours: 1.5, done: false, confidence: 0 })) });
+    state.subjects = L().seedSubjects.map((s) => mk(s[0], s[1], s[2], s[3]));
     state.availability = [2, 2, 4, 5, 2.5, 3.5, 1]; // Sun..Sat
     save(); render();
   }
 
   const subj = (id) => state.subjects.find((s) => s.id === id);
-  const fmtH = (h) => (h % 1 ? h.toFixed(1) : h) + ' س';
   const dayLabel = (d, today) => {
     const diff = Scheduler.diffDays(today, d);
-    return (diff === 0 ? 'النهارده' : diff === 1 ? 'بكرة' : DAYS[Scheduler.weekday(d)]) + ' ' + d.slice(5).replace('-', '/');
+    return (diff === 0 ? L().today : diff === 1 ? L().tomorrow : L().days[Scheduler.weekday(d)]) + ' ' + d.slice(5).replace('-', '/');
   };
 
   function viewSchedule() {
     const today = todayStr();
     document.getElementById('todayLbl').textContent = today;
-    if (!state.subjects.length) return '<div class="card">لسه مفيش مواد. روح تاب "المواد" وضيف مادة، أو حمّل مثال امتحانات يناير.<br><br><button class="btn" data-act="seed">حمّل مثال يناير</button></div>';
+    if (!state.subjects.length) return `<div class="card empty"><div class="big">🦷</div><p>${esc(L().noSubjects)}</p><button class="btn" data-act="seed">${esc(L().seedBtn)}</button></div>`;
     const r = Scheduler.generate(state, today);
     let h = '';
-    r.deficits.forEach((d) => { h += `<div class="card warn">⚠️ ${esc(subj(d.subjectId).name)}: ناقصك ${fmtH(d.hours)} قبل الامتحان. زوّد الوقت المتاح أو شيل محاضرات.</div>`; });
+    r.deficits.forEach((d) => { h += `<div class="card warn">${esc(L().deficit(subj(d.subjectId).name, L().fmtH(d.hours)))}</div>`; });
     const byDay = {}; r.sessions.forEach((s) => (byDay[s.date] = byDay[s.date] || []).push(s));
     const dates = Object.keys(byDay).sort().slice(0, 14);
-    if (!dates.length) h += '<div class="card">مفيش جلسات مذاكرة. اتأكد من الوقت المتاح ومن إن تواريخ الامتحانات لسه جاية.</div>';
+    if (!dates.length) h += `<div class="card empty"><div class="big">📭</div><p>${esc(L().noSessions)}</p></div>`;
     dates.forEach((d) => {
       const tot = byDay[d].reduce((a, s) => a + s.hours, 0);
-      h += `<div class="day ${d === today ? 'today' : ''}">${dayLabel(d, today)} <span class="muted">(${fmtH(tot)})</span></div><div class="card">`;
+      h += `<div class="day ${d === today ? 'today' : ''}">${dayLabel(d, today)} <span class="muted">(${L().fmtH(tot)})</span></div><div class="card">`;
       byDay[d].forEach((s) => {
         const sj = subj(s.subjectId);
-        const tag = s.type === 'revise' ? '<span class="tag revise">مراجعة تانية</span>' : s.type === 'review' ? '<span class="tag review">مراجعة</span>' : '';
-        h += `<div class="sess"><div class="grow"><b>${esc(sj.name)}</b> - ${esc(s.title)} ${tag}</div><span class="muted">${fmtH(s.hours)}</span>` +
-          (s.lectureId && s.type === 'study' ? `<button class="btn ghost" data-act="done" data-s="${sj.id}" data-l="${s.lectureId}">خلصت</button>` : '') + '</div>';
+        const tag = s.type === 'revise' ? `<span class="tag revise">${esc(L().tagRevise)}</span>` : s.type === 'review' ? `<span class="tag review">${esc(L().tagReview)}</span>` : '';
+        h += `<div class="sess"><i class="dot" style="background:${colorOf(sj.id)}"></i><div class="grow"><b>${esc(sj.name)}</b> - ${esc(s.type === 'review' ? L().generalReview : s.title)} ${tag}</div><span class="muted hrs">${L().fmtH(s.hours)}</span>` +
+          (s.lectureId && s.type === 'study' ? `<button class="btn ghost" data-act="done" data-s="${sj.id}" data-l="${s.lectureId}">${esc(L().doneBtn)}</button>` : '') + '</div>';
       });
       h += '</div>';
     });
-    if (Object.keys(byDay).length > 14) h += '<div class="muted">بيظهر أول 14 يوم بس. الباقي بيتحدث مع تقدمك.</div>';
+    if (Object.keys(byDay).length > 14) h += `<div class="muted">${esc(L().first14)}</div>`;
     return h;
   }
 
   function viewSubjects() {
-    let h = `<div class="card"><b>إضافة مادة</b><div class="row" style="margin-top:8px">
-      <input id="nName" placeholder="اسم المادة" class="grow"><input id="nDate" type="date">
-      <select id="nW"><option value="1">سهلة</option><option value="2" selected>عادية</option><option value="3">صعبة</option></select></div>
-      <textarea id="nLecs" placeholder="المحاضرات، واحدة في كل سطر (اختياري). ممكن تكتب الساعات بعد علامة | مثل: Lecture 1 | 2"></textarea>
-      <button class="btn" data-act="addSubject">إضافة</button> <button class="btn ghost" data-act="seed">مثال يناير</button></div>`;
+    let h = `<div class="card"><b>${esc(L().addSubjectTitle)}</b><div class="row" style="margin-top:8px">
+      <input id="nName" placeholder="${esc(L().subjNamePh)}" class="grow"><input id="nDate" type="date">
+      <select id="nW"><option value="1">${esc(L().diff[0])}</option><option value="2" selected>${esc(L().diff[1])}</option><option value="3">${esc(L().diff[2])}</option></select></div>
+      <textarea id="nLecs" placeholder="${esc(L().lecsPh)}"></textarea>
+      <button class="btn" data-act="addSubject">${esc(L().addBtn)}</button> <button class="btn ghost" data-act="seed">${esc(L().seedBtnShort)}</button></div>`;
     state.subjects.forEach((s) => {
       const open = openSubject === s.id;
-      h += `<div class="card"><div class="row"><b class="grow">${esc(s.name)}</b><span class="muted">${esc(s.examDate)}</span>
-        <button class="btn ghost" data-act="toggle" data-s="${s.id}">${open ? 'اقفل' : 'المحاضرات (' + s.lectures.length + ')'}</button>
-        <button class="btn danger" data-act="delSubject" data-s="${s.id}">حذف</button></div>`;
+      h += `<div class="card pcard" style="border-inline-start-color:${colorOf(s.id)}"><div class="row subj-head"><b class="grow">${esc(s.name)}</b><span class="datechip">${esc(s.examDate)}</span>
+        <button class="btn ghost" data-act="toggle" data-s="${s.id}">${open ? esc(L().closeBtn) : esc(L().lecturesBtn(s.lectures.length))}</button>
+        <button class="btn danger" data-act="delSubject" data-s="${s.id}">${esc(L().delBtn)}</button></div>`;
       if (open) {
         s.lectures.forEach((l) => {
           h += `<div class="lec ${l.done ? 'done' : ''}"><input type="checkbox" data-act="check" data-s="${s.id}" data-l="${l.id}" ${l.done ? 'checked' : ''}>
-            <span class="t grow">${esc(l.title)} <span class="muted">${l.hours} س</span></span>
-            ${l.done ? `<select data-act="conf" data-s="${s.id}" data-l="${l.id}"><option value="0">ثقتي؟</option>${[1, 2, 3, 4, 5].map((n) => `<option value="${n}" ${l.confidence === n ? 'selected' : ''}>${n}/5</option>`).join('')}</select>` : ''}
+            <span class="t grow">${esc(l.title)} <span class="muted">${L().fmtH(l.hours)}</span></span>
+            ${l.done ? `<select data-act="conf" data-s="${s.id}" data-l="${l.id}"><option value="0">${esc(L().confidencePh)}</option>${[1, 2, 3, 4, 5].map((n) => `<option value="${n}" ${l.confidence === n ? 'selected' : ''}>${n}/5</option>`).join('')}</select>` : ''}
             <button class="btn ghost" data-act="delLec" data-s="${s.id}" data-l="${l.id}">x</button></div>`;
         });
-        h += `<div class="row"><input id="al-${s.id}" placeholder="محاضرة جديدة" class="grow"><input id="ah-${s.id}" type="number" step="0.5" min="0.5" value="1" style="width:70px"><button class="btn" data-act="addLec" data-s="${s.id}">+</button></div>`;
+        h += `<div class="row" style="margin-top:8px"><input id="al-${s.id}" placeholder="${esc(L().newLecPh)}" class="grow"><input id="ah-${s.id}" type="number" step="0.5" min="0.5" value="1" style="width:76px"><button class="btn" data-act="addLec" data-s="${s.id}">+</button></div>`;
       }
       h += '</div>';
     });
@@ -214,23 +541,33 @@ button.ghost{background:#e8eef4;color:#1c2733}button.danger{background:#c0392b}
   }
 
   function viewTime() {
-    let h = '<div class="card"><b>ساعات المذاكرة المتاحة في كل يوم</b><div class="grid7" style="margin-top:8px">';
-    DAYS.forEach((n, i) => { h += `<label>${n}<br><input type="number" min="0" max="16" step="0.5" style="width:90px" data-act="avail" data-i="${i}" value="${state.availability[i]}"></label>`; });
-    h += '</div></div><div class="card"><b>يوم مختلف أو مقفول</b><div class="row" style="margin-top:8px"><input id="oDate" type="date"><input id="oHours" type="number" min="0" step="0.5" placeholder="ساعات (0 = مقفول)" style="width:150px"><button class="btn" data-act="addOverride">حفظ</button></div>';
+    let h = `<div class="card"><b>${esc(L().availTitle)}</b><div class="grid7" style="margin-top:10px">`;
+    L().days.forEach((n, i) => { h += `<label>${n}<input type="number" min="0" max="16" step="0.5" data-act="avail" data-i="${i}" value="${state.availability[i]}"></label>`; });
+    h += `</div></div><div class="card"><b>${esc(L().overrideTitle)}</b><div class="row" style="margin-top:10px"><input id="oDate" type="date"><input id="oHours" type="number" min="0" step="0.5" placeholder="${esc(L().hoursPh)}" style="width:160px"><button class="btn" data-act="addOverride">${esc(L().saveBtn)}</button></div>`;
     const ov = Object.keys(state.overrides).sort();
-    ov.forEach((d) => { h += `<div class="row" style="margin-top:6px"><span class="grow">${d}: ${fmtH(state.overrides[d])}</span><button class="btn ghost" data-act="delOverride" data-d="${d}">x</button></div>`; });
+    ov.forEach((d) => { h += `<div class="row" style="margin-top:8px"><span class="grow">${d}: ${L().fmtH(state.overrides[d])}</span><button class="btn ghost" data-act="delOverride" data-d="${d}">x</button></div>`; });
     return h + '</div>';
   }
 
   function viewProgress() {
     const today = todayStr();
-    if (!state.subjects.length) return '<div class="card">ضيف مواد الأول.</div>';
+    if (!state.subjects.length) return `<div class="card empty"><div class="big">📚</div><p>${esc(L().addFirst)}</p></div>`;
     return Scheduler.progress(state, today).sort((a, b) => (a.daysLeft ?? 9e9) - (b.daysLeft ?? 9e9)).map((p) =>
-      `<div class="card"><div class="row"><b class="grow">${esc(p.name)}</b><span class="muted">${p.daysLeft < 0 ? 'الامتحان عدّى' : 'فاضل ' + p.daysLeft + ' يوم'}</span></div>
-      <div class="bar"><i style="width:${p.pct}%"></i></div><div class="muted">${p.done}/${p.total} محاضرة (${p.pct}%)</div></div>`).join('');
+      `<div class="card pcard" style="border-inline-start-color:${colorOf(p.subjectId)}"><div class="row"><b class="grow">${esc(p.name)}</b><span class="tag">${p.daysLeft < 0 ? esc(L().examPassed) : esc(L().daysLeft(p.daysLeft))}</span></div>
+      <div class="bar"><i style="width:${p.pct}%"></i></div><div class="muted">${esc(L().lecCount(p.done, p.total, p.pct))}</div></div>`).join('');
+  }
+
+  function applyChrome() {
+    const l = L();
+    document.documentElement.lang = state.lang === 'en' ? 'en' : 'ar';
+    document.documentElement.dir = l.dir;
+    document.getElementById('appTitle').textContent = l.appTitle;
+    document.getElementById('langBtn').textContent = l.langBtn;
+    document.querySelectorAll('#tabs button').forEach((b) => { b.textContent = l.tabs[b.dataset.tab]; });
   }
 
   function render() {
+    applyChrome();
     document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
     document.getElementById('view').innerHTML = { schedule: viewSchedule, subjects: viewSubjects, time: viewTime, progress: viewProgress }[tab]();
   }
@@ -248,13 +585,14 @@ button.ghost{background:#e8eef4;color:#1c2733}button.danger{background:#c0392b}
     const t = e.target.closest('[data-tab],[data-act]'); if (!t) return;
     if (t.dataset.tab) { tab = t.dataset.tab; return render(); }
     const a = t.dataset.act, s = t.dataset.s, l = t.dataset.l;
-    if (a === 'seed') { if (!state.subjects.length || confirm('ده هيستبدل المواد الحالية. تكمل؟')) seed(); return; }
+    if (a === 'lang') { state.lang = state.lang === 'en' ? 'ar' : 'en'; save(); render(); return; }
+    if (a === 'seed') { if (!state.subjects.length || confirm(L().seedConfirm)) seed(); return; }
     if (a === 'addSubject') {
       const name = $('nName').value.trim(), date = $('nDate').value;
-      if (!name || !date) return alert('اكتب اسم المادة وتاريخ الامتحان');
+      if (!name || !date) return alert(L().needNameDate);
       state.subjects.push({ id: uid(), name, examDate: date, weight: +$('nW').value, lectures: parseLecs($('nLecs').value) });
     } else if (a === 'toggle') openSubject = openSubject === s ? null : s;
-    else if (a === 'delSubject') { if (!confirm('تحذف المادة؟')) return; state.subjects = state.subjects.filter((x) => x.id !== s); }
+    else if (a === 'delSubject') { if (!confirm(L().delConfirm)) return; state.subjects = state.subjects.filter((x) => x.id !== s); }
     else if (a === 'done') { const x = lecOf(s, l); x.done = true; }
     else if (a === 'delLec') subj(s).lectures = subj(s).lectures.filter((x) => x.id !== l);
     else if (a === 'addLec') { const n = $('al-' + s).value.trim(); if (!n) return; subj(s).lectures.push({ id: uid(), title: n, hours: parseFloat($('ah-' + s).value) || 1, done: false, confidence: 0 }); }
