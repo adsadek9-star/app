@@ -114,7 +114,7 @@ h1 { display: flex; align-items: center; gap: 9px; }
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
-#langBtn, #themeBtn {
+#langBtn, #themeBtn, #profileBtn {
   background: rgba(255, 255, 255, 0.16);
   border: 1px solid rgba(255, 255, 255, 0.35);
   color: #fff;
@@ -126,7 +126,7 @@ h1 { display: flex; align-items: center; gap: 9px; }
   cursor: pointer;
   transition: background 0.15s;
 }
-#langBtn:hover, #themeBtn:hover { background: rgba(255, 255, 255, 0.28); }
+#langBtn:hover, #themeBtn:hover, #profileBtn:hover { background: rgba(255, 255, 255, 0.28); }
 #themeBtn { padding: 5px 10px; }
 nav {
   display: flex;
@@ -427,6 +427,26 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
 .ftask.on { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.25); }
 .fphase { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
 .ftimer { font-size: 54px; font-weight: 800; text-align: center; margin: 10px 0 4px; font-variant-numeric: tabular-nums; letter-spacing: 2px; }
+
+/* ---- v8: 12h time picker, profile back arrow, day editor, big subject cards ---- */
+.tpick { display: inline-flex; align-items: center; gap: 6px; }
+.tpick select { min-width: 54px; padding: 9px 8px; font-size: 15px; font-weight: 700; text-align: center; }
+.apseg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.apseg button { border: 0; background: var(--ghost-bg); color: var(--muted); padding: 9px 12px; font-weight: 800; font-size: 13px; cursor: pointer; font-family: inherit; }
+.apseg button.on { background: var(--primary); color: #fff; }
+.backarrow { font-size: 18px; padding: 6px 14px; }
+[dir="rtl"] .backarrow { transform: scaleX(-1); }
+.sleepfix { background: var(--soft); border-radius: 12px; padding: 10px; margin-top: 6px; flex-wrap: wrap; }
+.sleepfix .tpick { margin-top: 4px; }
+.draftrow { opacity: 0.85; }
+.offday { text-align: center; font-weight: 800; }
+.card.bigsub { padding: 16px; }
+.bigsub .sicon.big { width: 46px; height: 46px; font-size: 23px; flex: none; }
+.bigsub .subjname { font-size: 16px; }
+.subj-actions { margin-top: 12px; gap: 8px; }
+.subj-actions .btn { padding: 11px 8px; font-weight: 800; }
+.subj-actions .btn.on { outline: 2px solid var(--primary); }
+.sheet.wide { max-height: 88vh; overflow: auto; }
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
@@ -438,6 +458,7 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
   <div class="hrow">
     <span id="syncLbl" class="sync"></span>
     <div id="todayLbl"></div>
+    <button id="profileBtn" type="button" data-act="openProfile" title="profile">👤</button>
     <button id="themeBtn" type="button" data-act="theme" title="theme">☀</button>
     <button id="langBtn" type="button" data-act="lang">English</button>
   </div>
@@ -447,7 +468,6 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
   <button data-tab="schedule">الجدول</button>
   <button data-tab="exams">الامتحانات</button>
   <button data-tab="subjects">المواد</button>
-  <button data-tab="profile">حسابي</button>
 </nav>
 <main id="view"></main>
 <div id="overlays"></div>
@@ -680,12 +700,34 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
     };
   }
 
+  /* ---------------- mandatory daily sleep ---------------- */
+  const SLEEP_MIN = 360;            // 6 fixed hours of sleep every day
+  const SLEEP_DEFAULT = '23:00';    // default start when the day has no setting (11 PM -> 5 AM)
+
+  // The day's fixed sleep block as a raw block ('HH:MM' strings), or null when
+  // the state carries no sleep map (older callers / unit tests).
+  function sleepBlock(state, wd) {
+    const sl = state && state.sleep;
+    if (!sl || typeof sl !== 'object') return null;
+    const s = hmToMin(sl[wd]);
+    const start = s == null ? hmToMin(SLEEP_DEFAULT) : s;
+    return { id: 'sleep-' + wd, label: '', kind: 'sleep', start: fmtMin(start), end: fmtMin((start + SLEEP_MIN) % 1440) };
+  }
+
+  // Weekly blocks of a weekday plus the fixed sleep block.
+  function blocksForWd(state, wd) {
+    const list = (((state || {}).busy || {})[wd] || []).slice();
+    const sb = sleepBlock(state, wd);
+    if (sb) list.push(sb);
+    return list;
+  }
+
   // Busy blocks of one planning day, as [start,end) minutes with sleep-style
   // midnight crossings unrolled (end may exceed 1440).
   function busyOn(state, d) {
     const wd = weekday(d);
     const out = [];
-    ((state.busy || {})[wd] || []).forEach((raw) => {
+    blocksForWd(state, wd).forEach((raw) => {
       const b = normBlock(raw);
       if (b.start == null || b.end == null) return;
       if (b.start === b.end) return;
@@ -698,7 +740,7 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
     });
     // yesterday's midnight-crossing blocks spill into the start of this day
     const pwd = (wd + 6) % 7;
-    ((state.busy || {})[pwd] || []).forEach((raw) => {
+    blocksForWd(state, pwd).forEach((raw) => {
       const b = normBlock(raw);
       if (b.start == null || b.end == null || b.end >= b.start) return;
       if (b.end > DAY_MIN) out.push([0, b.end]);
@@ -735,7 +777,7 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
   function overlapOn(state, d) {
     const raw = [];
     const wd = weekday(d);
-    ((state.busy || {})[wd] || []).forEach((b) => raw.push(normBlock(b)));
+    blocksForWd(state, wd).forEach((b) => raw.push(normBlock(b)));
     ((state.busyOnce || {})[d] || []).forEach((b) => raw.push(Object.assign(normBlock(b), { once: true })));
     const bad = [];
     for (let i = 0; i < raw.length; i++) {
@@ -762,8 +804,13 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       const b = normBlock(raw);
       if (b.start == null || b.end == null || b.start === b.end) return false;
       const [b0, b1] = unr2(b.start, b.end);
-      if (a0 === b1 || b0 === a1) return false; // touching is fine
-      return a0 < b1 && b0 < a1;
+      // compare on the unrolled circle so a post-midnight tail also clashes
+      for (const sh of [-1440, 0, 1440]) {
+        const c0 = b0 + sh, c1 = b1 + sh;
+        if (a0 === c1 || c0 === a1) continue; // touching is fine
+        if (a0 < c1 && c0 < a1) return true;
+      }
+      return false;
     });
   }
 
@@ -840,7 +887,6 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
 
   function capacityOn(state, d) {
     if ((state.blocked || []).includes(d)) return 0;
-    if (state.overrides && state.overrides[d] != null) return Math.max(0, Number(state.overrides[d]));
     // free time is the day (04:00 -> 04:00) minus busy blocks; a 30-minute break is
     // kept between tasks, and tasks never start after 03:30 so a break always fits
     const mins = freeWindowsOn(state, d).reduce((a, [s, e]) => a + Math.max(0, Math.min(e, 1440 + DAY_MIN - BREAK_M) - s), 0);
@@ -1188,6 +1234,7 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
     estimate, estimateDifficulty, reviewHours, normSubject, SLOT,
     STUDY_H, SOLVE_H, CLINIC_H,
     hmToMin, fmtMin, normBlock, busyOn, freeWindowsOn, gapsOn, overlapOn, blockClashes,
+    sleepBlock, blocksForWd, SLEEP_MIN, SLEEP_DEFAULT,
     BREAK_M, DAY_MIN,
     FOCUS_PRESETS, taskRemainingMin, deductFromTask, focusStats, nextExam,
     countdownParts, revisionPlan,
@@ -1211,7 +1258,7 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       months: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'],
       appTitle: 'Dental Student Planner',
       langBtn: 'English',
-      tabs: { day: 'يومي', schedule: 'الجدول', exams: 'الامتحانات', subjects: 'المواد', profile: 'حسابي' },
+      tabs: { day: 'يومي', schedule: 'الجدول', exams: 'الامتحانات', subjects: 'المواد' },
       greetingAm: (n) => 'صباح الفل' + (n ? ' يا ' + n : ''),
       greetingPm: (n) => 'مساء الفل' + (n ? ' يا ' + n : ''),
       myDaySub: 'كل اللي عليك النهارده في مكان واحد',
@@ -1268,7 +1315,7 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       warnNoDate: (name, hours) => '⚠️ ' + name + ': ناقصك حوالي ' + hours + ' مذاكرة ولسه محددتش امتحان. ابدأ بـ:',
       warnTask: (i, title, hours) => i + ') ' + title + ' (' + hours + ')',
       warnMore: (n) => 'و ' + n + ' مهمة تانية وراهم',
-      noPlan: 'لسه مفيش مواد. حمّل مواد فرقتك الرسمية من الزرار تحت، أو ضيف مادة بنفسك من تاب "المواد".',
+      noPlan: 'لسه مفيش مواد. حمّل مواد فرقتك الرسمية من الزرار تحت.',
       curTitle: 'مواد فرقتك الرسمية',
       curSub: 'من دليل الكلية الرسمي 2025 · ضيف المادة وبعدين حدد امتحانها ومهامها بنفسك',
       addCurBtn: 'ضيف',
@@ -1291,9 +1338,6 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       examLine: (k, d, t, n) => I18N.ar.examWord[k] + ' ' + n + ' يوم ' + d + (t ? ' الساعة ' + t : ''),
       daysLeft: (n) => 'فاضل ' + n + ' يوم',
       examPassed: 'الامتحان عدّى',
-      addSubjectTitle: 'إضافة مادة',
-      subjNamePh: 'اسم المادة',
-      hasExamQ: 'عليه امتحان أو كويز؟',
       kindExam: 'امتحان',
       kindQuiz: 'كويز',
       natureTheory: 'نظري',
@@ -1301,7 +1345,6 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       coveredPh: 'كام محاضرة داخلة؟',
       coveredShort: (n) => n + ' محاضرة داخلة',
       addBtn: 'إضافة',
-      needName: 'اكتب اسم المادة الأول',
       needExam: 'حدد نوع الامتحان وتاريخه',
       tasksBtn: (n) => 'المهام (' + n + ')',
       closeBtn: 'اقفل',
@@ -1324,9 +1367,24 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       needTask: 'اكتب اسم المهمة الأول',
       confPh: 'ثقتي؟',
       busyTitle: 'يومك في الأسبوع',
-      busySub: 'ضيف معاد كل حاجة في يومك (سكاشن، جيم، نوم) والمذاكرة هتتحط في الفراغات لوحدها، مع نص ساعة بريك بين كل مهمة والتانية.',
+      busySub: 'النوم 6 ساعات ثابتة كل يوم ومش بتتشال. ضيف باقي معادياتك (لكتشر، سكشن، جيم، أي حاجة) والمذاكرة بتتحط في الفراغات لوحدها. الفاضل بيتحسب بعد ما تدوس "حفظ اليوم".',
       dayFree: (h) => 'فاضل للمذاكرة حوالي ' + h,
-      kindWord: { class: 'سكشن/محاضرة', gym: 'جيم', sleep: 'نوم', other: 'حاجة تانية' },
+      kindWord: { class: 'لكتشر/سكشن', gym: 'جيم', sleep: 'نوم', other: 'حاجة تانية' },
+      sleepTag: '6 س ثابتة',
+      saveDay: 'حفظ اليوم',
+      draftTag: 'لسه مترحفظش',
+      dayOffTitle: 'يوم أجازة',
+      dayOffSub: 'حدد يوم يتقفل خالص - مفيش مذاكرة بتتحط فيه.',
+      dayOffBtn: 'خلّيه أجازة',
+      dayOffTag: 'أجازة',
+      dayOffToday: 'النهارده أجازة 🏖️ مفيش مذاكرة عليك',
+      backBtn: 'رجوع',
+      daysSecTitle: 'أيامك في الأسبوع',
+      onboardDaysTitle: 'ظبط أيامك',
+      onboardDaysSub: 'حدد وقت نومك ومعادياتك الأسبوعية، وتقدر تغيرهم في أي وقت من حسابك.',
+      onboardDaysBtn: 'تمام، يلا نبدأ',
+      onboardDaysSkip: 'أظبطهم بعدين',
+      addExamBtn: 'ضيف امتحان',
       blockLabelPh: 'اسم الفترة (اختياري)',
       fromPh: 'من',
       toPh: 'لـ',
@@ -1335,8 +1393,6 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       onceTitle: 'يوم معين مشغول',
       busyOncePh: 'السبب (اختياري)',
       examPastErr: 'مينفعش امتحان أو كويز بتاريخ أو وقت عدّى - اختار وقت جاي',
-      overrideTitle: 'يوم مختلف (تحديد ساعات يدوي)',
-      hoursPh: 'ساعات (0 = مقفول)',
       saveBtn: 'حفظ',
       addFirst: 'ضيف مواد الأول.',
       taskCount: (done, total, pct) => done + '/' + total + ' مهمة (' + pct + '%)',
@@ -1376,7 +1432,7 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
       appTitle: 'Dental Student Planner',
       langBtn: 'عربي',
-      tabs: { day: 'My Day', schedule: 'Schedule', exams: 'Exams', subjects: 'Subjects', profile: 'Profile' },
+      tabs: { day: 'My Day', schedule: 'Schedule', exams: 'Exams', subjects: 'Subjects' },
       greetingAm: (n) => 'Good morning' + (n ? ', ' + n : ''),
       greetingPm: (n) => 'Good evening' + (n ? ', ' + n : ''),
       myDaySub: 'Everything on you today, in one place',
@@ -1433,7 +1489,7 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       warnNoDate: (name, hours) => '⚠️ ' + name + ': you are short about ' + hours + ' of work and no exam is set yet. Start with:',
       warnTask: (i, title, hours) => i + ') ' + title + ' (' + hours + ')',
       warnMore: (n) => 'and ' + n + ' more after these',
-      noPlan: 'No subjects yet. Load your official year subjects with the button below, or add one yourself from the Subjects tab.',
+      noPlan: 'No subjects yet. Load your official year subjects with the button below.',
       curTitle: 'Your official year subjects',
       curSub: 'From the official 2025 student guide - add a subject, then set its exam and tasks yourself',
       addCurBtn: 'Add',
@@ -1456,9 +1512,6 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       examLine: (k, d, t, n) => I18N.en.examWord[k] + ' (' + n + ') on ' + d + (t ? ' at ' + t : ''),
       daysLeft: (n) => n + ' days left',
       examPassed: 'Exam passed',
-      addSubjectTitle: 'Add a subject',
-      subjNamePh: 'Subject name',
-      hasExamQ: 'Has an exam or quiz?',
       kindExam: 'Exam',
       kindQuiz: 'Quiz',
       natureTheory: 'Theory',
@@ -1466,7 +1519,6 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       coveredPh: 'How many lectures?',
       coveredShort: (n) => n + ' lectures covered',
       addBtn: 'Add',
-      needName: 'Enter the subject name first',
       needExam: 'Set the exam type and date',
       tasksBtn: (n) => 'Tasks (' + n + ')',
       closeBtn: 'Close',
@@ -1489,9 +1541,24 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       needTask: 'Enter the task name first',
       confPh: 'Confidence?',
       busyTitle: 'Your week, day by day',
-      busySub: 'Add when things happen in your day (sections, gym, sleep). Study sessions go into the free gaps by themselves, with a 30-minute break between one task and the next.',
+      busySub: 'Sleep is a fixed 6 hours every day and cannot be removed. Add the rest of your commitments (lectures, sections, gym, anything) and study goes into the free gaps by itself. The free time updates after you tap "Save day".',
       dayFree: (h) => 'About ' + h + ' free for study',
-      kindWord: { class: 'Class/section', gym: 'Gym', sleep: 'Sleep', other: 'Other' },
+      kindWord: { class: 'Lecture/section', gym: 'Gym', sleep: 'Sleep', other: 'Other' },
+      sleepTag: 'fixed 6 h',
+      saveDay: 'Save day',
+      draftTag: 'not saved yet',
+      dayOffTitle: 'Day off',
+      dayOffSub: 'Pick a date to switch off completely - no study is planned on it.',
+      dayOffBtn: 'Mark as off',
+      dayOffTag: 'Day off',
+      dayOffToday: 'Today is a day off 🏖️ no study for you',
+      backBtn: 'Back',
+      daysSecTitle: 'Your week, day by day',
+      onboardDaysTitle: 'Set up your days',
+      onboardDaysSub: 'Set your sleep time and weekly commitments - you can change them anytime from your profile.',
+      onboardDaysBtn: "Done, let's go",
+      onboardDaysSkip: "I'll do it later",
+      addExamBtn: 'Add exam',
       blockLabelPh: 'Block name (optional)',
       fromPh: 'from',
       toPh: 'to',
@@ -1500,8 +1567,6 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       onceTitle: 'A specific busy day',
       busyOncePh: 'Reason (optional)',
       examPastErr: "An exam or quiz can't be in the past - pick a future date/time",
-      overrideTitle: 'A different day (manual hours cap)',
-      hoursPh: 'Hours (0 = blocked)',
       saveBtn: 'Save',
       addFirst: 'Add subjects first.',
       taskCount: (done, total, pct) => done + '/' + total + ' tasks (' + pct + '%)',
@@ -1553,7 +1618,9 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
     profile: { name: '', year: null, onboarded: false },
     busy: {},        // weekly busy blocks per weekday 0..6: [{id,label,kind,start,end}]
     busyOnce: {},    // one-date busy blocks: {date: [{id,label,kind,start,end}]}
-    overrides: {}, blocked: [], subjects: [], savedAt: 0,
+    sleep: {},       // fixed 6h sleep start per weekday 0..6 ('HH:MM'); missing = default
+    blocked: [],     // dates switched fully off (day off): no study is planned
+    subjects: [], savedAt: 0,
     focusLog: [],    // [{id, taskId, subjectId, date:'YYYY-MM-DD', minutes, at}]
     theme: 'dark',   // 'dark' (default) or 'light'
   });
@@ -1587,14 +1654,32 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       }
     }
   } catch (e) { state = empty(); }
-  if (!state.profile) state.profile = { name: '', year: null, onboarded: false };
-  if (!state.busy || typeof state.busy !== 'object') state.busy = {};
-  if (!state.busyOnce || typeof state.busyOnce !== 'object') state.busyOnce = {};
-  if (!Array.isArray(state.focusLog)) state.focusLog = [];
-  if (state.theme !== 'light') state.theme = 'dark';
+  function normalizeState() {
+    if (!state.profile) state.profile = { name: '', year: null, onboarded: false };
+    if (!state.busy || typeof state.busy !== 'object') state.busy = {};
+    if (!state.busyOnce || typeof state.busyOnce !== 'object') state.busyOnce = {};
+    if (!Array.isArray(state.focusLog)) state.focusLog = [];
+    if (!Array.isArray(state.blocked)) state.blocked = [];
+    if (!state.sleep || typeof state.sleep !== 'object') state.sleep = {};
+    // Fold old editable sleep blocks into the fixed 6-hour sleep setting.
+    for (let wd = 0; wd < 7; wd++) {
+      const list = state.busy[wd] || [];
+      const sl = list.find((b) => b && b.kind === 'sleep' && Scheduler.hmToMin(b.start) != null);
+      if (sl && Scheduler.hmToMin(state.sleep[wd]) == null) state.sleep[wd] = sl.start;
+      state.busy[wd] = list.filter((b) => b && b.kind !== 'sleep');
+      if (!state.busy[wd].length) delete state.busy[wd];
+    }
+    Object.keys(state.busyOnce).forEach((d) => {
+      state.busyOnce[d] = (state.busyOnce[d] || []).filter((b) => b && b.kind !== 'sleep');
+      if (!state.busyOnce[d].length) delete state.busyOnce[d];
+    });
+    if (state.overrides) delete state.overrides; // the manual per-date cap was removed
+    if (state.theme !== 'light') state.theme = 'dark';
+  }
+  normalizeState();
   const saveLocal = () => localStorage.setItem(KEY, JSON.stringify(state));
 
-  let tab = 'day', openSubject = null, openExam = null, taskKind = {}, authSkipped = false, toastTimer = null, timeDay = null;
+  let tab = 'day', prevTab = 'day', openSubject = null, openExam = null, taskKind = {}, authSkipped = false, toastTimer = null, timeDay = null, onboardStep = 1, draftBusy = {};
 
   // focus mode runtime (the running session is also persisted locally, not synced)
   const FKEY = KEY + '.focus';
@@ -1619,6 +1704,43 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
   const fmtMin = Scheduler.fmtMin;
 
   const KIND_ICON = { class: '🏫', gym: '💪', sleep: '😴', other: '📌' };
+
+  /* ---- 12-hour time picker (hour / minutes / AM-PM) ---- */
+  const H12 = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+  function tpHTML(id, val, allowEmpty) {
+    let h12 = null, ap = 'AM', mm = '00';
+    const v = Scheduler.hmToMin(val);
+    if (v != null) {
+      const h24 = Math.floor(v / 60) % 24;
+      h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+      ap = h24 < 12 ? 'AM' : 'PM';
+      mm = String(v % 60).padStart(2, '0');
+    }
+    const mins = ['00', '15', '30', '45'];
+    if (!mins.includes(mm)) mins.push(mm);
+    return `<span class="tpick" id="${id}">` +
+      `<select id="${id}H">${allowEmpty ? '<option value="">--</option>' : ''}${H12.map((h) => `<option value="${h}"${h === h12 ? ' selected' : ''}>${h}</option>`).join('')}</select>` +
+      `<span class="tsep muted">:</span>` +
+      `<select id="${id}M">${mins.map((m) => `<option value="${m}"${m === mm ? ' selected' : ''}>${m}</option>`).join('')}</select>` +
+      `<span class="apseg" id="${id}AP"><button type="button" data-v="AM" class="${ap === 'AM' ? 'on' : ''}">AM</button><button type="button" data-v="PM" class="${ap === 'PM' ? 'on' : ''}">PM</button></span></span>`;
+  }
+  // 'HH:MM' (24h) from a picker; '' when an optional picker is unset, null when missing.
+  function tpRead(id, allowEmpty) {
+    const hEl = $(id + 'H'), mEl = $(id + 'M');
+    if (!hEl || !mEl) return null;
+    if (hEl.value === '') return allowEmpty ? '' : null;
+    const apEl = document.querySelector('#' + id + 'AP button.on');
+    const ap = apEl ? apEl.dataset.v : 'AM';
+    const h24 = (+hEl.value) % 12 + (ap === 'PM' ? 12 : 0);
+    return Scheduler.fmtMin(h24 * 60 + (+mEl.value));
+  }
+  // Persist the fixed sleep start of weekday i from its picker.
+  function commitSleep(i) {
+    const v = tpRead('sl' + i);
+    if (v == null) return;
+    state.sleep[i] = v;
+    save(); render();
+  }
   const ICON_POOL = ['📚', '📖', '🧠', '🔬', '🧪', '💊', '🦷', '📝'];
   const ICON_KW = [
     [/anatom|تشريح/, '🦴'], [/histolog|بيولوج|هستولوج|هيستولوج/, '🧬'],
@@ -1667,8 +1789,8 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       else if (spill) { if (b.end > Scheduler.DAY_MIN) out.push({ label: b.label, kind: b.kind, s: 0, e: b.end }); }
       else out.push({ label: b.label, kind: b.kind, s: Math.max(b.start, Scheduler.DAY_MIN), e: 1440 + b.end });
     };
-    (state.busy[wd] || []).forEach((b) => pushB(b, false));
-    (state.busy[(wd + 6) % 7] || []).forEach((b) => {
+    Scheduler.blocksForWd(state, wd).forEach((b) => pushB(b, false));
+    Scheduler.blocksForWd(state, (wd + 6) % 7).forEach((b) => {
       const n = Scheduler.normBlock(b);
       if (n.start != null && n.end != null && n.end < n.start) pushB(b, true);
     });
@@ -1709,9 +1831,7 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
         const cloudAt = Number(data.updatedAt) || 0;
         if (!state.savedAt || cloudAt > state.savedAt) {
           state = Object.assign(empty(), data.state);
-          if (!state.profile) state.profile = { name: '', year: null, onboarded: false };
-          if (!Array.isArray(state.focusLog)) state.focusLog = [];
-          if (state.theme !== 'light') state.theme = 'dark';
+          normalizeState();
           saveLocal(); setSync('synced');
         } else pushCloud();
       } else pushCloud();
@@ -1868,6 +1988,7 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
     h += `<div class="card"><div class="row"><b class="grow">${esc(L().todayProgress)}</b><span class="tag">${pct}%</span></div>
       <div class="bar"><i style="width:${pct}%"></i></div>
       <div class="muted">${esc(plannedMin > 0 ? L().studiedOf(fmtDur(doneMin), fmtDur(plannedMin)) : L().studiedNoPlan(fmtDur(doneMin)))}</div></div>`;
+    if ((state.blocked || []).includes(today)) h += `<div class="card offday">${esc(L().dayOffToday)}</div>`;
     h += `<button class="btn bigstart" data-act="focusOpen">${esc(L().startStudying)}</button>`;
 
     // today's commitments (busy blocks)
@@ -1926,7 +2047,7 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
 
   function viewSchedule() {
     const today = todayStr();
-    if (!state.subjects.length) return `<div class="card empty"><div class="big">🦷</div><p>${esc(L().noPlan)}</p></div>` + viewTime();
+    if (!state.subjects.length) return `<div class="card empty"><div class="big">🦷</div><p>${esc(L().noPlan)}</p></div>`;
     const now = new Date();
     const r = Scheduler.generate(state, today, { nowMin: now.getHours() * 60 + now.getMinutes() });
     const byDay = {};
@@ -1938,7 +2059,8 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
     for (let d = today; d < end; d = Scheduler.addDays(d, 1)) {
       const sess = byDay[d] || [];
       const tot = sess.reduce((a, s) => a + s.hours, 0);
-      h += `<div class="day ${d === today ? 'today' : ''}">${dayLabel(d, today)}${tot ? ` <span class="tag free">${fmtHTxt(tot)}</span>` : ''}</div><div class="card">`;
+      const off = (state.blocked || []).includes(d);
+      h += `<div class="day ${d === today ? 'today' : ''}">${dayLabel(d, today)}${tot ? ` <span class="tag free">${fmtHTxt(tot)}</span>` : ''}${off ? ` <span class="tag revise">${esc(L().dayOffTag)}</span>` : ''}</div><div class="card">`;
       const items = [];
       if (examsByDay[d]) {
         const e = examsByDay[d];
@@ -1952,7 +2074,7 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       items.forEach((it) => { h += it.html; });
       h += '</div>';
     }
-    return h + viewTime();
+    return h;
   }
 
   function viewExams() {
@@ -2004,13 +2126,14 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
         <option value="theory" ${ex.nature === 'theory' ? 'selected' : ''}>${esc(L().natureTheory)}</option>
         <option value="practical" ${ex.nature === 'practical' ? 'selected' : ''}>${esc(L().naturePractical)}</option></select>
       <input id="${prefix}Cov" type="number" min="1" max="60" placeholder="${esc(L().coveredPh)}" value="${ex.covered || ''}" style="width:110px"></div>
-      <div class="row" style="margin-top:8px"><input id="${prefix}Date" type="date" value="${esc(ex.date || '')}" class="grow"><input id="${prefix}Time" type="time" value="${esc(ex.time || '')}">
+      <div class="row" style="margin-top:8px"><input id="${prefix}Date" type="date" value="${esc(ex.date || '')}" class="grow">${tpHTML(prefix + 'Time', ex.time, true)}
       <button class="btn" data-act="saveExam" data-s="${s.id}">${esc(L().saveBtn)}</button></div></div>`;
   }
 
   function viewSubjects() {
     let h = '';
     const missing = curMissing();
+
     if (curForYear().length) {
       h += `<div class="card"><b>${esc(L().curTitle)}</b><div class="muted" style="margin-top:4px">${esc(L().curSub)}</div>`;
       if (!missing.length) h += `<div class="muted" style="margin-top:8px">${esc(L().curAllAdded)}</div>`;
@@ -2022,28 +2145,23 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       if (missing.length > 1) h += `<div style="margin-top:10px"><button class="btn ghost" data-act="loadCur">${esc(L().loadCurBtn)}</button></div>`;
       h += '</div>';
     }
-    h += `<div class="card"><b>${esc(L().addSubjectTitle)}</b>
-      <div class="row" style="margin-top:8px"><input id="nName" placeholder="${esc(L().subjNamePh)}" class="grow">
-      <button class="btn" data-act="addSubject">${esc(L().addBtn)}</button></div>
-      <label class="checkline"><input type="checkbox" id="nHasExam"> ${esc(L().hasExamQ)}</label>
-      <div id="nExamBox" class="hidden"><div class="row" style="margin-top:6px">
-        <select id="nKind"><option value="exam">${esc(L().kindExam)}</option><option value="quiz">${esc(L().kindQuiz)}</option></select>
-        <select id="nNature"><option value="theory">${esc(L().natureTheory)}</option><option value="practical">${esc(L().naturePractical)}</option></select>
-        <input id="nCov" type="number" min="1" max="60" placeholder="${esc(L().coveredPh)}" style="width:110px"></div>
-        <div class="row" style="margin-top:8px"><input id="nDate" type="date" class="grow"><input id="nTime" type="time"></div></div></div>`;
 
     state.subjects.forEach((s) => {
       const open = openSubject === s.id, exOpen = openExam === s.id, ex = examOf(s);
-      h += `<div class="card pcard" style="border-inline-start-color:${colorOfS(s)}"><div class="row subj-head">
-        <b class="grow"><span class="sicon" style="background:${colorOfS(s)}22">${iconOf(s)}</span> ${esc(s.name)}</b>
-        ${ex ? `<span class="datechip">${esc(ex.date)}${ex.time ? ' ' + esc(ex.time) : ''}</span>` : `<span class="muted">${esc(L().noExamYet)}</span>`}
-        <button class="btn ghost" data-act="toggleExam" data-s="${s.id}">${exOpen ? esc(L().closeBtn) : esc(L().editExam)}</button>
-        <button class="btn ghost" data-act="toggle" data-s="${s.id}">${open ? esc(L().closeBtn) : esc(L().tasksBtn(s.tasks.length))}</button>
-        <button class="btn danger" data-act="delSubject" data-s="${s.id}">${esc(L().delBtn)}</button></div>`;
-      if (ex) h += `<div class="muted" style="margin:2px 0 6px">${esc(L().examLine(ex.kind, ex.date, ex.time, L().natureWord[ex.nature] || ex.nature))}${ex.covered ? ' · ' + esc(L().coveredShort(ex.covered)) : ''}</div>`;
       const doneN = s.tasks.filter((t) => t.done).length;
       const pctS = s.tasks.length ? Math.round(doneN / s.tasks.length * 100) : 0;
-      if (s.tasks.length) h += `<div class="bar" style="margin:8px 0 6px"><i style="width:${pctS}%"></i></div><div class="muted">${esc(L().taskCount(doneN, s.tasks.length, pctS))}</div>`;
+      h += `<div class="card pcard bigsub" style="border-inline-start-color:${colorOfS(s)}">
+        <div class="row subj-head">
+          <span class="sicon big" style="background:${colorOfS(s)}22">${iconOf(s)}</span>
+          <div class="grow"><b class="subjname">${esc(s.name)}</b>
+            <div class="muted">${ex ? esc(L().examLine(ex.kind, ex.date, ex.time, L().natureWord[ex.nature] || ex.nature)) + (ex.covered ? ' \u00b7 ' + esc(L().coveredShort(ex.covered)) : '') : esc(L().noExamYet)}</div></div>
+          <button class="btn ghost sm" data-act="delSubject" data-s="${s.id}" title="${esc(L().delBtn)}">\u2715</button>
+        </div>
+        ${s.tasks.length ? `<div class="bar" style="margin:10px 0 4px"><i style="width:${pctS}%"></i></div><div class="muted">${esc(L().taskCount(doneN, s.tasks.length, pctS))}</div>` : ''}
+        <div class="row subj-actions">
+          <button class="btn ghost grow${exOpen ? ' on' : ''}" data-act="toggleExam" data-s="${s.id}">\uD83D\uDCC5 ${exOpen ? esc(L().closeBtn) : ex ? esc(L().editExam) : esc(L().addExamBtn)}</button>
+          <button class="btn ghost grow${open ? ' on' : ''}" data-act="toggle" data-s="${s.id}">\uD83D\uDCD6 ${open ? esc(L().closeBtn) : esc(L().tasksBtn(s.tasks.length))}</button>
+        </div>`;
       if (exOpen) {
         h += examForm(s, 'e-' + s.id + '-');
         if (ex) h += `<button class="btn ghost" data-act="clearExam" data-s="${s.id}" style="margin-top:6px">${esc(L().clearExam)}</button>`;
@@ -2088,63 +2206,84 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
     return h;
   }
 
-  function viewTime() {
+  // Weekly day setup: fixed 6h sleep per day + staged busy blocks (committed with
+  // a per-day Save button), day-off dates, and one-off busy dates.
+  function daysEditorHTML() {
     const today = todayStr();
     const wdToday = Scheduler.weekday(today);
     if (timeDay == null) timeDay = wdToday;
     let h = `<div class="card"><b>${esc(L().busyTitle)}</b><div class="muted" style="margin-top:4px">${esc(L().busySub)}</div></div>`;
     L().days.forEach((name, i) => {
       const blocks = (state.busy[i] || []).map(Scheduler.normBlock)
-        .filter((b) => b.start != null && b.end != null && b.start !== b.end)
+        .filter((b) => b.start != null && b.end != null && b.start !== b.end && b.kind !== 'sleep')
         .sort((a, b) => a.start - b.start);
+      const draft = draftBusy[i] || [];
       const ref = Scheduler.addDays(today, (i - wdToday + 7) % 7);
-      const free = Scheduler.capacityOn({ busy: state.busy, blocked: [] }, ref);
+      const free = Scheduler.capacityOn({ busy: state.busy, sleep: state.sleep, blocked: [] }, ref);
       const open = timeDay === i;
       h += `<div class="card"><div class="row dayhead" data-act="toggleDay" data-i="${i}" style="cursor:pointer">
         <b class="grow">${esc(name)}${i === wdToday ? ' <span class="tag">' + esc(L().today) + '</span>' : ''}</b>
         <span class="tag free">${esc(L().dayFree(fmtHTxt(free)))}</span>
-        <span class="muted" style="font-weight:800">${open ? '−' : '+'}</span></div>`;
+        <span class="muted" style="font-weight:800">${open ? '\u2212' : '+'}</span></div>`;
       if (open) {
+        const sb = Scheduler.sleepBlock(state, i);
+        const sbEnd = Scheduler.fmtMin((Scheduler.hmToMin(sb.start) + Scheduler.SLEEP_MIN) % 1440);
+        h += `<div class="lec sleepfix"><span class="sicon" style="background:#64748b22">${KIND_ICON.sleep}</span>
+          <span class="t grow">${esc(L().kindWord.sleep)} <span class="tag">${esc(L().sleepTag)}</span><br>
+          <span class="muted">${esc(L().fromPh)}</span> ${tpHTML('sl' + i, sb.start)} <span class="muted" dir="ltr">&rarr; ${sbEnd}</span></span></div>`;
         blocks.forEach((b) => {
           h += `<div class="lec"><span class="sicon" style="background:#64748b22">${KIND_ICON[b.kind]}</span>
             <span class="t grow">${esc(b.label || L().kindWord[b.kind])}<br><span class="muted" dir="ltr">${fmtMin(b.start)} - ${fmtMin(b.end)}</span></span>
             <button class="btn ghost" data-act="delBlock" data-i="${i}" data-b="${esc(b.id)}">x</button></div>`;
         });
-        h += `<div class="addblock"><div class="row"><select id="bk">${Object.keys(L().kindWord).map((k) => `<option value="${k}">${KIND_ICON[k]} ${esc(L().kindWord[k])}</option>`).join('')}</select>
+        draft.forEach((b, di) => {
+          h += `<div class="lec draftrow"><span class="sicon" style="background:#64748b22">${KIND_ICON[b.kind]}</span>
+            <span class="t grow">${esc(b.label || L().kindWord[b.kind])} <span class="tag revise">${esc(L().draftTag)}</span><br><span class="muted" dir="ltr">${esc(b.start)} - ${esc(b.end)}</span></span>
+            <button class="btn ghost" data-act="delDraft" data-i="${i}" data-d="${di}">x</button></div>`;
+        });
+        h += `<div class="addblock"><div class="row"><select id="bk">${['class', 'gym', 'other'].map((k) => `<option value="${k}">${KIND_ICON[k]} ${esc(L().kindWord[k])}</option>`).join('')}</select>
           <input id="bl" class="grow" placeholder="${esc(L().blockLabelPh)}"></div>
-          <div class="row" style="margin-top:8px"><span class="muted">${esc(L().fromPh)}</span><input id="bs" type="time" value="18:00">
-          <span class="muted">${esc(L().toPh)}</span><input id="be" type="time" value="20:00">
-          <button class="btn" data-act="addBlock" data-i="${i}">${esc(L().addBtn)}</button></div></div>`;
+          <div class="row" style="margin-top:8px;flex-wrap:wrap"><span class="muted">${esc(L().fromPh)}</span>${tpHTML('bs', '18:00')}
+          <span class="muted">${esc(L().toPh)}</span>${tpHTML('be', '20:00')}</div>
+          <div class="row" style="margin-top:8px"><button class="btn ghost grow" data-act="addBlock" data-i="${i}">${esc(L().addBtn)}</button>
+          <button class="btn grow" data-act="saveDay" data-i="${i}">${esc(L().saveDay)}</button></div></div>`;
       }
       h += '</div>';
     });
-    h += `<div class="card"><b>${esc(L().onceTitle)}</b>
+    h += `<div class="card"><b>${esc(L().dayOffTitle)}</b><div class="muted" style="margin-top:4px">${esc(L().dayOffSub)}</div>
+      <div class="row" style="margin-top:10px"><input id="offDate" type="date" class="grow"><button class="btn" data-act="addOff">${esc(L().dayOffBtn)}</button></div>`;
+    (state.blocked || []).slice().sort().forEach((d) => {
+      h += `<div class="lec"><span class="sicon" style="background:#64748b22">\uD83C\uDFD6\uFE0F</span>
+        <span class="t grow">${d} &middot; ${esc(L().dayOffTag)}</span>
+        <button class="btn ghost" data-act="delOff" data-d="${d}">x</button></div>`;
+    });
+    h += `</div><div class="card"><b>${esc(L().onceTitle)}</b>
       <div class="row" style="margin-top:10px"><input id="o1Date" type="date"><input id="o1Label" class="grow" placeholder="${esc(L().busyOncePh)}"></div>
-      <div class="row" style="margin-top:8px"><span class="muted">${esc(L().fromPh)}</span><input id="o1s" type="time" value="09:00">
-      <span class="muted">${esc(L().toPh)}</span><input id="o1e" type="time" value="17:00">
-      <button class="btn" data-act="addBusyOnce">${esc(L().addBtn)}</button></div>`;
+      <div class="row" style="margin-top:8px;flex-wrap:wrap"><span class="muted">${esc(L().fromPh)}</span>${tpHTML('o1s', '09:00')}
+      <span class="muted">${esc(L().toPh)}</span>${tpHTML('o1e', '17:00')}</div>
+      <div class="row" style="margin-top:8px"><button class="btn" data-act="addBusyOnce">${esc(L().addBtn)}</button></div>`;
     Object.keys(state.busyOnce).sort().forEach((d) => {
       (state.busyOnce[d] || []).forEach((raw) => {
         const b = Scheduler.normBlock(raw);
         h += `<div class="lec"><span class="sicon" style="background:#64748b22">${KIND_ICON[b.kind]}</span>
-          <span class="t grow">${d} · ${esc(b.label || L().kindWord[b.kind])}<br><span class="muted" dir="ltr">${fmtMin(b.start)} - ${fmtMin(b.end)}</span></span>
+          <span class="t grow">${d} &middot; ${esc(b.label || L().kindWord[b.kind])}<br><span class="muted" dir="ltr">${fmtMin(b.start)} - ${fmtMin(b.end)}</span></span>
           <button class="btn ghost" data-act="delBusyOnce" data-d="${d}" data-b="${esc(b.id)}">x</button></div>`;
       });
     });
-    h += `</div><div class="card"><b>${esc(L().overrideTitle)}</b><div class="row" style="margin-top:10px"><input id="oDate" type="date"><input id="oHours" type="number" min="0" step="0.5" placeholder="${esc(L().hoursPh)}" style="width:160px"><button class="btn" data-act="addOverride">${esc(L().saveBtn)}</button></div>`;
-    Object.keys(state.overrides).sort().forEach((d) => { h += `<div class="row" style="margin-top:8px"><span class="grow">${d}: ${fmtHTxt(state.overrides[d])}</span><button class="btn ghost" data-act="delOverride" data-d="${d}">x</button></div>`; });
     return h + '</div>';
   }
 
   function viewProfile() {
     const p = state.profile;
-    let h = `<div class="card"><b>${esc(L().profileTitle)}</b>
+    let h = `<div class="row" style="margin-bottom:10px"><button class="btn ghost backarrow" data-act="backFromProfile" title="${esc(L().backBtn)}">&#8592;</button><b style="font-size:17px">${esc(L().profileTitle)}</b></div>`;
+    h += `<div class="card"><b>${esc(L().profileTitle)}</b>
       <div class="row" style="margin-top:10px"><label class="muted">${esc(L().nameLbl)}</label><input id="pName" class="grow" value="${esc(p.name || '')}"></div>
       <div style="margin-top:10px"><label class="muted">${esc(L().yearLbl)}</label><div class="yeargrid" style="margin-top:6px">`;
     L().years.forEach((y, i) => { h += `<button class="ypick ${p.year === i + 1 ? 'on' : ''}" data-act="pickYear" data-y="${i + 1}">${esc(y)}</button>`; });
     h += `</div></div>
       <div class="row" style="margin-top:10px"><label class="muted">${esc(L().uniLbl)}</label><span class="grow"><b>${esc(UNI[state.lang === 'en' ? 'en' : 'ar'])}</b></span></div>
       <div style="margin-top:10px"><button class="btn" data-act="saveProfile">${esc(L().saveBtn)}</button></div></div>`;
+    h += `<div class="day">${esc(L().daysSecTitle)}</div>` + daysEditorHTML();
     h += `<div class="card"><b>${esc(L().accountSec)}</b>`;
     if (!cloudEnabled()) h += `<p class="muted" style="margin:8px 0 0">${esc(L().localMode)}</p>`;
     else if (session) h += `<div class="row" style="margin-top:8px"><span class="grow">${esc(session.email || '')} <span class="sync ${syncState}">${syncState === 'synced' ? '☁️ ' + esc(L().synced) : syncState === 'syncing' ? esc(L().syncing) : syncState === 'error' ? esc(L().syncErr) : ''}</span></span><button class="btn ghost" data-act="logout">${esc(L().logoutBtn)}</button></div>`;
@@ -2226,6 +2365,12 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       return h;
     }
     if (!state.profile.onboarded) {
+      if (onboardStep === 2) {
+        return `<div class="overlay"><div class="sheet wide"><b style="font-size:17px">${esc(L().onboardDaysTitle)}</b>
+          <p class="muted">${esc(L().onboardDaysSub)}</p>` + daysEditorHTML() +
+          `<div style="margin-top:12px"><button class="btn" data-act="onboardDaysDone" style="width:100%">${esc(L().onboardDaysBtn)}</button></div>
+          <div style="text-align:center;margin-top:8px"><button class="linklike" data-act="onboardDaysDone">${esc(L().onboardDaysSkip)}</button></div></div></div>`;
+      }
       h += `<div class="overlay"><div class="sheet"><b style="font-size:17px">${esc(L().welcomeTitle)}</b>
         <p class="muted">${esc(L().welcomeSub)}</p>
         <input id="oName" placeholder="${esc(L().yourNamePh)}" value="${esc(state.profile.name || '')}">
@@ -2314,12 +2459,12 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
   document.addEventListener('input', (e) => {
     const t = e.target;
     if (t.dataset && t.dataset.est) { const el = $('est-' + t.dataset.est); if (el) el.textContent = estChipText(t.dataset.est); }
-    if (t.id === 'nHasExam') $('nExamBox').classList.toggle('hidden', !t.checked);
   });
 
   document.addEventListener('change', (e) => {
     const t = e.target, a = t.dataset && t.dataset.act;
-    if (t.id === 'nHasExam') { $('nExamBox').classList.toggle('hidden', !t.checked); return; }
+    const mSl = /^sl(\d)(H|M)$/.exec(t.id || '');
+    if (mSl) { commitSleep(+mSl[1]); return; }
     if (!a) return;
     if (a === 'check') { const x = taskOf(t.dataset.s, t.dataset.l); x.done = t.checked; if (t.checked) x.doneAt = todayStr(); else { x.confidence = 0; delete x.doneAt; } }
     else if (a === 'conf') taskOf(t.dataset.s, t.dataset.l).confidence = +t.value;
@@ -2329,12 +2474,21 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
   });
 
   document.addEventListener('click', (e) => {
+    const apb = e.target.closest('.apseg button');
+    if (apb) {
+      apb.parentElement.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b === apb));
+      const mAp = /^sl(\d)AP$/.exec(apb.parentElement.id || '');
+      if (mAp) commitSleep(+mAp[1]);
+      return;
+    }
     const t = e.target.closest('[data-tab],[data-act]'); if (!t) return;
     if (t.dataset.tab) { tab = t.dataset.tab; return render(); }
     const a = t.dataset.act, s = t.dataset.s, l = t.dataset.l;
 
     if (a === 'lang') { state.lang = state.lang === 'en' ? 'ar' : 'en'; save(); return render(); }
     if (a === 'theme') { state.theme = state.theme === 'light' ? 'dark' : 'light'; save(); return render(); }
+    if (a === 'openProfile') { prevTab = tab === 'profile' ? prevTab : tab; tab = 'profile'; return render(); }
+    if (a === 'backFromProfile') { tab = prevTab || 'day'; return render(); }
     if (a === 'focusOpen') { focusOpen = true; return render(); }
     if (a === 'focusTask') { focusSel = { s, l }; focusOpen = true; return render(); }
     if (a === 'focusClose') { focusOpen = false; return render(); }
@@ -2366,17 +2520,31 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
     if (a === 'addBlock') {
       const i = +t.dataset.i;
       const kind = $('bk').value, label = $('bl').value.trim();
-      const s = $('bs').value, e = $('be').value;
+      const s = tpRead('bs'), e = tpRead('be');
+      if (s == null || e == null || s === e) return alert(L().errTime);
       const sm = Scheduler.hmToMin(s), em = Scheduler.hmToMin(e);
-      if (sm == null || em == null || sm === em) return alert(L().errTime);
-      if (Scheduler.blockClashes(state.busy[i], sm, em)) return alert(L().errOverlap);
-      (state.busy[i] = state.busy[i] || []).push({ id: uid(), label, kind, start: s, end: e });
-      save(); return render();
+      // stage the block: it only counts after "Save day"
+      const clashList = Scheduler.blocksForWd(state, i).concat(draftBusy[i] || []);
+      if (Scheduler.blockClashes(clashList, sm, em)) return alert(L().errOverlap);
+      (draftBusy[i] = draftBusy[i] || []).push({ id: uid(), label, kind, start: s, end: e });
+      return render();
     }
+    if (a === 'delDraft') { const i = +t.dataset.i; (draftBusy[i] || []).splice(+t.dataset.d, 1); return render(); }
+    if (a === 'saveDay') {
+      const i = +t.dataset.i;
+      if ((draftBusy[i] || []).length) {
+        state.busy[i] = (state.busy[i] || []).concat(draftBusy[i]);
+        draftBusy[i] = [];
+        save(); toast(L().savedOk);
+      }
+      return render();
+    }
+    if (a === 'addOff') { const d = $('offDate').value; if (!d) return; if (!(state.blocked || []).includes(d)) { state.blocked.push(d); save(); } return render(); }
+    if (a === 'delOff') { state.blocked = (state.blocked || []).filter((d) => d !== t.dataset.d); save(); return render(); }
     if (a === 'delBlock') { const i = +t.dataset.i; state.busy[i] = (state.busy[i] || []).filter((b) => b.id !== t.dataset.b); save(); return render(); }
     if (a === 'addBusyOnce') {
       const d = $('o1Date').value, label = $('o1Label').value.trim();
-      const s = $('o1s').value, e = $('o1e').value;
+      const s = tpRead('o1s'), e = tpRead('o1e');
       if (!d) return;
       const sm = Scheduler.hmToMin(s), em = Scheduler.hmToMin(e);
       if (sm == null || em == null || sm === em) return alert(L().errTime);
@@ -2402,7 +2570,20 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
     if (a === 'onboardStart') {
       const name = ($('oName') || {}).value || '';
       if (!name.trim() || !state.profile.year) return alert(L().needProfile);
-      state.profile.name = name.trim(); state.profile.onboarded = true;
+      state.profile.name = name.trim();
+      onboardStep = 2; timeDay = null;
+      save(); return render();
+    }
+    if (a === 'onboardDaysDone') {
+      // commit any staged blocks, then finish: official year subjects load themselves
+      Object.keys(draftBusy).forEach((i) => { if (draftBusy[i].length) state.busy[i] = (state.busy[i] || []).concat(draftBusy[i]); });
+      draftBusy = {};
+      state.profile.onboarded = true;
+      if (!state.subjects.length) {
+        curMissing().forEach((c) => {
+          state.subjects.push({ id: uid(), name: curName(c), code: c.code, icon: c.icon || '', exam: null, tasks: [] });
+        });
+      }
       save(); return render();
     }
     if (a === 'saveProfile') {
@@ -2416,21 +2597,6 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
     if (a === 'showAuth') { authSkipped = false; return render(); }
     if (a === 'logout') return doLogout();
 
-    if (a === 'addSubject') {
-      const name = $('nName').value.trim();
-      if (!name) return alert(L().needName);
-      const hasExam = $('nHasExam').checked;
-      let exam = null;
-      if (hasExam) {
-        const date = $('nDate').value;
-        if (!date) return alert(L().needExam);
-        const time = $('nTime').value || '';
-        if (examInPast(date, time)) return alert(L().examPastErr);
-        exam = { kind: $('nKind').value, date, time, nature: $('nNature').value, covered: +$('nCov').value || 0 };
-      }
-      state.subjects.push({ id: uid(), name, exam, tasks: [] });
-      save(); return render();
-    }
     if (a === 'toggle') { openSubject = openSubject === s ? null : s; return render(); }
     if (a === 'toggleExam') { openExam = openExam === s ? null : s; return render(); }
     if (a === 'delSubject') { if (!confirm(L().delConfirm)) return; state.subjects = state.subjects.filter((x) => x.id !== s); save(); return render(); }
@@ -2438,7 +2604,7 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       const p = 'e-' + s + '-';
       const date = $(p + 'Date').value;
       if (!date) return alert(L().needExam);
-      const time = $(p + 'Time').value || '';
+      const time = tpRead(p + 'Time', true) || '';
       if (examInPast(date, time)) return alert(L().examPastErr);
       subj(s).exam = { kind: $(p + 'Kind').value, date, time, nature: $(p + 'Nature').value, covered: +$(p + 'Cov').value || 0 };
       save(); return render();
@@ -2457,8 +2623,6 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
     }
     if (a === 'delTask') { const sj = subj(s); sj.tasks = sj.tasks.filter((x) => x.id !== l); save(); return render(); }
     if (a === 'done') { const x = taskOf(s, l); if (x) { x.done = true; x.doneAt = todayStr(); } save(); return render(); }
-    if (a === 'addOverride') { const d = $('oDate').value, hv = $('oHours').value; if (!d || hv === '') return; state.overrides[d] = Math.max(0, +hv); save(); return render(); }
-    if (a === 'delOverride') { delete state.overrides[t.dataset.d]; save(); return render(); }
   });
 
   document.addEventListener('visibilitychange', () => {
