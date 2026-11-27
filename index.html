@@ -587,6 +587,34 @@ a.btn { display: inline-block; text-decoration: none; }
 .barch { width: 100%; height: 84px; margin-top: 8px; }
 .barch rect { fill: var(--primary); opacity: 0.9; }
 .barch rect.dim { opacity: 0.35; }
+
+/* ---------- v20: suggested plan, quick review, workout, subject stats, challenge ---------- */
+.planrow, .revrow { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+.plannum {
+  flex: 0 0 22px; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--teal-bg); color: var(--teal-ink);
+  display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;
+}
+.whys { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.why { font-size: 11px; padding: 2px 7px; border-radius: 999px; background: var(--teal-bg); color: var(--teal-ink); }
+.wodots { display: flex; gap: 5px; margin-top: 10px; }
+.wodot { flex: 1; text-align: center; font-size: 11px; padding: 6px 0; border-radius: 10px; background: var(--soft); color: var(--muted); }
+.wodot.plan { background: var(--teal-bg); color: var(--teal-ink); }
+.wodot.done { background: var(--primary); color: #fff; }
+.wodot.now { box-shadow: inset 0 0 0 1px var(--primary); }
+.wopick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.wopickbtn {
+  flex: 1 0 11%; padding: 8px 0; border-radius: 10px; border: 1px solid var(--line);
+  background: transparent; color: var(--ink); font: inherit; font-size: 12px; cursor: pointer;
+}
+.wopickbtn.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+.ssrow { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+.ssname { font-size: 13px; }
+.ssmin { font-size: 12px; min-width: 44px; text-align: end; }
+.warnline { margin-top: 8px; font-size: 12px; color: var(--amber-ink); }
+.chcode { font-size: 22px; letter-spacing: 3px; color: var(--teal-ink); }
+.lbname { font-size: 12px; margin-inline-start: 4px; }
+.lbrow .err, .errline { color: var(--danger-ink); }
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
@@ -1088,7 +1116,7 @@ const MOTIV_AR = [
   'القعدة الصح قدام الكتاب أصعب من المذاكرة نفسها',
   'التركيز اللي بتحطه في المسلسلات، حط ربعه هنا',
   'أهلك فاكرينك بتذاكر؟ خليها حقيقة',
-  'المذاكرة زي الجيم، البداية صعبة والنتيجة حلوة',
+  'المذاكرة زي التمرين، البداية صعبة والنتيجة حلوة',
   'الكتاب لسه نضيف، ده مش معناه إنه مابيتحبش',
   // ليل وسهر
   'الليل هادي، والدنيا ساكتة، وقت التركيز الحقيقي',
@@ -2233,6 +2261,116 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       .sort((a, b) => a.examDate.localeCompare(b.examDate));
   }
 
+  /* ---------------- v20: workout days ---------------- */
+
+  // Workout days are weekday numbers (0 = Sunday). Default: Sat, Mon, Wed, Fri.
+  const WORKOUT_DEFAULT = [1, 3, 5, 6]; // sorted: Mon, Wed, Fri, Sat
+
+  function workoutDays(state) {
+    const w = state && state.workout;
+    const d = w && Array.isArray(w.days) ? w.days.filter((x) => x >= 0 && x <= 6) : WORKOUT_DEFAULT.slice();
+    return (d.length ? d : WORKOUT_DEFAULT.slice()).slice().sort((a, b) => a - b);
+  }
+  function isWorkoutDay(state, d) { return workoutDays(state).indexOf(weekday(d)) !== -1; }
+  function workoutDone(state, d) { return !!(((state.workout || {}).log || {})[d]); }
+  // Workouts finished so far in the week that contains d (Saturday start).
+  function workoutWeek(state, d) {
+    const wd = weekday(d);
+    const start = addDays(d, -((wd + 1) % 7));
+    const log = (state.workout || {}).log || {};
+    let done = 0;
+    for (let i = 0; i < 7; i++) { const x = addDays(start, i); if (x > d) break; if (log[x]) done++; }
+    return { done, target: workoutDays(state).length, start };
+  }
+
+  /* ---------------- v20: per-subject stats ---------------- */
+
+  // Minutes per subject from real data only: focus sessions plus the hours of
+  // tasks finished (the same numbers the dashboard shows).
+  function subjectMinutes(state, from) {
+    const out = {};
+    (state.focusLog || []).forEach((f) => {
+      if (!f || !f.subjectId) return;
+      if (from && (!f.date || f.date < from)) return;
+      out[f.subjectId] = (out[f.subjectId] || 0) + (Number(f.minutes) || 0);
+    });
+    (state.subjects || []).forEach((s) => (s.tasks || []).forEach((t) => {
+      if (!t.done || !t.doneAt) return;
+      if (from && t.doneAt < from) return;
+      const m = Math.round(((Number(t.studyH) || 0) + (Number(t.solveH) || 0) + (Number(t.workH) || 0)) * 60);
+      out[s.id] = (out[s.id] || 0) + m;
+    }));
+    return out;
+  }
+
+  function subjectStats(state, today) {
+    const w = subjectMinutes(state, addDays(today, -6));
+    const all = subjectMinutes(state, null);
+    const rows = (state.subjects || []).map((s) => {
+      const ex = (s.exam && s.exam.date) || null;
+      return {
+        id: s.id, name: s.name, week: w[s.id] || 0, total: all[s.id] || 0,
+        open: (s.tasks || []).filter((t) => !t.done).length,
+        examIn: ex && ex >= today ? diffDays(today, ex) : null,
+      };
+    });
+    const byWeek = rows.slice().sort((a, b) => b.week - a.week);
+    const top = byWeek.length && byWeek[0].week > 0 ? byWeek[0] : null;
+    const low = byWeek.length ? byWeek[byWeek.length - 1] : null;
+    const neglected = rows.filter((r) => r.week === 0 && r.examIn != null && r.examIn <= 45 && r.open > 0)
+      .sort((a, b) => a.examIn - b.examIn);
+    return { rows: byWeek, top, low, neglected, totalWeek: rows.reduce((a, r) => a + r.week, 0) };
+  }
+
+  /* ---------------- v20: the day's suggested plan ---------------- */
+
+  // An ordered suggestion list for today: nearest exam first, overdue clinics
+  // next, a subject that has had no time this week gets a nudge, and a heavy
+  // college day or a workout day gets a shorter list. Nothing here is invented:
+  // the minutes come from the tasks themselves and the day's real free time.
+  function autoPlan(state, today, opts) {
+    const cap = capacityOn(state, today);
+    const capMin = Math.round(cap * 60);
+    const blocks = busyOn(state, today);
+    const busyMin = blocks.reduce((a, b) => a + Math.max(0, Math.min(b[1], 1440) - b[0]), 0);
+    const heavy = busyMin >= 240;
+    const wo = isWorkoutDay(state, today);
+    const perSubj = subjectMinutes(state, addDays(today, -6));
+    const cands = [];
+    (state.subjects || []).forEach((s) => {
+      const ex = (s.exam && s.exam.date) || null;
+      const exDays = ex && ex >= today ? diffDays(today, ex) : null;
+      (s.tasks || []).forEach((t) => {
+        if (!t || t.done) return;
+        const rem = taskRemainingMin(t);
+        if (rem <= 0) return;
+        const diff = Number(t.difficulty) || 2;
+        let score = 0; const why = [];
+        if (exDays != null) { score += Math.max(0, 45 - exDays) * 1.2; why.push(exDays <= 14 ? 'exam' : 'soon'); }
+        if (t.due && t.due <= addDays(today, 3)) { score += 25; why.push('due'); }
+        if (!(perSubj[s.id] > 0)) { score += 12; why.push('neglect'); }
+        score += diff * 4;
+        if (diff >= 3) why.push('hard');
+        score += Math.min(18, rem / 5);
+        cands.push({ subjectId: s.id, subject: s.name, taskId: t.id, title: t.title, minutes: Math.min(rem, 60), rem, why, score });
+      });
+    });
+    cands.sort((a, b) => b.score - a.score || b.rem - a.rem);
+    const maxItems = heavy ? 2 : (wo ? 3 : 4);
+    const budget = Math.max(30, Math.round(capMin * (wo ? 0.6 : heavy ? 0.7 : 0.85)));
+    const items = []; const perSubject = {};
+    let used = 0;
+    cands.forEach((c) => {
+      if (items.length >= maxItems) return;
+      if ((perSubject[c.subjectId] || 0) >= 2) return;
+      if (items.length && used + c.minutes > budget) return;
+      perSubject[c.subjectId] = (perSubject[c.subjectId] || 0) + 1;
+      used += c.minutes;
+      items.push({ subjectId: c.subjectId, subject: c.subject, taskId: c.taskId, title: c.title, minutes: c.minutes, why: c.why.slice(0, 2) });
+    });
+    return { items, heavy, workout: wo, workoutDone: workoutDone(state, today), capMin, targetMin: used, busyMin };
+  }
+
   return {
     generate, progress, warnings, addDays, weekday, diffDays, capacityOn,
     estimate, estimateDifficulty, reviewHours, normSubject, SLOT,
@@ -2243,7 +2381,183 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     FOCUS_PRESETS, taskRemainingMin, deductFromTask, focusStats, nextExam,
     weekKey, weekScore,
     countdownParts, revisionPlan,
+    WORKOUT_DEFAULT, workoutDays, isWorkoutDay, workoutDone, workoutWeek,
+    subjectMinutes, subjectStats, autoPlan,
   };
+});
+
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.SyncMerge = factory();
+})(this, function () {
+  /* v20: two-device sync.
+     Before v20 the cloud copy was a whole-state overwrite and the winning side
+     was picked by state.savedAt - and every app open bumps savedAt (the daily
+     motivation line, the streak best, the reminder stamp). So the second device
+     always "won" with its older copy and wiped the newer one. Now every item
+     carries its own change stamp (task.m, subject.m) and the two copies are
+     merged item by item instead of one replacing the other. Deletions are kept
+     as tombstones (gone / goneS) so a merge never resurrects something the
+     student removed on the other device. */
+
+  const clone = (o) => JSON.parse(JSON.stringify(o));
+
+  function taskSig(t) {
+    const o = {};
+    Object.keys(t || {}).forEach((k) => { if (k !== 'm') o[k] = t[k]; });
+    return JSON.stringify(o);
+  }
+  function subjSig(s) {
+    const o = {};
+    Object.keys(s || {}).forEach((k) => { if (k !== 'm' && k !== 'tasks') o[k] = s[k]; });
+    return JSON.stringify(o);
+  }
+
+  // Change-detection map for a state, without touching it.
+  function snapshot(state) {
+    const m = {};
+    (state.subjects || []).forEach((s) => {
+      m['s:' + s.id] = subjSig(s);
+      (s.tasks || []).forEach((t) => { m['t:' + t.id] = taskSig(t); });
+    });
+    return m;
+  }
+
+  // Compare the state with the previous snapshot: stamp every changed or new
+  // task/subject with m = now, and remember removed ids as tombstones.
+  function stamp(state, prev, now) {
+    const next = {};
+    (state.subjects || []).forEach((s) => {
+      const ss = subjSig(s);
+      next['s:' + s.id] = ss;
+      if (!prev || prev['s:' + s.id] === undefined || prev['s:' + s.id] !== ss) s.m = now;
+      (s.tasks || []).forEach((t) => {
+        const ts = taskSig(t);
+        next['t:' + t.id] = ts;
+        if (!prev || prev['t:' + t.id] === undefined || prev['t:' + t.id] !== ts) t.m = now;
+      });
+    });
+    if (prev) {
+      Object.keys(prev).forEach((k) => {
+        if (next[k] !== undefined) return;
+        if (k.charAt(0) === 't') { state.gone = state.gone || {}; state.gone[k.slice(2)] = now; }
+        else if (k.charAt(0) === 's') { state.goneS = state.goneS || {}; state.goneS[k.slice(2)] = now; }
+      });
+    }
+    return next;
+  }
+
+  // Key-order-independent serialization, used to decide whether a merge
+  // actually produced something the cloud copy does not have yet.
+  function stable(x) {
+    if (x === null || typeof x !== 'object') return JSON.stringify(x);
+    if (Array.isArray(x)) return '[' + x.map(stable).join(',') + ']';
+    return '{' + Object.keys(x).sort().map((k) => JSON.stringify(k) + ':' + stable(x[k])).join(',') + '}';
+  }
+
+  const byId = (list) => {
+    const m = {};
+    (list || []).forEach((x) => { if (x && x.id) m[x.id] = x; });
+    return m;
+  };
+
+  function unionById(a, b) {
+    const m = {};
+    (a || []).forEach((x) => { if (x && x.id) m[x.id] = x; });
+    (b || []).forEach((x) => { if (x && x.id) m[x.id] = x; });
+    return Object.keys(m).map((k) => m[k]).sort((p, q) => ((p.at || 0) - (q.at || 0)));
+  }
+
+  function goneUnion(a, b) {
+    const out = Object.assign({}, a || {});
+    Object.keys(b || {}).forEach((k) => { out[k] = Math.max(Number(out[k]) || 0, Number(b[k]) || 0); });
+    return out;
+  }
+
+  function mergeSubjects(cloudList, localList) {
+    const c = byId(cloudList), l = byId(localList);
+    const ids = Object.keys(c);
+    Object.keys(l).forEach((id) => { if (c[id] === undefined) ids.push(id); });
+    return ids.map((id) => {
+      const sc = c[id], sl = l[id];
+      if (!sc) return clone(sl);
+      if (!sl) return clone(sc);
+      const takeLocal = (Number(sl.m) || 0) >= (Number(sc.m) || 0);
+      const out = clone(takeLocal ? sl : sc);
+      const tc = byId(sc.tasks), tl = byId(sl.tasks);
+      const tids = Object.keys(tc);
+      Object.keys(tl).forEach((tid) => { if (tc[tid] === undefined) tids.push(tid); });
+      out.tasks = tids.map((tid) => {
+        const a = tc[tid], b = tl[tid];
+        if (!a) return clone(b);
+        if (!b) return clone(a);
+        return clone((Number(b.m) || 0) >= (Number(a.m) || 0) ? b : a);
+      });
+      return out;
+    });
+  }
+
+  function mergeStreak(sl, sc) {
+    const a = sl || {}, b = sc || {};
+    const st = Object.assign({}, b, a);
+    st.best = Math.max(Number(a.best) || 0, Number(b.best) || 0);
+    st.fills = Array.from(new Set([].concat(a.fills || [], b.fills || []))).sort();
+    const am = String(a.month || ''), bm = String(b.month || '');
+    if (am > bm) { st.month = am; st.used = Number(a.used) || 0; }
+    else if (bm > am) { st.month = bm; st.used = Number(b.used) || 0; }
+    else { st.month = am; st.used = Math.max(Number(a.used) || 0, Number(b.used) || 0); }
+    return st;
+  }
+
+  function merge(local, cloud) {
+    if (!cloud || !cloud.subjects) return local;
+    if (!local) return cloud;
+    const lAt = Number(local.savedAt) || 0, cAt = Number(cloud.savedAt) || 0;
+    const lNewer = lAt >= cAt;
+    const out = clone(lNewer ? local : cloud);
+
+    out.focusLog = unionById(cloud.focusLog, local.focusLog);
+    out.gone = goneUnion(cloud.gone, local.gone);
+    out.goneS = goneUnion(cloud.goneS, local.goneS);
+    out.blocked = Array.from(new Set([].concat(local.blocked || [], cloud.blocked || []))).sort();
+
+    out.subjects = mergeSubjects(cloud.subjects, local.subjects);
+    const gone = out.gone, goneS = out.goneS;
+    out.subjects = out.subjects.filter((s) => !(goneS[s.id] && goneS[s.id] >= (Number(s.m) || 0)));
+    out.subjects.forEach((s) => {
+      s.tasks = (s.tasks || []).filter((t) => !(gone[t.id] && gone[t.id] >= (Number(t.m) || 0)));
+    });
+
+    out.streak = mergeStreak(local.streak, cloud.streak);
+
+    // workout log: one flag per date, so a union is always safe
+    const wl = {}, wc = (cloud.workout || {}).log || {}, wll = (local.workout || {}).log || {};
+    Object.keys(wl).forEach((k) => delete wl[k]);
+    Object.keys(wc).forEach((k) => { if (wc[k]) wl[k] = 1; });
+    Object.keys(wll).forEach((k) => { if (wll[k]) wl[k] = 1; });
+    out.workout = Object.assign({}, (lNewer ? local : cloud).workout || {}, { log: wl });
+
+    // review log: keep the most recent review date per task
+    const rv = {};
+    const rc = local.reviewLog || {}, rd = cloud.reviewLog || {};
+    Object.keys(rc).forEach((k) => { rv[k] = rc[k]; });
+    Object.keys(rd).forEach((k) => { if (!rv[k] || String(rd[k]) > String(rv[k])) rv[k] = rd[k]; });
+    out.reviewLog = rv;
+
+    // the challenge code should survive even if the other copy has none yet
+    const ch = (lNewer ? local : cloud).challenge || { code: '' };
+    const other = (lNewer ? cloud : local).challenge || { code: '' };
+    out.challenge = (ch && ch.code) ? ch : (other && other.code ? other : ch);
+
+    // the reminder stamp is a date string: the later one wins so it does not re-fire
+    const rl = (local.remind || {}).last || '', rcl = (cloud.remind || {}).last || '';
+    if (rl > rcl) out.remind = Object.assign({}, out.remind, { last: rl });
+
+    out.savedAt = Math.max(lAt, cAt);
+    return out;
+  }
+
+  return { snapshot, stamp, merge, stable, taskSig, subjSig, mergeSubjects };
 });
 
 (function () {
@@ -2373,6 +2687,67 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       lbNoCloud: 'اللوحة محتاجة نت. نقطتك بتتحفظ وهتتبعت أول ما النت يشتغل.',
       lbWait: 'بنحضّر اللوحة...',
       lbAnonErr: 'الدخول المجهول مش متفعّل في Firebase لسه (خطوة عند صاحب التطبيق)',
+      // v20
+      lbNameShow: 'اظهر اسمي على اللوحة',
+      lbNameHide: 'خليها مجهولة',
+      lbNameHint: 'مجهول افتراضيًا: الأفتار والنقط بس. لو فعّلت الاسم هيظهر أول اسم من بروفايلك.',
+      lbNameOff: 'ظاهر مجهول (أفتار ونقط بس)',
+      lbTestBtn: 'اختبر الاتصال',
+      lbTestOk: 'تمام، اللوحة شغالة والكتابة مسموحة ✓',
+      lbTestFail: 'الكتابة مرفوضة: ',
+      lbTestWait: 'بنجرب اللوحة...',
+      lbWriteFail: 'نقطتك مش بتوصل للوحة:',
+      lbPermErr: 'الصلاحيات على Firebase مش متظبطة. لازم تتظبط مرة واحدة من كونسول Firebase (القواعد اللي في ملف FIRESTORE_RULES).',
+      lbSignInFirst: 'محتاج تدخل بحساب أو دخول مجهول عشان نقطك تتحفظ',
+      chTitle: 'تحدي الأسبوع',
+      chSub: 'اعمل كود وابعته لصحابك. كل واحد في المجموعة بيشوف ترتيب الباقي بالنقط، من غير أسماء.',
+      chCreate: 'اعمل تحدي جديد',
+      chJoinPh: 'كود التحدي',
+      chJoinBtn: 'ادخل',
+      chCodeLbl: 'كود التحدي',
+      chCopy: 'انسخ الكود',
+      chCopied: 'الكود اتنسخ ✓',
+      chLeave: 'اطلع من التحدي',
+      chMembers: (n) => n + ' لاعب',
+      chEmpty: 'لسه محدش غيرك. ابعت الكود لصحابك.',
+      chNeed: 'اكتب الكود الأول',
+      chWait: 'بنجيب التحدي...',
+      chNoNet: 'التحدي محتاج نت',
+      revTitle: 'مراجعة سريعة',
+      revSub: 'محاضرات خلصتها من فترة. 10 دقايق تراجعها ومتتنساش.',
+      rev3: 'خلصتها من 3 أيام',
+      rev7: 'خلصتها من أسبوع',
+      revBtn: 'راجع 10 دقايق',
+      revLater: 'بعدين',
+      planTitle: 'خطة اليوم المقترحة',
+      planSub: 'ترتيب مقترح حسب أقرب امتحان، والمتأخر، والمادة المهملة.',
+      planHeavy: 'يومك في الكلية طويل، فالخطة أقصر النهارده.',
+      planWo: 'النهارده يوم ورك أوت، والخطة مراعية كده.',
+      planEmpty: 'مفيش حاجة ناقصة النهارده. ارتاح أو راجع حاجة قديمة.',
+      planMins: (m) => m + ' دقيقة',
+      planWhyExam: 'امتحان قريب',
+      planWhySoon: 'امتحان قريب',
+      planWhyDue: 'معادها قرّب',
+      planWhyNeglect: 'مهملة الأسبوع ده',
+      planWhyHard: 'صعبة',
+      planStart: 'ابدأ',
+      woTitle: 'الورك أوت',
+      woSub: 'اختار أيام الورك أوت في الأسبوع. التطبيق بيحميها في الخطة وبينزلها في جدولك.',
+      woDaysLbl: 'أيام الورك أوت',
+      woCount: (a, b) => a + ' من ' + b + ' الأسبوع ده',
+      woDoneBtn: 'خلصت الورك أوت النهارده',
+      woUndoBtn: 'شيل علامة النهارده',
+      woToday: 'النهارده يوم ورك أوت',
+      woSaved: 'أيام الورك أوت اتظبطت',
+      woAddBlock: 'هنضيف بلوك ورك أوت في الأيام دي في جدولك',
+      ssTitle: 'إحصائيات المواد',
+      ssSub: 'دقايق المذاكرة الحقيقية لكل مادة (بومودورو + المحاضرات اللي خلصتها).',
+      ssTop: (n, m) => 'أكتر مادة: ' + n + ' (' + m + ' د)',
+      ssLow: (n, m) => 'أقل مادة: ' + n + ' (' + m + ' د)',
+      ssNeglect: (n, d) => '⚠️ ' + n + ' مهملة الأسبوع ده والامتحان بعد ' + d + ' يوم',
+      ssNone: 'لسه مفيش مذاكرة متسجلة الأسبوع ده',
+      ssWeek: 'الأسبوع ده',
+      syncNote: 'المزامنة بقت بتدمج تعديلات الأجهزة مع بعض بدل ما تمسحها',
       dashTitle: 'لوحة تقدمك',
       dashWeek: 'مذاكرة آخر ٧ أيام',
       dashPlan: 'المخطط',
@@ -2440,9 +2815,9 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       needTask: 'اكتب اسم المهمة الأول',
       confPh: 'ثقتي؟',
       busyTitle: 'يومك في الأسبوع',
-      busySub: 'النوم 6 ساعات ثابتة كل يوم ومش بتتشال. ضيف باقي معادياتك (لكتشر، سكشن، جيم، أي حاجة) والمذاكرة بتتحط في الفراغات لوحدها. الفاضل بيتحسب بعد ما تدوس "حفظ اليوم".',
+      busySub: 'النوم 6 ساعات ثابتة كل يوم ومش بتتشال. ضيف باقي معادياتك (لكتشر، سكشن، ورك أوت، أي حاجة) والمذاكرة بتتحط في الفراغات لوحدها. الفاضل بيتحسب بعد ما تدوس "حفظ اليوم".',
       dayFree: (h) => 'فاضل للمذاكرة حوالي ' + h,
-      kindWord: { class: 'لكتشر/سكشن', gym: 'جيم', sleep: 'نوم', other: 'حاجة تانية' },
+      kindWord: { class: 'لكتشر/سكشن', gym: 'ورك أوت', sleep: 'نوم', other: 'حاجة تانية' },
       sleepTag: '6 س ثابتة',
       saveDay: 'حفظ اليوم',
       draftTag: 'لسه مترحفظش',
@@ -2644,6 +3019,67 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       lbNoCloud: 'The board needs internet. Your points are kept and will be sent once you are back online.',
       lbWait: 'Getting the board ready...',
       lbAnonErr: 'Anonymous sign-in is not enabled in Firebase yet (a step for the app owner)',
+      // v20
+      lbNameShow: 'Show my name on the board',
+      lbNameHide: 'Keep me anonymous',
+      lbNameHint: 'Anonymous by default: avatar and points only. If you turn the name on, your first name from the profile shows.',
+      lbNameOff: 'Shown as anonymous (avatar and points only)',
+      lbTestBtn: 'Test the connection',
+      lbTestOk: 'All good, the board is live and your score was accepted',
+      lbTestFail: 'The write was refused: ',
+      lbTestWait: 'Testing the board...',
+      lbWriteFail: 'Your score is not reaching the board:',
+      lbPermErr: 'The Firebase rules are not set up. They need to be published once from the Firebase console (the rules in FIRESTORE_RULES).',
+      lbSignInFirst: 'You need an account or an anonymous sign-in before your score can be saved',
+      chTitle: 'Weekly challenge',
+      chSub: 'Create a code and send it to your friends. Everyone in the group sees the others ranked by points, without names.',
+      chCreate: 'Create a challenge',
+      chJoinPh: 'Challenge code',
+      chJoinBtn: 'Join',
+      chCodeLbl: 'Challenge code',
+      chCopy: 'Copy the code',
+      chCopied: 'Code copied',
+      chLeave: 'Leave the challenge',
+      chMembers: (n) => n + ' players',
+      chEmpty: 'Nobody else yet. Send the code to your friends.',
+      chNeed: 'Type the code first',
+      chWait: 'Getting the challenge...',
+      chNoNet: 'The challenge needs internet',
+      revTitle: 'Quick review',
+      revSub: 'Lectures you finished a while ago. Ten minutes now keeps them from slipping.',
+      rev3: 'Finished 3 days ago',
+      rev7: 'Finished a week ago',
+      revBtn: 'Review for 10 min',
+      revLater: 'Later',
+      planTitle: "Today's suggested plan",
+      planSub: 'Ordered by the nearest exam, what is overdue and what has had no time lately.',
+      planHeavy: 'Your college day is long, so the plan is shorter today.',
+      planWo: 'Today is a workout day, and the plan makes room for it.',
+      planEmpty: 'Nothing left for today. Rest, or review something old.',
+      planMins: (m) => m + ' min',
+      planWhyExam: 'exam soon',
+      planWhySoon: 'exam soon',
+      planWhyDue: 'due soon',
+      planWhyNeglect: 'no time this week',
+      planWhyHard: 'hard one',
+      planStart: 'Start',
+      woTitle: 'Workout',
+      woSub: 'Pick your workout days. The app protects them in the plan and puts them in your day.',
+      woDaysLbl: 'Workout days',
+      woCount: (a, b) => a + ' of ' + b + ' this week',
+      woDoneBtn: 'Workout done today',
+      woUndoBtn: 'Remove today',
+      woToday: 'Today is a workout day',
+      woSaved: 'Workout days saved',
+      woAddBlock: 'A workout block will be added on those days in your schedule',
+      ssTitle: 'Subject stats',
+      ssSub: 'Real study minutes per subject (pomodoro sessions plus the lectures you finished).',
+      ssTop: (n, m) => 'Most studied: ' + n + ' (' + m + ' min)',
+      ssLow: (n, m) => 'Least studied: ' + n + ' (' + m + ' min)',
+      ssNeglect: (n, d) => 'Warning: ' + n + ' has had no time this week and the exam is in ' + d + ' days',
+      ssNone: 'No study logged this week yet',
+      ssWeek: 'This week',
+      syncNote: 'Sync now merges the edits from your devices instead of overwriting them',
       dashTitle: 'Your progress',
       dashWeek: 'Last 7 days of studying',
       dashPlan: 'planned',
@@ -2711,9 +3147,9 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       needTask: 'Enter the task name first',
       confPh: 'Confidence?',
       busyTitle: 'Your week, day by day',
-      busySub: 'Sleep is a fixed 6 hours every day and cannot be removed. Add the rest of your commitments (lectures, sections, gym, anything) and study goes into the free gaps by itself. The free time updates after you tap "Save day".',
+      busySub: 'Sleep is a fixed 6 hours every day and cannot be removed. Add the rest of your commitments (lectures, sections, workouts, anything) and study goes into the free gaps by itself. The free time updates after you tap "Save day".',
       dayFree: (h) => 'About ' + h + ' free for study',
-      kindWord: { class: 'Lecture/section', gym: 'Gym', sleep: 'Sleep', other: 'Other' },
+      kindWord: { class: 'Lecture/section', gym: 'Workout', sleep: 'Sleep', other: 'Other' },
       sleepTag: 'fixed 6 h',
       saveDay: 'Save day',
       draftTag: 'not saved yet',
@@ -2823,7 +3259,11 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     theme: 'dark',   // 'dark' (default) or 'light'
     pace: { study: 60, solve: 20 }, // v13: the student's own minutes per lecture study / per question set
     motivIdx: -1, motivDate: '', // v13: which encouragement line showed, and on which day
-    leaderboard: { on: false }, // v17: opt-in anonymous weekly leaderboard
+    leaderboard: { on: false, showName: false }, // v17: opt-in weekly leaderboard; v20: showName
+    workout: { days: [1, 3, 5, 6], log: {} }, // v20: workout weekdays (0=Sun, sorted) + days finished
+    reviewLog: {},   // v20: taskId -> date of the last 10-minute review
+    challenge: { code: '' }, // v20: weekly challenge room code
+    gone: {}, goneS: {}, // v20: tombstones so a merge never resurrects deleted work
     remind: { on: false, time: '20:00', last: '' }, // v19: in-app study reminder
     streak: { best: 0, fills: [], month: '', used: 0 }, // v19: flame streak with 3 monthly restores
     batchSync: { lastSync: 0, total: 0, added: 0, updated: 0, removed: 0, unmatched: 0, error: '' }, // lectures-N.csv read status
@@ -2892,7 +3332,20 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     if (!state.pace || typeof state.pace !== 'object') state.pace = { study: 60, solve: 20 };
     if (!state.profile || typeof state.profile !== 'object') state.profile = { name: '', year: null, onboarded: false, avatar: '' };
     if (typeof state.profile.avatar !== 'string') state.profile.avatar = ''; // v17
-    if (!state.leaderboard || typeof state.leaderboard !== 'object') state.leaderboard = { on: false }; // v17
+    if (!state.leaderboard || typeof state.leaderboard !== 'object') state.leaderboard = { on: false, showName: false }; // v17
+    if (typeof state.leaderboard.showName !== 'boolean') state.leaderboard.showName = false; // v20
+    if (!state.workout || typeof state.workout !== 'object') state.workout = { days: [1, 3, 5, 6], log: {} }; // v20
+    if (!Array.isArray(state.workout.days) || !state.workout.days.length) state.workout.days = [1, 3, 5, 6];
+    if (!state.workout.log || typeof state.workout.log !== 'object') state.workout.log = {};
+    if (!state.reviewLog || typeof state.reviewLog !== 'object') state.reviewLog = {}; // v20
+    if (!state.challenge || typeof state.challenge !== 'object') state.challenge = { code: '' }; // v20
+    if (!state.gone || typeof state.gone !== 'object') state.gone = {}; // v20
+    if (!state.goneS || typeof state.goneS !== 'object') state.goneS = {}; // v20
+    // v20: tombstones only matter while the other device may still hold the old
+    // copy, so anything older than 90 days is dropped.
+    const tombCut = Date.now() - 90 * 864e5;
+    Object.keys(state.gone).forEach((k) => { if ((Number(state.gone[k]) || 0) < tombCut) delete state.gone[k]; });
+    Object.keys(state.goneS).forEach((k) => { if ((Number(state.goneS[k]) || 0) < tombCut) delete state.goneS[k]; });
     if (!state.remind || typeof state.remind !== 'object') state.remind = { on: false, time: '20:00', last: '' }; // v19
     if (!state.streak || typeof state.streak !== 'object') state.streak = { best: 0, fills: [], month: '', used: 0 }; // v19
     if (!Array.isArray(state.streak.fills)) state.streak.fills = [];
@@ -2927,9 +3380,11 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     const fr = localStorage.getItem(FKEY);
     if (fr) {
       const parsed = JSON.parse(fr);
-      if (parsed && parsed.taskId && parsed.subjectId && Scheduler.FOCUS_PRESETS[parsed.preset]) focusRun = parsed;
+      if (parsed && parsed.taskId && parsed.subjectId && (parsed.customMin || Scheduler.FOCUS_PRESETS[parsed.preset])) focusRun = parsed;
     }
   } catch (e) {}
+  // v20: a run is either one of the presets or a custom length (the 10-minute review)
+  const focusMinOf = (r) => (r && r.customMin) || Scheduler.FOCUS_PRESETS[(r && r.preset) || 0].focusMin;
   const persistFocus = () => { try { focusRun ? localStorage.setItem(FKEY, JSON.stringify(focusRun)) : localStorage.removeItem(FKEY); } catch (e) {} };
 
   const L = () => I18N[state.lang === 'en' ? 'en' : 'ar'];
@@ -3062,8 +3517,40 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
   const cloudEnabled = () => !!(FIREBASE_CONFIG.apiKey && window.firebase && window.firebase.initializeApp);
   const setSync = (s) => { syncState = s; const el = $('syncLbl'); if (el) { el.textContent = s ? ({ syncing: L().syncing, synced: L().synced, error: L().syncErr }[s]) : ''; el.className = 'sync ' + s; } };
 
+  // v20: short, unambiguous invite code for a weekly challenge
+  const CH_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  function genChCode() { let c = ''; for (let i = 0; i < 6; i++) c += CH_ALPHABET[Math.floor(Math.random() * CH_ALPHABET.length)]; return c; }
+
+  // v20: keep one protected workout block on each chosen weekday so the planner
+  // puts study around the workout instead of through it. It only adds the block
+  // when a slot is actually free, and it is easy to remove from the day editor.
+  function syncWorkoutBlocks() {
+    const days = Scheduler.workoutDays(state);
+    const slots = ['18:00', '19:00', '17:00', '20:00', '16:00'];
+    for (let wd = 0; wd < 7; wd++) {
+      const list = (state.busy[wd] || []).filter((b) => b && b.id !== 'wo-' + wd);
+      let block = null;
+      if (days.indexOf(wd) !== -1) {
+        for (const st of slots) {
+          const sm = Scheduler.hmToMin(st);
+          if (sm == null) continue;
+          if (!Scheduler.blockClashes(list, sm, sm + 60)) {
+            block = { id: 'wo-' + wd, label: L().woTitle, kind: 'gym', start: st, end: Scheduler.fmtMin(sm + 60) };
+            break;
+          }
+        }
+      }
+      if (block) list.push(block);
+      if (list.length) state.busy[wd] = list; else delete state.busy[wd];
+    }
+  }
+
+  // v20: every task and subject carries its own change stamp, so two devices can
+  // be merged item by item instead of one whole copy replacing the other.
+  let stateSnap = (typeof SyncMerge !== 'undefined') ? SyncMerge.snapshot(state) : null;
   function save() {
     state.savedAt = Date.now();
+    if (typeof SyncMerge !== 'undefined') stateSnap = SyncMerge.stamp(state, stateSnap, state.savedAt);
     saveLocal();
     if (session && fbDb) {
       setSync('syncing');
@@ -3072,6 +3559,10 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       if (state.leaderboard && state.leaderboard.on) {
         clearTimeout(lbTimer);
         lbTimer = setTimeout(pushLbScore, 5000);
+      }
+      if ((state.challenge || {}).code) {
+        clearTimeout(chTimer);
+        chTimer = setTimeout(pushChScore, 5000);
       }
     }
   }
@@ -3084,30 +3575,77 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     } catch (e) { setSync('error'); }
   }
 
-  /* ---- v17: anonymous weekly leaderboard (opt-in; avatar + points only) ---- */
-  let lbTimer = null, lbRows = null, lbError = '', lbFetchedAt = 0;
-  const lbEntryRef = () => fbDb.collection('leaderboard_weeks').doc(Scheduler.weekKey(todayStr())).collection('entries').doc(session.uid);
+  /* ---- v17/v20: weekly leaderboard (opt-in) + weekly challenge ---- */
+  let lbTimer = null, chTimer = null, lbRows = null, lbReadErr = '', lbWriteErr = '', lbFetchedAt = 0;
+  let chRows = null, chErr = '', chFetchedAt = 0;
+  const lbWeekRef = () => fbDb.collection('leaderboard_weeks').doc(Scheduler.weekKey(todayStr()));
+  const lbEntryRef = () => lbWeekRef().collection('entries').doc(session.uid);
+  const chCode = () => String((state.challenge || {}).code || '').toUpperCase();
+  const chRef = () => fbDb.collection('challenges').doc(chCode() || 'none');
+  const chEntryRef = () => chRef().collection('entries').doc(session.uid);
 
-  async function pushLbScore() {
-    if (!session || !fbDb || !state.leaderboard || !state.leaderboard.on) return;
-    try {
-      const ws = Scheduler.weekScore(state, todayStr());
-      await lbEntryRef().set({ avatar: (avatarById(state.profile.avatar) || {}).id || 'av01', score: ws.score, updatedAt: Date.now() });
-    } catch (e) { /* offline or rules not set yet: the next save retries */ }
+  // What we publish: avatar + points always, the first name only when the
+  // student turned the name switch on (an empty string keeps the row anonymous).
+  function lbPayload() {
+    const ws = Scheduler.weekScore(state, todayStr());
+    const nm = (state.leaderboard && state.leaderboard.showName)
+      ? String((state.profile.name || '').trim().split(/\s+/)[0] || '').slice(0, 24) : '';
+    return { avatar: (avatarById(state.profile.avatar) || {}).id || 'av01', score: ws.score, updatedAt: Date.now(), name: nm };
   }
 
-  async function fetchLbTop() {
-    if (!session || !fbDb) return;
-    try {
-      const snap = await fbDb.collection('leaderboard_weeks').doc(Scheduler.weekKey(todayStr())).collection('entries').orderBy('score', 'desc').limit(10).get();
-      lbRows = snap.docs.map((d) => ({ id: d.id, avatar: d.data().avatar, score: Number(d.data().score) || 0 }));
-      lbError = '';
-    } catch (e) { lbError = String((e && e.message) || e); }
+  async function pushLbScore() {
+    if (!session || !fbDb || !(state.leaderboard && state.leaderboard.on)) return;
+    try { await lbEntryRef().set(lbPayload()); lbWriteErr = ''; }
+    catch (e) { lbWriteErr = String((e && (e.code || e.message)) || e); }
     const el = $('lbList'); if (el) el.innerHTML = lbListHtml();
   }
 
+  async function fetchLbTop() {
+    if (!fbDb) return;
+    lbFetchedAt = Date.now();
+    try {
+      const snap = await lbWeekRef().collection('entries').orderBy('score', 'desc').limit(10).get();
+      lbRows = snap.docs.map((d) => { const v = d.data() || {}; return { id: d.id, avatar: v.avatar, score: Number(v.score) || 0, name: String(v.name || '') }; });
+      lbReadErr = '';
+    } catch (e) { lbReadErr = String((e && (e.code || e.message)) || e); }
+    const el = $('lbList'); if (el) el.innerHTML = lbListHtml();
+  }
+
+  async function pushChScore() {
+    if (!session || !fbDb || !chCode()) return;
+    try { await chEntryRef().set(lbPayload()); chErr = ''; }
+    catch (e) { chErr = String((e && (e.code || e.message)) || e); }
+    const el = $('chList'); if (el) el.innerHTML = chListHtml();
+  }
+
+  async function fetchCh() {
+    if (!fbDb || !chCode()) return;
+    chFetchedAt = Date.now();
+    try {
+      const snap = await chRef().collection('entries').orderBy('score', 'desc').limit(20).get();
+      chRows = snap.docs.map((d) => { const v = d.data() || {}; return { id: d.id, avatar: v.avatar, score: Number(v.score) || 0, name: String(v.name || '') }; });
+      chErr = '';
+    } catch (e) { chErr = String((e && (e.code || e.message)) || e); }
+    const el = $('chList'); if (el) el.innerHTML = chListHtml();
+  }
+
+  // a friendly line for a Firebase error code, without dumping raw internals
+  function fbErrText(code) {
+    if (!code) return '';
+    if (/permission|denied|insufficient/i.test(code)) return L().lbPermErr;
+    if (/network|unavailable|offline/i.test(code)) return L().lbNoCloud;
+    if (/auth|operation-not-allowed/i.test(code)) return L().lbAnonErr;
+    return String(code).slice(0, 60);
+  }
+
+  function lbRowHtml(r, i, me, pts) {
+    const nm = r.name ? `<span class="lbname">${esc(r.name)}</span>` : '';
+    return `<div class="row lbrow${me ? ' me' : ''}" style="margin-top:6px"><span class="lbrank">${i + 1}</span><span class="avchip">${avatarSvg(r.avatar)}</span><span class="grow">${nm}${me ? `<span class="muted">${r.name ? ' · ' : ''}${esc(L().lbYou)}</span>` : ''}</span><b>${r.score} ${esc(pts)}</b></div>`;
+  }
+
   function lbListHtml() {
-    if (lbError) return `<div class="muted">${esc(lbError)}</div>`;
+    if (lbReadErr) return `<div class="muted">${esc(fbErrText(lbReadErr))}</div>`;
+    if (lbWriteErr) return `<div class="muted err">${esc(L().lbWriteFail)} ${esc(fbErrText(lbWriteErr))}</div>`;
     if (!lbRows) return `<div class="muted">${esc(L().lbWait)}</div>`;
     if (!lbRows.length) return `<div class="muted">${esc(L().lbEmpty)}</div>`;
     const uid0 = session && session.uid;
@@ -3117,14 +3655,19 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     const top = lbRows.slice(0, 3), rest = lbRows.slice(3);
     h += '<div class="lbtop">' + top.map((r, i) => {
       const me = isMe(r); if (me) mine = true;
-      return `<div class="lbtopcard${me ? ' me' : ''}"><span class="lbmedal">${medals[i]}</span><span class="lbav">${avatarSvg(r.avatar)}</span><b class="lbscore">${r.score}</b><span class="muted sml">${esc(L().lbPts)}${me ? ' · ' + esc(L().lbYou) : ''}</span></div>`;
+      return `<div class="lbtopcard${me ? ' me' : ''}"><span class="lbmedal">${medals[i]}</span><span class="lbav">${avatarSvg(r.avatar)}</span>${r.name ? `<span class="lbname">${esc(r.name)}</span>` : ''}<b class="lbscore">${r.score}</b><span class="muted sml">${esc(L().lbPts)}${me ? ' · ' + esc(L().lbYou) : ''}</span></div>`;
     }).join('') + '</div>';
-    rest.forEach((r, i) => {
-      const me = isMe(r); if (me) mine = true;
-      h += `<div class="row lbrow${me ? ' me' : ''}" style="margin-top:6px"><span class="lbrank">${i + 4}</span><span class="avchip">${avatarSvg(r.avatar)}</span><span class="grow muted">${me ? esc(L().lbYou) : ''}</span><b>${r.score} ${esc(L().lbPts)}</b></div>`;
-    });
+    rest.forEach((r, i) => { const me = isMe(r); if (me) mine = true; h += lbRowHtml(r, i + 3, me, L().lbPts); });
     if (!mine && uid0) h += `<div class="muted" style="margin-top:8px">${esc(L().lbOut)}</div>`;
     return h;
+  }
+
+  function chListHtml() {
+    if (chErr) return `<div class="muted">${esc(fbErrText(chErr))}</div>`;
+    if (!chRows) return `<div class="muted">${esc(L().chWait)}</div>`;
+    if (!chRows.length) return `<div class="muted">${esc(L().chEmpty)}</div>`;
+    const uid0 = session && session.uid;
+    return chRows.map((r, i) => lbRowHtml(r, i, !!(uid0 && r.id === uid0), L().lbPts)).join('');
   }
 
   async function loadCloud() {
@@ -3134,12 +3677,14 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       const doc = await fbDb.collection('planner_states').doc(session.uid).get();
       const data = doc.exists ? doc.data() : null;
       if (data && data.state && data.state.version) {
-        const cloudAt = Number(data.updatedAt) || 0;
-        if (!state.savedAt || cloudAt > state.savedAt) {
-          state = Object.assign(empty(), data.state);
-          normalizeState();
-          saveLocal(); setSync('synced');
-        } else pushCloud();
+        const cloud = data.state;
+        const merged = (typeof SyncMerge !== 'undefined') ? SyncMerge.merge(state, cloud) : cloud;
+        state = Object.assign(empty(), merged);
+        normalizeState();
+        stateSnap = (typeof SyncMerge !== 'undefined') ? SyncMerge.snapshot(state) : null;
+        saveLocal(); setSync('synced');
+        // only talk back when this device really had something the cloud did not
+        if (typeof SyncMerge !== 'undefined' && SyncMerge.stable(state) !== SyncMerge.stable(cloud)) pushCloud();
       } else pushCloud();
     } catch (e) { setSync('error'); }
   }
@@ -3155,7 +3700,8 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
         if (session) {
           await loadCloud();
           if (state.leaderboard && state.leaderboard.on) { pushLbScore(); fetchLbTop(); }
-        }
+          if (chCode()) { pushChScore(); fetchCh(); }
+        } else fetchLbTop();
         render();
       });
     } catch (e) { /* offline: stay local */ }
@@ -3469,6 +4015,9 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     }).join('') + '</div>';
 
     h += warnCards(today);
+    // v20: the day's suggested plan (today only, not while previewing another day)
+    if (!viewDate) h += planCard(today, now.getHours() * 60 + now.getMinutes());
+    if (!viewDate) h += reviewCard(today); // v20: lectures finished a while ago
 
     const r = Scheduler.generate(state, today, { nowMin: now.getHours() * 60 + now.getMinutes() });
     const stats = Scheduler.focusStats(state.focusLog, today);
@@ -3488,6 +4037,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     // dark focus card with the start button (like the reference's focus card, simplified)
     h += `<div class="card focuscard"><div class="row"><div class="grow"><div class="fc-title">\uD83C\uDFAF ${esc(L().focusCardTitle)}</div><div class="fc-sub">${esc(L().focusCardSub)}</div></div>
       <button class="btn fcbtn" data-act="focusOpen">${esc(L().startStudying)}</button></div></div>`;
+    if (!viewDate) h += workoutCard(today); // v20
 
     // the selected day's schedule: commitments and study sessions in one chronological timeline
     const items = [];
@@ -3830,12 +4380,18 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       <div class="row" style="margin-top:10px"><span class="grow batchstatus${bs.error ? ' err' : ''}">${esc(batchStatusText())}</span>
       ${lecturesYear() ? `<button class="btn ghost sm" data-act="batchSync">${esc(L().batchSyncBtn)}</button>` : ''}</div></div>`;
     h += `<div class="day">${esc(L().daysSecTitle)}</div>` + daysEditorHTML();
+    // v20: workout days (renamed from gym everywhere in the app)
+    const woDays = Scheduler.workoutDays(state);
+    h += `<div class="card"><b>💪 ${esc(L().woTitle)}</b><div class="muted" style="margin-top:4px">${esc(L().woSub)}</div>
+      <div class="muted sml" style="margin-top:8px">${esc(L().woDaysLbl)}</div>
+      <div class="wopick">` + [6, 0, 1, 2, 3, 4, 5].map((wd) => `<button class="wopickbtn${woDays.indexOf(wd) !== -1 ? ' on' : ''}" data-act="woDay" data-wd="${wd}">${esc(L().daysShort[wd])}</button>`).join('') + `</div>
+      <div class="muted sml" style="margin-top:6px">${esc(L().woAddBlock)}</div></div>`;
     h += `<div class="card"><b>${esc(L().accountSec)}</b>`;
     if (!cloudEnabled()) h += `<p class="muted" style="margin:8px 0 0">${esc(L().localMode)}</p>`;
     else if (session) h += `<div class="row" style="margin-top:8px"><span class="grow">${esc(session.email || '')} <span class="sync ${syncState}">${syncState === 'synced' ? '☁️ ' + esc(L().synced) : syncState === 'syncing' ? esc(L().syncing) : syncState === 'error' ? esc(L().syncErr) : ''}</span></span><button class="btn ghost" data-act="logout">${esc(L().logoutBtn)}</button></div>`;
     else h += `<p class="muted" style="margin:8px 0 6px">${esc(L().authSub)}</p><button class="btn" data-act="showAuth">${esc(L().authTitle)}</button>`;
     h += '</div>';
-    // v17: opt-in anonymous leaderboard (avatar + weekly points, no names)
+    // v17/v20: opt-in leaderboard - anonymous by default, optional first name
     const lb = state.leaderboard || { on: false };
     const ws = Scheduler.weekScore(state, todayStr());
     h += `<div class="card"><b>🏆 ${esc(L().lbTitle)}</b>
@@ -3845,17 +4401,25 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       h += `<div style="margin-top:10px"><button class="btn" data-act="lbJoin">${esc(L().lbJoin)}</button></div>`;
     } else {
       h += `<div class="row" style="margin-top:10px"><span class="avchip">${avatarSvg(state.profile.avatar)}</span><span class="grow"><b>${esc(L().lbYourScore(ws.score, ws.week))}</b></span>
-        <button class="btn ghost sm" data-act="lbLeave">${esc(L().lbLeave)}</button></div>`;
+        <button class="btn ghost sm" data-act="lbLeave">${esc(L().lbLeave)}</button></div>
+        <div class="row" style="margin-top:10px"><span class="grow muted sml">${esc(L().lbNameHint)}</span>
+        <button class="btn ghost sm${lb.showName ? ' on' : ''}" data-act="lbNameToggle">${lb.showName ? esc(L().lbNameHide) : esc(L().lbNameShow)}</button></div>
+        <div class="muted sml" style="margin-top:4px">${esc(lb.showName ? ((state.profile.name || '').trim().split(/\s+/)[0] || '') : L().lbNameOff)}</div>`;
       if (!cloudEnabled()) h += `<div class="muted" style="margin-top:8px">${esc(L().lbNoCloud)}</div>`;
-      else if (!session) h += `<div class="muted" style="margin-top:8px">${esc(L().lbWait)}</div>`;
+      else {
+        h += `<div class="row" style="margin-top:8px"><span class="muted sml grow errline">${lbWriteErr ? esc(L().lbWriteFail) + ' ' + esc(fbErrText(lbWriteErr)) : ''}</span>
+          <button class="btn ghost sm" data-act="lbTest">${esc(L().lbTestBtn)}</button></div>`;
+      }
       h += `<div class="day" style="margin-top:10px">${esc(L().lbTop)}</div><div id="lbList">${lbListHtml()}</div>`;
     }
     h += '</div>';
+    h += challengeCard(); // v20: weekly challenge with friends
     // v19: study reminder (in-app notifications while the app is open)
     h += `<div class="card"><b>🔔 ${esc(L().remTitle)}</b><div class="muted" style="margin-top:4px">${esc(L().remSub)}</div>
       <div class="row" style="margin-top:8px"><input type="time" data-act="remTime" value="${esc(state.remind.time || '20:00')}" style="width:110px">
       <button class="btn ${state.remind.on ? '' : 'ghost'} grow" data-act="remToggle">${state.remind.on ? esc(L().remOn) : esc(L().remOff)}</button></div></div>`;
     h += `<div style="margin:0 0 12px"><button class="btn ghost" data-act="shareProg" style="width:100%">📤 ${esc(L().shareBtn)}</button></div>`;
+    h += subjStatsHtml(); // v20: real minutes per subject
     h += dashHTML(); // v14: progress dashboard at the very bottom of the profile
     return h;
   }
@@ -3887,6 +4451,118 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     const y = Scheduler.addDays(today, -1), y2 = Scheduler.addDays(today, -2);
     const canRestore = left > 0 && !counted(y) && counted(y2);
     return { cur, best: st.best || 0, canRestore, left };
+  }
+
+  /* ---------------- v20: review queue, workout, subject stats, challenge ---------------- */
+
+  // Lectures finished 3+ days ago (and a week ago) that have not been looked at
+  // since. Clinics are not in here, only lecture material.
+  function reviewQueue(today) {
+    const out = [];
+    state.subjects.forEach((s) => (s.tasks || []).forEach((t) => {
+      if (!t.done || !t.doneAt || t.kind === 'clinic') return;
+      const age = Scheduler.diffDays(t.doneAt, today);
+      if (age < 3) return;
+      const last = (state.reviewLog || {})[t.id];
+      if (last && Scheduler.diffDays(last, today) < 4) return;
+      out.push({ s, t, label: age >= 7 ? L().rev7 : L().rev3, age });
+    }));
+    out.sort((a, b) => b.age - a.age);
+    return out.slice(0, 3);
+  }
+
+  function reviewCard(today) {
+    const q = reviewQueue(today);
+    if (!q.length) return '';
+    let h = `<div class="card revcard"><b>🔁 ${esc(L().revTitle)}</b><div class="muted" style="margin-top:4px">${esc(L().revSub)}</div>`;
+    q.forEach(({ s, t, label }) => {
+      h += `<div class="revrow"><span class="sicon" style="background:${colorOfS(s)}22">${iconOf(s)}</span>
+        <span class="grow"><b>${esc(t.title)}</b><br><span class="muted sml">${esc(s.name)} · ${esc(label)}</span></span>
+        <button class="btn sm" data-act="revStart" data-s="${s.id}" data-l="${t.id}">${esc(L().revBtn)}</button>
+        <button class="btn ghost sm" data-act="revLater" data-s="${s.id}" data-l="${t.id}" title="${esc(L().revLater)}">✕</button></div>`;
+    });
+    return h + '</div>';
+  }
+
+  function workoutCard(today) {
+    const wk = Scheduler.workoutWeek(state, today);
+    const woToday = Scheduler.isWorkoutDay(state, today);
+    if (!woToday && !wk.done) return '';
+    const wd0 = Scheduler.weekday(today);
+    const start = Scheduler.addDays(today, -((wd0 + 1) % 7));
+    let dots = '';
+    for (let i = 0; i < 7; i++) {
+      const d = Scheduler.addDays(start, i);
+      const planned = Scheduler.isWorkoutDay(state, d);
+      const done = Scheduler.workoutDone(state, d);
+      dots += `<span class="wodot${done ? ' done' : planned ? ' plan' : ''}${d === today ? ' now' : ''}" title="${esc(d)}">${done ? '✓' : esc(L().daysShort[Scheduler.weekday(d)])}</span>`;
+    }
+    const done = Scheduler.workoutDone(state, today);
+    let h = `<div class="card wocard"><div class="row"><div class="grow"><b>💪 ${esc(L().woTitle)}</b>
+      <div class="muted sml" style="margin-top:2px">${esc(L().woCount(wk.done, wk.target))}${woToday ? ' · ' + esc(L().woToday) : ''}</div></div>`;
+    if (woToday) {
+      h += done
+        ? `<button class="btn ghost sm" data-act="woUndo">${esc(L().woUndoBtn)}</button>`
+        : `<button class="btn sm" data-act="woDone">${esc(L().woDoneBtn)}</button>`;
+    }
+    h += `</div><div class="wodots">${dots}</div></div>`;
+    return h;
+  }
+
+  function planCard(today, nowMin) {
+    const ap = Scheduler.autoPlan(state, today, { nowMin });
+    let h = `<div class="card plancard"><div class="row"><div class="grow"><b>🎯 ${esc(L().planTitle)}</b>
+      <div class="muted" style="margin-top:2px">${esc(L().planSub)}</div></div>
+      ${ap.targetMin ? `<span class="tag">${esc(fmtDur(ap.targetMin))}</span>` : ''}</div>`;
+    if (ap.heavy) h += `<div class="muted sml" style="margin-top:6px">${esc(L().planHeavy)}</div>`;
+    if (ap.workout) h += `<div class="muted sml" style="margin-top:2px">${esc(L().planWo)}</div>`;
+    if (!ap.items.length) h += `<div class="muted" style="margin-top:8px">${esc(L().planEmpty)}</div>`;
+    ap.items.forEach((it, i) => {
+      const sj = subj(it.subjectId) || {};
+      const why = it.why.map((w) => `<span class="why">${esc(L()['planWhy' + w.charAt(0).toUpperCase() + w.slice(1)] || '')}</span>`).join('');
+      h += `<div class="planrow"><span class="plannum">${i + 1}</span>
+        <span class="sicon" style="background:${colorOfS(sj)}22">${iconOf(sj)}</span>
+        <span class="grow"><b>${esc(it.title)}</b><br><span class="muted sml">${esc(it.subject)} · ${esc(L().planMins(it.minutes))}</span>${why ? `<div class="whys">${why}</div>` : ''}</span>
+        <button class="btn ghost sm" data-act="focusTask" data-s="${it.subjectId}" data-l="${it.taskId}">${esc(L().planStart)}</button></div>`;
+    });
+    return h + '</div>';
+  }
+
+  function subjStatsHtml() {
+    if (!state.subjects.length) return '';
+    const st = Scheduler.subjectStats(state, todayStr());
+    if (!st.rows.length) return '';
+    const max = Math.max(1, ...st.rows.map((r) => r.week));
+    let h = `<div class="card"><b>📊 ${esc(L().ssTitle)}</b><div class="muted" style="margin-top:4px">${esc(L().ssSub)}</div>`;
+    if (!st.totalWeek) h += `<div class="muted" style="margin-top:8px">${esc(L().ssNone)}</div>`;
+    st.rows.forEach((r) => {
+      const sj = subj(r.id) || {};
+      const pct = Math.round(r.week / max * 100);
+      h += `<div class="ssrow"><span class="sicon" style="background:${colorOfS(sj)}22">${iconOf(sj)}</span>
+        <span class="grow"><span class="ssname">${esc(r.name)}</span><span class="bar slim" style="margin-top:4px"><i style="width:${pct}%"></i></span></span>
+        <b class="ssmin">${r.week ? esc(fmtDur(r.week)) : '0'}</b></div>`;
+    });
+    if (st.top) h += `<div class="muted sml" style="margin-top:8px">${esc(L().ssTop(st.top.name, st.top.week))}</div>`;
+    if (st.low && (!st.top || st.low.id !== st.top.id)) h += `<div class="muted sml">${esc(L().ssLow(st.low.name, st.low.week))}</div>`;
+    st.neglected.slice(0, 2).forEach((r) => { h += `<div class="warnline">${esc(L().ssNeglect(r.name, r.examIn))}</div>`; });
+    return h + '</div>';
+  }
+
+  function challengeCard() {
+    const code = chCode();
+    let h = `<div class="card"><b>👥 ${esc(L().chTitle)}</b><div class="muted" style="margin-top:4px">${esc(L().chSub)}</div>`;
+    if (!code) {
+      h += `<div style="margin-top:10px"><button class="btn" data-act="chCreate">${esc(L().chCreate)}</button></div>
+        <div class="row" style="margin-top:8px"><input id="chJoin" class="grow" placeholder="${esc(L().chJoinPh)}" dir="ltr" maxlength="8" style="text-transform:uppercase">
+        <button class="btn ghost" data-act="chJoinBtn">${esc(L().chJoinBtn)}</button></div>`;
+    } else {
+      h += `<div class="row" style="margin-top:10px"><span class="grow"><span class="muted sml">${esc(L().chCodeLbl)}</span><br><b class="chcode" dir="ltr">${esc(code)}</b></span>
+        <button class="btn ghost sm" data-act="chCopy">${esc(L().chCopy)}</button></div>
+        <div class="row" style="margin-top:8px"><span class="muted sml grow">${chRows ? esc(L().chMembers(chRows.length)) : ''}</span>
+        <button class="btn ghost sm" data-act="chLeave">${esc(L().chLeave)}</button></div>
+        <div id="chList" style="margin-top:8px">${chListHtml()}</div>`;
+    }
+    return h + '</div>';
   }
 
   function dashHTML() {
@@ -4038,9 +4714,10 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     if (clk) { const c = clockNow(); if (clk.textContent !== c) clk.textContent = c; }
     if (todayStr() !== lastTickDay) { lastTickDay = todayStr(); render(); return; }
     if (focusRun && !focusRun.paused && (focusRun.phase === 'focus' || focusRun.phase === 'break') && focusRun.endsAt && now >= focusRun.endsAt) {
-      const p = Scheduler.FOCUS_PRESETS[focusRun.preset];
+      const p = Scheduler.FOCUS_PRESETS[focusRun.preset] || Scheduler.FOCUS_PRESETS[0];
       if (focusRun.phase === 'focus') {
-        logFocus(focusRun.subjectId, focusRun.taskId, p.focusMin);
+        logFocus(focusRun.subjectId, focusRun.taskId, focusMinOf(focusRun));
+        if (focusRun.review) { (state.reviewLog = state.reviewLog || {})[focusRun.taskId] = todayStr(); save(); }
         focusRun.cycles = (focusRun.cycles || 0) + 1;
         focusRun.phase = 'break';
         focusRun.endsAt = now + p.breakMin * 60000;
@@ -4241,10 +4918,10 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     $('view').innerHTML = { day: viewDay, schedule: viewSchedule, exams: viewExams, subjects: viewSubjects, profile: viewProfile }[tab]() + footerHtml();
     $('overlays').innerHTML = overlays();
     if (focusRun) updateFocusText();
-    // v17: refresh the leaderboard whenever the profile shows and it is stale
-    if (tab === 'profile' && state.leaderboard && state.leaderboard.on && session && fbDb && Date.now() - lbFetchedAt > 60000) {
-      lbFetchedAt = Date.now();
-      fetchLbTop();
+    // v17/v20: refresh the board and the challenge whenever the profile shows and they are stale
+    if (tab === 'profile' && fbDb) {
+      if (state.leaderboard && state.leaderboard.on && Date.now() - lbFetchedAt > 60000) fetchLbTop();
+      if (chCode() && Date.now() - chFetchedAt > 60000) fetchCh();
     }
   }
 
@@ -4314,7 +4991,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     }
     if (a === 'focusNext') {
       if (!focusRun) return render();
-      focusRun.phase = 'focus'; focusRun.endsAt = Date.now() + Scheduler.FOCUS_PRESETS[focusRun.preset].focusMin * 60000; focusRun.paused = false;
+      focusRun.phase = 'focus'; focusRun.endsAt = Date.now() + focusMinOf(focusRun) * 60000; focusRun.paused = false;
       persistFocus(); return render();
     }
     if (a === 'focusPause') { if (focusRun && !focusRun.paused) { focusRun.remainMs = Math.max(0, focusRun.endsAt - Date.now()); focusRun.paused = true; persistFocus(); } return render(); }
@@ -4322,7 +4999,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     if (a === 'focusStop') {
       if (focusRun && focusRun.phase === 'focus') {
         const remain = focusRun.paused ? focusRun.remainMs : Math.max(0, focusRun.endsAt - Date.now());
-        const elapsed = Math.floor((Scheduler.FOCUS_PRESETS[focusRun.preset].focusMin * 60000 - remain) / 60000);
+        const elapsed = Math.floor((focusMinOf(focusRun) * 60000 - remain) / 60000);
         if (elapsed >= 1) logFocus(focusRun.subjectId, focusRun.taskId, elapsed);
       }
       focusRun = null; focusOpen = false; persistFocus(); return render();
@@ -4416,10 +5093,13 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     if (a === 'logout') return doLogout();
     if (a === 'pickAv') { state.profile.avatar = t.dataset.v; save(); return render(); }
     if (a === 'lbJoin') {
-      (state.leaderboard = state.leaderboard || {}).on = true;
+      (state.leaderboard = state.leaderboard || { on: true, showName: false }).on = true;
       lbRows = null; save();
-      if (cloudEnabled() && fbAuth && !session) fbAuth.signInAnonymously().catch(() => toast(L().lbAnonErr));
-      else if (session && fbDb) { pushLbScore(); fetchLbTop(); }
+      (async () => {
+        if (!cloudEnabled() || !fbAuth) return render();
+        if (!session) { try { await fbAuth.signInAnonymously(); } catch (e) { return toast(L().lbAnonErr); } }
+        await pushLbScore(); await fetchLbTop(); render();
+      })();
       return render();
     }
     if (a === 'lbLeave') {
@@ -4427,6 +5107,78 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       lbRows = null;
       if (session && fbDb) { try { lbEntryRef().delete().catch(() => {}); } catch (e) {} }
       save(); return render();
+    }
+    if (a === 'lbNameToggle') {
+      if (!state.leaderboard) state.leaderboard = { on: true, showName: false };
+      state.leaderboard.showName = !state.leaderboard.showName;
+      save(); pushLbScore(); if (chCode()) pushChScore();
+      return render();
+    }
+    if (a === 'lbTest') {
+      (async () => {
+        if (!cloudEnabled() || !fbAuth) return toast(L().lbNoCloud);
+        toast(L().lbTestWait);
+        if (!session) { try { await fbAuth.signInAnonymously(); } catch (e) { return toast(L().lbAnonErr); } }
+        if (!state.leaderboard) state.leaderboard = { on: false, showName: false };
+        state.leaderboard.on = true; save();
+        await pushLbScore(); await fetchLbTop();
+        toast(lbWriteErr ? L().lbTestFail + fbErrText(lbWriteErr) : L().lbTestOk);
+        render();
+      })();
+      return;
+    }
+    if (a === 'chCreate') {
+      state.challenge = { code: genChCode() }; chRows = null; save(); render();
+      (async () => {
+        if (!cloudEnabled() || !fbAuth) return toast(L().chNoNet);
+        if (!session) { try { await fbAuth.signInAnonymously(); } catch (e) { return toast(L().lbAnonErr); } }
+        await pushChScore(); await fetchCh(); render();
+      })();
+      return;
+    }
+    if (a === 'chJoinBtn') {
+      const v = String(($('chJoin') || {}).value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (v.length < 4) return toast(L().chNeed);
+      state.challenge = { code: v }; chRows = null; save(); render();
+      (async () => {
+        if (!cloudEnabled() || !fbAuth) return toast(L().chNoNet);
+        if (!session) { try { await fbAuth.signInAnonymously(); } catch (e) { return toast(L().lbAnonErr); } }
+        await pushChScore(); await fetchCh(); render();
+      })();
+      return;
+    }
+    if (a === 'chLeave') {
+      const oldCode = chCode();
+      state.challenge = { code: '' }; chRows = null; save(); render();
+      if (session && fbDb && oldCode) { try { fbDb.collection('challenges').doc(oldCode).collection('entries').doc(session.uid).delete().catch(() => {}); } catch (e) {} }
+      return;
+    }
+    if (a === 'chCopy') {
+      const code = chCode();
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code);
+        else { const el = document.createElement('textarea'); el.value = code; document.body.appendChild(el); el.select(); document.execCommand('copy'); el.remove(); }
+        toast(L().chCopied);
+      } catch (e) { toast(code); }
+      return;
+    }
+    if (a === 'revStart') {
+      if (!taskOf(s, l)) return render();
+      focusSel = { s, l };
+      focusRun = { subjectId: s, taskId: l, preset: 0, customMin: 10, review: true, phase: 'focus', endsAt: Date.now() + 10 * 60000, remainMs: 0, paused: false, cycles: 0 };
+      focusOpen = false; persistFocus(); return render();
+    }
+    if (a === 'revLater') { (state.reviewLog = state.reviewLog || {})[l] = todayStr(); save(); return render(); }
+    if (a === 'woDone') { (state.workout.log = state.workout.log || {})[todayStr()] = 1; save(); toast(L().woDoneBtn); return render(); }
+    if (a === 'woUndo') { delete (state.workout.log || {})[todayStr()]; save(); return render(); }
+    if (a === 'woDay') {
+      const wd = +t.dataset.wd;
+      const days = Scheduler.workoutDays(state).slice();
+      const i = days.indexOf(wd);
+      if (i === -1) days.push(wd); else days.splice(i, 1);
+      state.workout.days = days.sort((x, y) => x - y);
+      syncWorkoutBlocks();
+      save(); toast(L().woSaved); return render();
     }
     if (a === 'batchSync') return syncLecturesFile(true);
 
@@ -4500,7 +5252,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     if (!document.hidden && canSyncLectures() && Date.now() - (state.batchSync.lastSync || 0) > 30 * 60000) syncLecturesFile(false);
   });
 
-  window.__planner = { get state() { return state; }, loadCur, render, tick, get focusRun() { return focusRun; }, get session() { return session; }, batchIdle: () => batchPromise || Promise.resolve(), lbDemo: (rows) => { lbRows = rows; lbError = ''; const el = $('lbList'); if (el) el.innerHTML = lbListHtml(); } };
+  window.__planner = { get state() { return state; }, loadCur, render, tick, loadCloud, pushCloud, save, get focusRun() { return focusRun; }, get session() { return session; }, batchIdle: () => batchPromise || Promise.resolve(), lbDemo: (rows) => { lbRows = rows; lbError = ''; const el = $('lbList'); if (el) el.innerHTML = lbListHtml(); } };
   render();
   initCloud();
   if (canSyncLectures()) syncLecturesFile(false);
