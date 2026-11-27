@@ -4437,6 +4437,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       duration: 'المدة', earlier: 'قدّمها', later: 'أخّرها', remove: 'امسح البلوك',
       weekTitle: 'الأسبوع', weekOverview: 'نظرة على الأسبوع',
       planned: 'المخطط', tasksLeft: 'تاسكات فاضلة', examsWeek: 'امتحانات',
+      focusNoPlan: 'مفيش بلان لليوم. ضيف مذاكرة لجدولك الأول.', addToDay: 'ضيف بنفسي', movedFrom: 'اتأجلت من', movedTo: 'اتأجلت لـ', todayWord: 'النهارده',
       suggest: 'اقترح جدول تلقائي', wipe: 'امسح اليوم', suggested: 'اتضاف الاقتراح', suggestNone: 'مفيش اقتراح يتضاف', overdueTitle: 'كنت حاطط دول امبارح ومخلصتهمش:',
       clearDay: 'ابدأ جدول فاضي', resetDay: 'رجّع لجدول التطبيق', resetDone: 'رجعت لجدول التطبيق',
       myDayTag: 'جدولك', autoTag: 'جدول التطبيق', changed: 'اتحفظ',
@@ -4450,6 +4451,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       duration: 'Length', earlier: 'Earlier', later: 'Later', remove: 'Delete block',
       weekTitle: 'Week', weekOverview: 'Week overview',
       planned: 'Planned', tasksLeft: 'Tasks left', examsWeek: 'Exams',
+      focusNoPlan: 'Nothing on your plan today. Add some study to your day first.', addToDay: 'Add it myself', movedFrom: 'Moved from', movedTo: 'Moved to', todayWord: 'today',
       suggest: 'Suggest a schedule', wipe: 'Clear the day', suggested: 'Suggestion added', suggestNone: 'Nothing to suggest', overdueTitle: 'You planned these yesterday and did not finish them:',
       clearDay: 'Start with an empty day', resetDay: "Back to the app's plan", resetDone: "Back to the app's plan",
       myDayTag: 'Your plan', autoTag: "App's plan", changed: 'Saved',
@@ -4491,7 +4493,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
   // Freeze a day into state.plans so an edit has something to edit.
   function ensurePlanDay(d) {
     if (!state.plans) state.plans = {};
-    if (!dayManual(d)) state.plans[d] = autoPlanBlocks(d);
+    if (!dayManual(d)) state.plans[d] = []; // v26: an untouched day is empty (v25 wrongly froze the app's blocks into it)
     return state.plans[d];
   }
 
@@ -4593,8 +4595,100 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       ${n ? `<button class="btn ghost" data-act="planWipe" data-d="${d}" title="${esc(PT().wipe)}" aria-label="x">\u2715</button>` : ''}</div>`;
   }
 
+  // The task is already on some other day's plan (today or later).
+  function plannedElsewhere(sid, tid, d) {
+    const today = todayStr();
+    return Object.keys(state.plans || {}).some((k) => k !== d && k >= today && (state.plans[k] || []).some((b) => b && b.subjectId === sid && b.taskId === tid));
+  }
+
+  // Free windows of a day with the blocks already planned cut out.
+  function openWindows(d) {
+    const taken = planBlocks(d).map((b) => [pMin(b.start), pMin(b.end)]).filter(([a, z]) => a != null && z != null).sort((x, y) => x[0] - y[0]);
+    const out = [];
+    freeSlots(d).forEach(([a, z]) => {
+      let cur = a;
+      taken.forEach(([ta, tz]) => { if (tz <= cur || ta >= z) return; if (ta > cur) out.push([cur, ta]); cur = Math.max(cur, tz); });
+      if (z > cur) out.push([cur, z]);
+    });
+    return out;
+  }
+
+  // v26: each suggested task gets its usual time (his pace), whole, never a 15 or 30
+  // minute scrap. Tasks already on another day's plan are skipped.
+  function planSuggest(d) {
+    if (d < todayStr()) return;
+    ensurePlanDay(d);
+    const have = state.plans[d];
+    const taken = {};
+    have.forEach((b) => { if (b.taskId) taken[b.subjectId + '|' + b.taskId] = 1; });
+    let r = { sessions: [] };
+    try { const n = new Date(); r = Scheduler.generate(state, todayStr(), { nowMin: n.getHours() * 60 + n.getMinutes() }); } catch (e) { r = { sessions: [] }; }
+    const sess = r.sessions.filter((x) => x.date >= d && x.date <= Scheduler.addDays(d, 6)).sort((x, y) => (x.date < y.date ? -1 : x.date > y.date ? 1 : (x.startMin || 0) - (y.startMin || 0)));
+    const target = Math.round(sess.filter((x) => x.date === d).reduce((a, x) => a + (x.hours || 0), 0) * 60);
+    let got = 0, added = 0;
+    const tried = {};
+    for (const x of sess) {
+      if (got >= target) break;
+      if (!x.lectureId) continue;
+      const key = x.subjectId + '|' + x.lectureId;
+      if (taken[key] || tried[key]) continue;
+      tried[key] = 1;
+      const t = taskOf(x.subjectId, x.lectureId);
+      if (!t || t.done || plannedElsewhere(x.subjectId, x.lectureId, d)) continue;
+      let dur = Math.min(120, Math.ceil(Scheduler.taskRemainingMin(t) / 15) * 15);
+      if (dur < 15) continue;
+      const wins = openWindows(d).map(([a, z]) => [Math.ceil(a / 5) * 5, z]).filter(([a, z]) => z > a);
+      let win = wins.find(([a, z]) => z - a >= dur);
+      if (!win) {
+        // no gap holds the whole time: take the biggest gap, only when it covers most of it
+        win = wins.slice().sort((x, y) => (y[1] - y[0]) - (x[1] - x[0]))[0];
+        if (!win || win[1] - win[0] < 45 || (win[1] - win[0]) < dur * 0.6) continue;
+        dur = Math.floor((win[1] - win[0]) / 15) * 15;
+        if (dur < 45) continue;
+      }
+      const st = win[0];
+      have.push({ taskId: x.lectureId, subjectId: x.subjectId, type: x.type || 'study', start: pHM(st), end: pHM(st + dur) });
+      taken[key] = 1; got += dur; added++;
+    }
+    sortPlan(d);
+    save(); toast(added ? PT().suggested : PT().suggestNone);
+    render();
+  }
+
+  // v26: a block that was planned for a day that has passed and was not finished moves
+  // to the next day with room (today first). The old block stays on its day as the record.
+  function rolloverPlans() {
+    const today = todayStr();
+    if (!state.plans) return;
+    let changed = false;
+    Object.keys(state.plans).filter((k) => k < today && k >= Scheduler.addDays(today, -14)).sort().forEach((k) => {
+      (state.plans[k] || []).forEach((b) => {
+        if (!b || !b.taskId || b.movedTo) return;
+        const t = taskOf(b.subjectId, b.taskId);
+        if (!t || t.done) return;
+        const dur = Math.max(15, pDur(b) || 60);
+        const already = Object.keys(state.plans).find((x) => x >= today && (state.plans[x] || []).some((q) => q && q.subjectId === b.subjectId && q.taskId === b.taskId));
+        if (already) { b.movedTo = already; changed = true; return; }
+        for (let i = 0; i < 7; i++) {
+          const d = Scheduler.addDays(today, i);
+          const room = openWindows(d).find(([w1, w2]) => Math.ceil(w1 / 5) * 5 + dur <= w2);
+          if (!room) continue;
+          const st = Math.ceil(room[0] / 5) * 5;
+          ensurePlanDay(d);
+          state.plans[d].push({ taskId: b.taskId, subjectId: b.subjectId, type: b.type || 'study', start: pHM(st), end: pHM(st + dur), from: k });
+          sortPlan(d);
+          b.movedTo = d; changed = true; return;
+        }
+      });
+    });
+    if (changed) save();
+  }
+
+  // v26: tasks he planned for yesterday (or earlier) and did not finish, and where they went.
   function overdueHtml() {
-    const y = Scheduler.addDays(todayStr(), -1);
+    const today = todayStr();
+    const y = Scheduler.addDays(today, -1);
+    const fmtD = (d) => (d === today ? PT().todayWord : d.slice(5).replace('-', '/'));
     const seen = {};
     const items = [];
     (dayManual(y) ? state.plans[y] : []).forEach((b) => {
@@ -4603,31 +4697,17 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       if (!t || t.done) return;
       seen[b.subjectId + '|' + b.taskId] = 1;
       const sj = subj(b.subjectId) || {};
-      items.push(`${sj.name || ''} - ${t.title}`);
+      items.push(`${sj.name || ''} - ${t.title}${b.movedTo ? ' \u2192 ' + PT().movedTo + ' ' + fmtD(b.movedTo) : ''}`);
+    });
+    (dayManual(today) ? state.plans[today] : []).forEach((b) => {
+      if (!b || !b.taskId || !b.from || b.from >= today || b.from === y || seen[b.subjectId + '|' + b.taskId]) return;
+      const t = taskOf(b.subjectId, b.taskId);
+      if (!t || t.done) return;
+      seen[b.subjectId + '|' + b.taskId] = 1;
+      items.push(`${(subj(b.subjectId) || {}).name || ''} - ${t.title} \u2192 ${PT().movedFrom} ${fmtD(b.from)}`);
     });
     if (!items.length) return '';
     return `<div class="card warncard overdue"><b>\u26A0\uFE0F ${esc(PT().overdueTitle)}</b>${items.map((x) => `<div class="muted" style="margin-top:4px">${esc(x)}</div>`).join('')}</div>`;
-  }
-
-  // The tasks the app would study on that day that are not already on the plan.
-  function planSuggest(d) {
-    if (d < todayStr()) return;
-    ensurePlanDay(d);
-    const have = state.plans[d];
-    const taken = {};
-    have.forEach((b) => { if (b.taskId) taken[b.subjectId + '|' + b.taskId] = 1; });
-    const occ = have.map((b) => [pMin(b.start), pMin(b.end)]).filter(([a, z]) => a != null && z != null);
-    let added = 0;
-    autoPlanBlocks(d).forEach((b) => {
-      const a = pMin(b.start), z = pMin(b.end);
-      if (a == null || z == null) return;
-      if (b.taskId && taken[b.subjectId + '|' + b.taskId]) return;
-      if (occ.some(([x, y]) => a < y && x < z)) return;
-      have.push(b); occ.push([a, z]); added++;
-    });
-    sortPlan(d);
-    save(); toast(added ? PT().suggested : PT().suggestNone);
-    render();
   }
 
   function weekOverviewHtml(days) {
@@ -4715,7 +4795,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     // a new block: as long as the task needs, as long as the slot allows, at most 60
     const slotMin = Math.max(15, (st.e || 0) - (st.s || 0));
     const rem = Scheduler.taskRemainingMin(t);
-    let dur = Math.min(slotMin, rem > 0 ? rem : 60, 60);
+    let dur = Math.min(slotMin, rem > 0 ? rem : 60);
     dur = Math.max(15, Math.ceil(dur / 15) * 15);
     const room = findRoom(d, st.s, st.e, dur);
     if (!room) { toast(PT().noRoom); return render(); }
@@ -5986,17 +6066,24 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       else h += `<button class="btn ghost grow" data-act="focusPause">${esc(L().focusPause)}</button>`;
       h += `<button class="btn danger" data-act="focusStop">${esc(L().focusStop)}</button></div></div></div>`;
     } else if (focusOpen) {
+      // v26: only what is on today's plan (in plan order); a task he picked with its own play button stays in the list
       const open = [];
-      state.subjects.forEach((sj) => sj.tasks.forEach((t) => { if (!t.done) open.push({ sj, t, rem: Scheduler.taskRemainingMin(t) }); }));
-      open.sort((a, b) => {
-        const ea = examOf(a.sj), eb = examOf(b.sj);
-        const da = a.t.due || (ea && ea.date) || '9999', db = b.t.due || (eb && eb.date) || '9999';
-        return da.localeCompare(db) || b.rem - a.rem;
-      });
+      const seenF = {};
+      const addF = (sid, tid) => {
+        const sj = subj(sid), t = sj && taskOf(sid, tid);
+        if (!t || t.done || seenF[sid + '|' + tid]) return;
+        seenF[sid + '|' + tid] = 1;
+        open.push({ sj, t, rem: Scheduler.taskRemainingMin(t) });
+      };
+      planBlocks(todayStr()).slice().sort((a, b) => (pMin(a.start) || 0) - (pMin(b.start) || 0)).forEach((b) => { if (b.taskId) addF(b.subjectId, b.taskId); });
+      if (focusSel) addF(focusSel.s, focusSel.l);
       if (open.length && !(focusSel && taskOf(focusSel.s, focusSel.l) && !taskOf(focusSel.s, focusSel.l).done)) focusSel = { s: open[0].sj.id, l: open[0].t.id };
       h += `<div class="overlay"><div class="sheet focus"><b style="font-size:17px">${esc(L().focusTitle)}</b>`;
       if (!open.length) {
-        h += `<p class="muted">${esc(L().focusNoTasks)}</p><div style="margin-top:12px"><button class="btn ghost" data-act="focusClose" style="width:100%">${esc(L().focusCancel)}</button></div>`;
+        h += `<p class="muted">${esc(PT().focusNoPlan)}</p>
+          <div class="row" style="margin-top:12px;gap:8px"><button class="btn grow" data-act="planSuggest" data-d="${todayStr()}">\u2728 ${esc(PT().suggest)}</button>
+          <button class="btn ghost grow" data-act="focusAddPlan">${esc(PT().addToDay)}</button></div>
+          <div style="margin-top:8px"><button class="btn ghost" data-act="focusClose" style="width:100%">${esc(L().focusCancel)}</button></div>`;
       } else {
         h += `<div class="muted" style="margin:8px 0 6px">${esc(L().focusPickTask)}</div><div class="ftasks">` +
           open.slice(0, 8).map(({ sj, t, rem }) => `<button class="ftask ${focusSel && focusSel.l === t.id ? 'on' : ''}" data-act="pickFTask" data-s="${sj.id}" data-l="${t.id}">
@@ -6035,6 +6122,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     if (tourStep == null && state.profile.onboarded && !tourDone && !sharedData && !(cloudEnabled() && !session && !authSkipped)) tourStep = 0; // v21 first-run tour
     if (tourStep != null) tab = TOUR_TABS[tourStep];
     if (focusRun && !taskOf(focusRun.subjectId, focusRun.taskId)) { focusRun = null; persistFocus(); }
+    if (!sharedData && state.subjects.length) rolloverPlans(); // v26
     applyChrome();
     const nowD = new Date();
     const hd = state.lang === 'en'
@@ -6111,6 +6199,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     if (a === 'backFromProfile') { tab = prevTab || 'day'; return render(); }
     if (a === 'focusOpen') { focusOpen = true; return render(); }
     if (a === 'focusTask') { focusSel = { s, l }; focusOpen = true; return render(); }
+    if (a === 'focusAddPlan') { focusOpen = false; tab = 'schedule'; schedOff = 0; schedDate = todayStr(); window.scrollTo(0, 0); return render(); }
     if (a === 'focusClose') { focusOpen = false; return render(); }
     if (a === 'pickFTask') { focusSel = { s, l }; return render(); }
     if (a === 'pickFPreset') { focusPreset = +t.dataset.i || 0; return render(); }
