@@ -447,6 +447,46 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
 .subj-actions .btn { padding: 11px 8px; font-weight: 800; }
 .subj-actions .btn.on { outline: 2px solid var(--primary); }
 .sheet.wide { max-height: 88vh; overflow: auto; }
+
+/* ---- v9: simple dashboard restyle (reference-inspired, our colors) ---- */
+.motiv {
+  display: inline-block; margin: 8px 0 2px; padding: 7px 14px;
+  background: var(--teal-bg); color: var(--teal-ink);
+  border: 1px solid var(--line); border-radius: 999px;
+  font-size: 14px; font-weight: 700; line-height: 1.6;
+}
+#clockLbl { font-variant-numeric: tabular-nums; font-weight: 800; }
+.statrow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }
+.statcard {
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 12px; box-shadow: var(--shadow); animation: fadeUp 0.25s ease both; min-width: 0;
+}
+.sc-label { font-size: 12px; font-weight: 700; color: var(--muted); }
+.sc-num { font-size: 21px; font-weight: 800; margin-top: 5px; font-variant-numeric: tabular-nums; }
+.sc-sub { font-size: 11.5px; margin-top: 3px; }
+.bar.slim { height: 6px; margin: 9px 0 1px; }
+.focuscard {
+  background: linear-gradient(130deg, #0c1a1c, #0f2f2b 55%, #123f3a);
+  border: 1px solid #1d4a44; color: #eef7f5;
+}
+.focuscard .fc-title { font-size: 16px; font-weight: 800; }
+.focuscard .fc-sub { font-size: 13px; color: #a9c8c2; margin-top: 3px; }
+.focuscard .fcbtn { flex: none; }
+[data-theme="light"] .focuscard {
+  background: linear-gradient(130deg, #0b2825, #0f766e 70%, #0d9488);
+  border-color: #0f766e; color: #fff;
+}
+[data-theme="light"] .focuscard .fc-sub { color: #cdeae4; }
+@media (max-width: 420px) {
+  .sc-num { font-size: 18px; }
+  .statrow { gap: 8px; }
+  .statcard { padding: 10px; }
+}
+
+/* v9: let long Arabic titles breathe on narrow screens instead of crushing */
+.sess { flex-wrap: wrap; }
+.sess .grow { flex: 1 1 46%; }
+.sess .hrs { font-size: 12px; }
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
@@ -679,7 +719,7 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
   const diffDays = (a, b) => Math.round((parse(b) - parse(a)) / 864e5);
 
   const BREAK_M = 30;  // rest between scheduled tasks, in minutes
-  const DAY_MIN = 240; // a planning day starts at 04:00; a block after midnight belongs to the day before
+  const DAY_MIN = 0;   // a planning day is the calendar day (12 AM -> 12 AM, local time); a block after midnight belongs to the day before
 
   /* ---------------- busy blocks / free time ---------------- */
 
@@ -734,7 +774,7 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       if (b.end > b.start) {
         if (b.end > DAY_MIN) out.push([b.start, b.end]); // entirely after the day boundary
       } else {
-        // crosses midnight: the part before 04:00 belongs to the previous planning day
+        // crosses midnight: the part after midnight belongs to this planning day
         out.push([Math.max(b.start, DAY_MIN), 1440 + b.end]);
       }
     });
@@ -887,8 +927,8 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
 
   function capacityOn(state, d) {
     if ((state.blocked || []).includes(d)) return 0;
-    // free time is the day (04:00 -> 04:00) minus busy blocks; a 30-minute break is
-    // kept between tasks, and tasks never start after 03:30 so a break always fits
+    // free time is the day (12 AM -> 12 AM) minus busy blocks; a 30-minute break is
+    // kept between tasks, and tasks never start after 11:30 PM so a break always fits
     const mins = freeWindowsOn(state, d).reduce((a, [s, e]) => a + Math.max(0, Math.min(e, 1440 + DAY_MIN - BREAK_M) - s), 0);
     return Math.max(0, Math.floor(mins / 60 * 2) / 2);
   }
@@ -1262,12 +1302,32 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       greetingAm: (n) => 'صباح الفل' + (n ? ' يا ' + n : ''),
       greetingPm: (n) => 'مساء الفل' + (n ? ' يا ' + n : ''),
       myDaySub: 'كل اللي عليك النهارده في مكان واحد',
+      motiv: [
+        'يلا يا بطل، يوم جديد وفرصة جديدة 💪✨',
+        'خطوة صغيرة كل يوم بتعمل فرق كبير 🌱😊',
+        'اتخيل نفسك يوم النتيجة وانت فخور بنفسك 🦷💙',
+        'مش لازم الكمال، المهم الاستمرارية 🚀🤍',
+        'نفس عميق، كوباية شاي، ويلا بينا ☕🌸',
+        'التعب بيروح، بس إحساس الإنجاز بيفضل 😉📚',
+        'انت أقرب للهدف مما تتخيل، كمّل 🌟',
+        'ذاكر بتركيز دلوقتي، وريّح بالك بعدين 🍫🧠',
+        'كل ساعة مذاكرة النهارده بتريّحك يوم الامتحان 💚⏳',
+        'ابدأ بإنجاز صغير، واليوم كله هيحلو ☀️😌',
+        'منافسك الوحيد هو نفسك امبارح، وانت كسبان 🏆🔥',
+        'ربنا يوفقك يا صديقي، يلا نعمل يوم جميل 🤍🌿',
+      ],
       todayProgress: 'إنجاز النهارده',
       studiedOf: (done, plan) => 'ذاكرت ' + done + ' من ' + plan + ' النهارده',
       studiedNoPlan: (done) => 'ذاكرت ' + done + ' النهارده',
       startStudying: 'ابدأ المذاكرة ▶',
-      todayBusy: 'معادياتك النهارده',
-      todayStudy: 'خطة مذاكرة النهارده',
+      todaySchedule: 'جدولك النهارده',
+      emptyToday: 'مفيش حاجة في جدولك النهارده 🎉',
+      statTodayShort: 'إنجاز النهارده',
+      statStudiedShort: 'مذاكرة النهارده',
+      statWeekShort: 'الأسبوع ده',
+      planOf: (plan) => 'الخطة: ' + plan,
+      focusCardTitle: 'وضع التركيز',
+      focusCardSub: 'اختار مهمة وابدأ: 25 دقيقة مذاكرة + 5 دقايق بريك، أو 50 + 10',
       requiredTasks: 'المهام المطلوبة',
       deadlinesTitle: 'مواعيد التسليم والامتحانات',
       noDeadlines: 'مفيش مواعيد قريبة.',
@@ -1436,12 +1496,32 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       greetingAm: (n) => 'Good morning' + (n ? ', ' + n : ''),
       greetingPm: (n) => 'Good evening' + (n ? ', ' + n : ''),
       myDaySub: 'Everything on you today, in one place',
+      motiv: [
+        "New day, new shot - you've got this 💪✨",
+        'Small steps every day add up big 🌱😊',
+        'Picture results day and how proud you will be 🦷💙',
+        'Progress over perfection, keep going 🚀🤍',
+        'Deep breath, a cup of tea, and off we go ☕🌸',
+        'Tired fades; the win stays 😉📚',
+        'You are closer than you think - keep going 🌟',
+        'Focus now, relax later - deal? 🍫🧠',
+        'Every hour today buys you calm on exam day 💚⏳',
+        'Start with one small win and the day turns ☀️😌',
+        'Your only rival is yesterday-you, and you are winning 🏆🔥',
+        "Let's make today a good one, friend 🤍🌿",
+      ],
       todayProgress: "Today's progress",
       studiedOf: (done, plan) => 'You studied ' + done + ' of ' + plan + ' today',
       studiedNoPlan: (done) => 'You studied ' + done + ' today',
       startStudying: 'Start studying ▶',
-      todayBusy: "Today's commitments",
-      todayStudy: "Today's study plan",
+      todaySchedule: "Today's schedule",
+      emptyToday: 'Nothing on your schedule today 🎉',
+      statTodayShort: "Today's progress",
+      statStudiedShort: 'Studied today',
+      statWeekShort: 'This week',
+      planOf: (plan) => 'Plan: ' + plan,
+      focusCardTitle: 'Focus session',
+      focusCardSub: 'Pick a task and go: 25 min focus + 5 min break, or 50 + 10',
       requiredTasks: 'Required tasks',
       deadlinesTitle: 'Deadlines & exams',
       noDeadlines: 'No upcoming deadlines.',
@@ -1680,6 +1760,7 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
   const saveLocal = () => localStorage.setItem(KEY, JSON.stringify(state));
 
   let tab = 'day', prevTab = 'day', openSubject = null, openExam = null, taskKind = {}, authSkipped = false, toastTimer = null, timeDay = null, onboardStep = 1, draftBusy = {};
+  let lastTickDay = todayStr();
 
   // focus mode runtime (the running session is also persisted locally, not synced)
   const FKEY = KEY + '.focus';
@@ -1702,6 +1783,26 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
   const fmtHTxt = (h) => L().fmtH(Math.round(h * 2) / 2);
   const fmtDur = (min) => { const m = Math.round(min); return m < 60 ? L().fmtM(m) : L().fmtH(Math.round(m / 60 * 2) / 2); };
   const fmtMin = Scheduler.fmtMin;
+  // Display helper: minutes-since-midnight (may exceed 1440) or an 'HH:MM' string
+  // -> 12-hour clock with AM/PM. Storage stays 24-hour; this is display-only.
+  const fmtClock = (v) => {
+    const m = typeof v === 'number' ? v : Scheduler.hmToMin(v);
+    if (m == null || !isFinite(m)) return '';
+    const t = ((Math.round(m) % 1440) + 1440) % 1440;
+    const h24 = Math.floor(t / 60);
+    return (h24 % 12 === 0 ? 12 : h24 % 12) + ':' + String(t % 60).padStart(2, '0') + ' ' + (h24 < 12 ? 'AM' : 'PM');
+  };
+  const clockNow = () => { const d = new Date(); return fmtClock(d.getHours() * 60 + d.getMinutes()); };
+  // '5:30 - 8:30 AM' when both ends share the period, else '11:00 AM - 12:30 PM'.
+  const fmtClockRange = (a, b) => {
+    const ma = typeof a === 'number' ? a : Scheduler.hmToMin(a);
+    const mb = typeof b === 'number' ? b : Scheduler.hmToMin(b);
+    if (ma == null || mb == null) return fmtClock(a) + ' - ' + fmtClock(b);
+    const pa = Math.floor((((Math.round(ma) % 1440) + 1440) % 1440) / 60) < 12 ? 'AM' : 'PM';
+    const pb = Math.floor((((Math.round(mb) % 1440) + 1440) % 1440) / 60) < 12 ? 'AM' : 'PM';
+    if (pa === pb) return fmtClock(ma).replace(/ (AM|PM)$/, '') + ' - ' + fmtClock(mb);
+    return fmtClock(ma) + ' - ' + fmtClock(mb);
+  };
 
   const KIND_ICON = { class: '🏫', gym: '💪', sleep: '😴', other: '📌' };
 
@@ -1932,13 +2033,13 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
   function sessionRow(s, sj) {
     const title = s.type === 'review' ? L().generalReview : s.type === 'examreview' ? L().examReviewTitle : s.title;
     const doneable = s.lectureId && (s.type === 'study' || s.type === 'solve' || s.type === 'clinic');
-    const time = s.startMin != null ? `<span class="muted hrs" dir="ltr">${fmtMin(s.startMin)} - ${fmtMin(s.endMin)}</span>` : '';
+    const time = s.startMin != null ? `<span class="muted hrs" dir="ltr">${fmtClockRange(s.startMin, s.endMin)}</span>` : '';
     return `<div class="sess"><span class="sicon" style="background:${colorOfS(sj)}22">${iconOf(sj)}</span><div class="grow"><b>${esc(sj.name)}</b> - ${esc(title)} ${sessionTag(s)}</div>${time}<span class="muted hrs">${fmtHTxt(s.hours)}</span>` +
       (doneable ? `<button class="btn ghost" data-act="done" data-s="${sj.id}" data-l="${s.lectureId}">${esc(L().doneBtn)}</button>` : '') + '</div>';
   }
 
   function busyRow(b) {
-    return `<div class="sess busyrow"><span class="sicon" style="background:#64748b22">${KIND_ICON[b.kind] || KIND_ICON.other}</span><div class="grow muted">${esc(b.label || L().kindWord[b.kind] || '')}</div><span class="muted hrs" dir="ltr">${fmtMin(b.s)} - ${fmtMin(b.e)}</span></div>`;
+    return `<div class="sess busyrow"><span class="sicon" style="background:#64748b22">${KIND_ICON[b.kind] || KIND_ICON.other}</span><div class="grow muted">${esc(b.label || L().kindWord[b.kind] || '')}</div><span class="muted hrs" dir="ltr">${fmtClockRange(b.s, b.e)}</span></div>`;
   }
 
   /* ---------------- views ---------------- */
@@ -1962,15 +2063,21 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
   }
 
   function examRowFor(s, ex, today) {
-    return `<div class="sess examrow"><div class="grow">📝 <b>${esc(s.name)}</b> - ${esc(L().examLine(ex.kind, ex.date, ex.time, L().natureWord[ex.nature] || ex.nature))}</div></div>`;
+    return `<div class="sess examrow"><div class="grow">📝 <b>${esc(s.name)}</b> - ${esc(L().examLine(ex.kind, ex.date, fmtClock(ex.time), L().natureWord[ex.nature] || ex.nature))}</div></div>`;
   }
 
   function viewDay() {
     const today = todayStr();
     const now = new Date();
     const name = (state.profile.name || '').trim().split(/\s+/)[0];
-    const greet = (now.getHours() >= 4 && now.getHours() < 12 ? L().greetingAm : L().greetingPm)(name);
-    let h = `<div class="hero"><div class="grow"><b class="hero-title">${esc(greet)}</b><div class="muted">${esc(L().myDaySub)}</div></div></div>`;
+    // morning greeting from 5 AM to noon, evening greeting the rest of the day
+    const greet = (now.getHours() >= 5 && now.getHours() < 12 ? L().greetingAm : L().greetingPm)(name);
+    const doy = Math.floor((Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) - Date.UTC(now.getFullYear(), 0, 1)) / 864e5);
+    const motivLines = L().motiv || [];
+    const motiv = motivLines.length ? motivLines[doy % motivLines.length] : '';
+    let h = `<div class="hero"><div class="grow"><b class="hero-title">${esc(greet)}</b>` +
+      (motiv ? `<div><span class="motiv">${esc(motiv)}</span></div>` : '') +
+      `<div class="muted" style="margin-top:6px">${esc(L().myDaySub)}</div></div></div>`;
     if (!state.subjects.length) {
       h += `<div class="card empty"><div class="big">🦷</div><p>${esc(L().noPlan)}</p></div>`;
       if (curMissing().length) h += `<div class="card"><button class="btn" data-act="loadCur" style="width:100%">${esc(L().loadCurBtn)}</button></div>`;
@@ -1985,24 +2092,29 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       a2 + (t.done && t.doneAt === today ? (t.kind === 'clinic' ? (t.workH || 0) : (t.studyH || 0) + (t.solveH || 0)) : 0), 0), 0) * 60);
     const doneMin = stats.todayMin + doneTasksMin;
     const pct = plannedMin > 0 ? Math.min(100, Math.round(doneMin / plannedMin * 100)) : (doneMin > 0 ? 100 : 0);
-    h += `<div class="card"><div class="row"><b class="grow">${esc(L().todayProgress)}</b><span class="tag">${pct}%</span></div>
-      <div class="bar"><i style="width:${pct}%"></i></div>
-      <div class="muted">${esc(plannedMin > 0 ? L().studiedOf(fmtDur(doneMin), fmtDur(plannedMin)) : L().studiedNoPlan(fmtDur(doneMin)))}</div></div>`;
+    // stats row: three simple mini cards (progress %, studied today, this week)
+    h += `<div class="statrow">
+      <div class="statcard"><div class="sc-label">${esc(L().statTodayShort)}</div><div class="sc-num">${pct}%</div><div class="bar slim"><i style="width:${pct}%"></i></div></div>
+      <div class="statcard"><div class="sc-label">${esc(L().statStudiedShort)}</div><div class="sc-num">${esc(fmtDur(doneMin))}</div><div class="sc-sub muted">${plannedMin > 0 ? esc(L().planOf(fmtDur(plannedMin))) : ''}</div></div>
+      <div class="statcard"><div class="sc-label">${esc(L().statWeekShort)}</div><div class="sc-num">${esc(fmtDur(stats.weekMin))}</div><div class="sc-sub muted">${esc(L().statSessions(stats.sessions))}</div></div>
+    </div>`;
     if ((state.blocked || []).includes(today)) h += `<div class="card offday">${esc(L().dayOffToday)}</div>`;
-    h += `<button class="btn bigstart" data-act="focusOpen">${esc(L().startStudying)}</button>`;
 
-    // today's commitments (busy blocks)
-    const blocks = blocksForDate(today);
-    h += `<div class="day today">${esc(L().todayBusy)}</div><div class="card">`;
-    if (!blocks.length) h += `<div class="muted" style="padding:6px 2px">${esc(L().noSessDay)}</div>`;
-    blocks.forEach((b) => { h += busyRow(b); });
-    h += '</div>';
+    // dark focus card with the start button (like the reference's focus card, simplified)
+    h += `<div class="card focuscard"><div class="row"><div class="grow"><div class="fc-title">\uD83C\uDFAF ${esc(L().focusCardTitle)}</div><div class="fc-sub">${esc(L().focusCardSub)}</div></div>
+      <button class="btn fcbtn" data-act="focusOpen">${esc(L().startStudying)}</button></div></div>`;
 
-    // today's study plan
-    h += `<div class="day">${esc(L().todayStudy)}</div><div class="card">`;
-    const todaySess = r.sessions.filter((x) => x.date === today);
-    if (!todaySess.length) h += `<div class="muted" style="padding:6px 2px">${esc(L().noSessDay)}</div>`;
-    todaySess.forEach((x) => { const sj = subj(x.subjectId); if (sj) h += sessionRow(x, sj); });
+    // today's schedule: commitments and study sessions in one chronological timeline
+    const items = [];
+    blocksForDate(today).forEach((b) => items.push({ m: b.s, html: busyRow(b) }));
+    r.sessions.filter((x) => x.date === today).forEach((x) => {
+      const sj = subj(x.subjectId);
+      if (sj) items.push({ m: x.startMin == null ? 1e9 : x.startMin, html: sessionRow(x, sj) });
+    });
+    items.sort((a, b) => a.m - b.m);
+    h += `<div class="day today">${esc(L().todaySchedule)}</div><div class="card">`;
+    if (!items.length) h += `<div class="muted" style="padding:6px 2px">${esc(L().emptyToday)}</div>`;
+    items.forEach((it) => { h += it.html; });
     h += '</div>';
 
     // required tasks
@@ -2027,7 +2139,7 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
     const dl = [];
     state.subjects.forEach((s) => {
       const ex = examOf(s);
-      if (ex && ex.date >= today) dl.push({ d: ex.date, html: `<div class="sess"><span class="sicon" style="background:${colorOfS(s)}22">${iconOf(s)}</span><div class="grow"><b>${esc(s.name)}</b> - ${esc(L().examLine(ex.kind, ex.date, ex.time, L().natureWord[ex.nature] || ex.nature))}</div><span class="tag">${esc(L().daysLeft(Scheduler.diffDays(today, ex.date)))}</span></div>` });
+      if (ex && ex.date >= today) dl.push({ d: ex.date, html: `<div class="sess"><span class="sicon" style="background:${colorOfS(s)}22">${iconOf(s)}</span><div class="grow"><b>${esc(s.name)}</b> - ${esc(L().examLine(ex.kind, ex.date, fmtClock(ex.time), L().natureWord[ex.nature] || ex.nature))}</div><span class="tag">${esc(L().daysLeft(Scheduler.diffDays(today, ex.date)))}</span></div>` });
     });
     state.subjects.forEach((s) => s.tasks.forEach((t) => {
       if (!t.done && t.due && t.due >= today) dl.push({ d: t.due, html: `<div class="sess"><span class="sicon" style="background:${colorOfS(s)}22">${iconOf(s)}</span><div class="grow">${esc(t.title)} <span class="muted">${esc(s.name)}</span></div><span class="tag clinic">${esc(L().dueOn(t.due.slice(5).replace('-', '/')))}</span></div>` });
@@ -2089,14 +2201,14 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       const col = sj ? colorOfS(sj) : 'var(--primary)';
       h += `<div class="card pcard" style="border-inline-start-color:${col}"><div class="muted">${esc(L().nextExamTitle)}</div>
         <div class="row" style="margin-top:6px"><span class="sicon" style="background:${col}22">${sj ? iconOf(sj) : '📝'}</span>
-        <b class="grow">${esc(nx.name)}</b><span class="muted">${esc(L().examLine(nx.kind, nx.date, nx.time, L().natureWord[nx.nature] || nx.nature))}</span></div>
+        <b class="grow">${esc(nx.name)}</b><span class="muted">${esc(L().examLine(nx.kind, nx.date, fmtClock(nx.time), L().natureWord[nx.nature] || nx.nature))}</span></div>
         <div class="cdnum" data-cd="${target}" dir="auto">${esc(cdText(target))}</div></div>`;
     }
     h += `<div class="day">${esc(L().examTableTitle)}</div>`;
     ups.forEach((s) => {
       const ex = s.exam, dleft = Scheduler.diffDays(today, ex.date);
       h += `<div class="card pcard" style="border-inline-start-color:${colorOfS(s)}"><div class="row"><span class="sicon" style="background:${colorOfS(s)}22">${iconOf(s)}</span>
-        <div class="grow"><b>${esc(s.name)}</b><div class="muted">${esc(L().examLine(ex.kind, ex.date, ex.time, L().natureWord[ex.nature] || ex.nature))}${ex.covered ? ' · ' + esc(L().coveredShort(ex.covered)) : ''}</div></div>
+        <div class="grow"><b>${esc(s.name)}</b><div class="muted">${esc(L().examLine(ex.kind, ex.date, fmtClock(ex.time), L().natureWord[ex.nature] || ex.nature))}${ex.covered ? ' · ' + esc(L().coveredShort(ex.covered)) : ''}</div></div>
         <span class="tag">${esc(L().daysLeft(dleft))}</span></div></div>`;
     });
     h += `<div class="day">${esc(L().revTitle)}</div>`;
@@ -2154,7 +2266,7 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
         <div class="row subj-head">
           <span class="sicon big" style="background:${colorOfS(s)}22">${iconOf(s)}</span>
           <div class="grow"><b class="subjname">${esc(s.name)}</b>
-            <div class="muted">${ex ? esc(L().examLine(ex.kind, ex.date, ex.time, L().natureWord[ex.nature] || ex.nature)) + (ex.covered ? ' \u00b7 ' + esc(L().coveredShort(ex.covered)) : '') : esc(L().noExamYet)}</div></div>
+            <div class="muted">${ex ? esc(L().examLine(ex.kind, ex.date, fmtClock(ex.time), L().natureWord[ex.nature] || ex.nature)) + (ex.covered ? ' \u00b7 ' + esc(L().coveredShort(ex.covered)) : '') : esc(L().noExamYet)}</div></div>
           <button class="btn ghost sm" data-act="delSubject" data-s="${s.id}" title="${esc(L().delBtn)}">\u2715</button>
         </div>
         ${s.tasks.length ? `<div class="bar" style="margin:10px 0 4px"><i style="width:${pctS}%"></i></div><div class="muted">${esc(L().taskCount(doneN, s.tasks.length, pctS))}</div>` : ''}
@@ -2227,18 +2339,18 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
         <span class="muted" style="font-weight:800">${open ? '\u2212' : '+'}</span></div>`;
       if (open) {
         const sb = Scheduler.sleepBlock(state, i);
-        const sbEnd = Scheduler.fmtMin((Scheduler.hmToMin(sb.start) + Scheduler.SLEEP_MIN) % 1440);
+        const sbEnd = fmtClock(Scheduler.hmToMin(sb.start) + Scheduler.SLEEP_MIN);
         h += `<div class="lec sleepfix"><span class="sicon" style="background:#64748b22">${KIND_ICON.sleep}</span>
           <span class="t grow">${esc(L().kindWord.sleep)} <span class="tag">${esc(L().sleepTag)}</span><br>
           <span class="muted">${esc(L().fromPh)}</span> ${tpHTML('sl' + i, sb.start)} <span class="muted" dir="ltr">&rarr; ${sbEnd}</span></span></div>`;
         blocks.forEach((b) => {
           h += `<div class="lec"><span class="sicon" style="background:#64748b22">${KIND_ICON[b.kind]}</span>
-            <span class="t grow">${esc(b.label || L().kindWord[b.kind])}<br><span class="muted" dir="ltr">${fmtMin(b.start)} - ${fmtMin(b.end)}</span></span>
+            <span class="t grow">${esc(b.label || L().kindWord[b.kind])}<br><span class="muted" dir="ltr">${fmtClockRange(b.start, b.end)}</span></span>
             <button class="btn ghost" data-act="delBlock" data-i="${i}" data-b="${esc(b.id)}">x</button></div>`;
         });
         draft.forEach((b, di) => {
           h += `<div class="lec draftrow"><span class="sicon" style="background:#64748b22">${KIND_ICON[b.kind]}</span>
-            <span class="t grow">${esc(b.label || L().kindWord[b.kind])} <span class="tag revise">${esc(L().draftTag)}</span><br><span class="muted" dir="ltr">${esc(b.start)} - ${esc(b.end)}</span></span>
+            <span class="t grow">${esc(b.label || L().kindWord[b.kind])} <span class="tag revise">${esc(L().draftTag)}</span><br><span class="muted" dir="ltr">${fmtClockRange(b.start, b.end)}</span></span>
             <button class="btn ghost" data-act="delDraft" data-i="${i}" data-d="${di}">x</button></div>`;
         });
         h += `<div class="addblock"><div class="row"><select id="bk">${['class', 'gym', 'other'].map((k) => `<option value="${k}">${KIND_ICON[k]} ${esc(L().kindWord[k])}</option>`).join('')}</select>
@@ -2266,7 +2378,7 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       (state.busyOnce[d] || []).forEach((raw) => {
         const b = Scheduler.normBlock(raw);
         h += `<div class="lec"><span class="sicon" style="background:#64748b22">${KIND_ICON[b.kind]}</span>
-          <span class="t grow">${d} &middot; ${esc(b.label || L().kindWord[b.kind])}<br><span class="muted" dir="ltr">${fmtMin(b.start)} - ${fmtMin(b.end)}</span></span>
+          <span class="t grow">${d} &middot; ${esc(b.label || L().kindWord[b.kind])}<br><span class="muted" dir="ltr">${fmtClockRange(b.start, b.end)}</span></span>
           <button class="btn ghost" data-act="delBusyOnce" data-d="${d}" data-b="${esc(b.id)}">x</button></div>`;
       });
     });
@@ -2328,6 +2440,10 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
 
   function tick() {
     const now = Date.now();
+    // keep the header clock fresh and roll the app over to the new day at midnight
+    const clk = $('clockLbl');
+    if (clk) { const c = clockNow(); if (clk.textContent !== c) clk.textContent = c; }
+    if (todayStr() !== lastTickDay) { lastTickDay = todayStr(); render(); return; }
     if (focusRun && !focusRun.paused && (focusRun.phase === 'focus' || focusRun.phase === 'break') && focusRun.endsAt && now >= focusRun.endsAt) {
       const p = Scheduler.FOCUS_PRESETS[focusRun.preset];
       if (focusRun.phase === 'focus') {
@@ -2437,7 +2553,11 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
   function render() {
     if (focusRun && !taskOf(focusRun.subjectId, focusRun.taskId)) { focusRun = null; persistFocus(); }
     applyChrome();
-    $('todayLbl').textContent = todayStr();
+    const nowD = new Date();
+    const hd = state.lang === 'en'
+      ? L().days[nowD.getDay()] + ', ' + L().months[nowD.getMonth()] + ' ' + nowD.getDate()
+      : L().days[nowD.getDay()] + '\u060c ' + nowD.getDate() + ' ' + L().months[nowD.getMonth()];
+    $('todayLbl').innerHTML = `<span>${esc(hd)}</span> \u00b7 <span id="clockLbl" dir="ltr">${esc(clockNow())}</span>`;
     document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
     $('view').innerHTML = { day: viewDay, schedule: viewSchedule, exams: viewExams, subjects: viewSubjects, profile: viewProfile }[tab]();
     $('overlays').innerHTML = overlays();
