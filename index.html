@@ -2985,7 +2985,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       remOff: 'شغّله',
       remNoPerm: 'الإشعارات مقفولة من المتصفح، فعّلها من إعدادات الموقع',
       remNotifTitle: 'لسه مخلصتش مذاكرة النهارده 💪',
-      remNotifBody: 'افتح التطبيق وكمّل خطتك',
+      remNotifBody: 'افتح التطبيق وكمّل خطتك', remNotifLeft: (n) => 'فاضلك ' + n + ' من خطة النهارده',
       shareBtn: 'شارك تقدمك',
       tourNext: 'التالي',
       tourBack: 'رجوع',
@@ -3389,7 +3389,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       remOff: 'Turn on',
       remNoPerm: 'Notifications are blocked by the browser',
       remNotifTitle: 'Today\'s studying is not done yet',
-      remNotifBody: 'Open the app and finish your plan',
+      remNotifBody: 'Open the app and finish your plan', remNotifLeft: (n) => n + ' left from today\'s plan',
       shareBtn: 'Share your progress',
       tourNext: 'Next',
       tourBack: 'Back',
@@ -4508,6 +4508,19 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
   }
 
   // The day's blocks: the student's own when he edited that day, else the app's.
+  // v29: what the student really put on a day (his own blocks and accepted suggestions).
+  // A copy that was moved here from a missed day (has .from) is not counted twice;
+  // the original stays on its own day as the record.
+  function planStat(d) {
+    let min = 0, left = 0, n = 0;
+    planBlocks(d).forEach((b) => {
+      if (!b || !b.taskId || b.from) return;
+      n++; min += pDur(b);
+      const t = taskOf(b.subjectId, b.taskId);
+      if (t && !t.done) left++;
+    });
+    return { min, left, n };
+  }
   function planBlocks(d) {
     // v25: a day is empty until the student fills it or taps the suggest button
     return dayManual(d) ? (state.plans[d] || []).slice() : [];
@@ -4783,6 +4796,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
         'Start Studying بيعرض اللي في خطة يومك بس.',
         'كل مادة بتفتح شاشتها لوحدها، وأسماء المواد بالإنجليزي.',
         'إعدادات اليوم (النوم والمواعيد والورك أوت) بتتزامن صح بين الجهازين.',
+        'التذكير ونسبة "المخطط vs المنجز" الأسبوعية بقوا بيتحسبوا على الخطة اللي انت حطيتها في الجدول.',
         'جديد: حدد ساعات المذاكرة لكل يوم، وضيف جدول الكلية لكذا يوم مرة واحدة. الاقتراح بيملى الأوقات الفاضية بس ويحذرك لو اليوم زحمة.',
       ],
       steps: 'الخطوات',
@@ -4834,7 +4848,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
           why: 'بياناتك تفضل معاك لو غيرت الموبايل، وجدولك واحد على الموبايل واللابتوب.',
           fix: 'لو الجهازين مش زي بعض: (١) اتأكد من نفس الإيميل ونفس الرقم. (٢) استنى ١٠ ثواني مع نت شغال. (٣) اقفل التطبيق وافتحه من جديد. (٤) لو لسه، سجل خروج وسجل دخول بنفس الإيميل. مهم: متسجلش خروج ولا تمسح بيانات المتصفح وانت من غير حساب بإيميل، لأن بياناتك على الجهاز ده بس. اربط حسابك بإيميل الأول.' },
         { i: '📤', t: 'مشاركة وتذكير',
-          steps: ['في "يومي" تحت جدول النهارده: "صورة الجدول" أو "لينك للقراءة" تبعتهم لصاحبك. اللينك بيفتح للقراءة بس.', 'في البروفايل "شارك تقدمك" بتطلعلك صورة تقدمك.', 'فعّل "تذكير المذاكرة" وحدد الوقت. التذكير بيشتغل والتطبيق مفتوح بس.'],
+          steps: ['في "يومي" تحت جدول النهارده: "صورة الجدول" أو "لينك للقراءة" تبعتهم لصاحبك. اللينك بيفتح للقراءة بس.', 'في البروفايل "شارك تقدمك" بتطلعلك صورة تقدمك.', 'فعّل "تذكير المذاكرة" وحدد الوقت. التذكير بيشتغل والتطبيق مفتوح بس، وبيمشي على خطتك في الجدول وبيسكت لما تخلص كل اللي حطيته.'],
           why: 'تذاكروا مع بعض وتتحاسبوا.',
           fix: 'لو التذكير مش بيطلع: اسمح بالإشعارات من إعدادات الموقع في المتصفح.' },
         { i: '🛠', t: 'لو حاجة مش مظبوطة',
@@ -4851,6 +4865,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       newsBtn: 'Open the updates channel',
       latest: 'Latest changes',
       latestList: [
+        'The reminder and the weekly planned vs done percentage now follow the plan you put on the timeline.',
         'New: set study hours per day and add your college timetable to several days at once. Suggest fills real free gaps only and warns when a day is too crowded.',
         'The schedule is now a timeline: put your own study in the free gaps.',
         '"Suggest a schedule" builds a full day for the time you have.',
@@ -4908,7 +4923,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
           why: 'Your data stays with you if you change phone, and your schedule is the same on phone and laptop.',
           fix: 'If two devices differ: (1) check the same email and the same # id. (2) wait 10 seconds with internet on. (3) close and reopen the app. (4) still wrong? Log out and sign in with the same email. Important: do not log out or clear browser data if you have no email account, because your data lives only on that device. Link an email first.' },
         { i: '📤', t: 'Sharing and reminders',
-          steps: ['On My Day under today\'s schedule: "Schedule image" or "Read-only link" to send a friend. The link opens read-only.', 'In Profile "Share your progress" makes a picture of your week.', 'Turn on "Study reminder" and pick a time. It only works while the app is open.'],
+          steps: ['On My Day under today\'s schedule: "Schedule image" or "Read-only link" to send a friend. The link opens read-only.', 'In Profile "Share your progress" makes a picture of your week.', 'Turn on "Study reminder" and pick a time. It only works while the app is open. It follows the plan on your timeline and stays quiet once everything you planned is done.'],
           why: 'Study together and keep each other going.',
           fix: 'If the reminder does not appear, allow notifications in the browser\'s site settings.' },
         { i: '🛠', t: 'If something looks wrong',
@@ -5709,10 +5724,8 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     const weekMin = last7.reduce((a, x) => a + x.m, 0);
     // planned minutes for the same 7 days, from the generated schedule
     const now = new Date();
-    const r = Scheduler.generate(state, today, { nowMin: now.getHours() * 60 + now.getMinutes() });
-    const in7 = {};
-    last7.forEach((x) => { in7[x.d] = 1; });
-    const planMin = Math.round(r.sessions.filter((x) => in7[x.date]).reduce((a, x) => a + x.hours, 0) * 60);
+    // v29: the plan he made on the timeline (not the old automatic plan)
+    const planMin = last7.reduce((a, x) => a + planStat(x.d).min, 0);
     const weekPct = planMin > 0 ? Math.min(100, Math.round(weekMin / planMin * 100)) : (weekMin > 0 ? 100 : 0);
     // readiness: share of all tasks done, and days to the nearest exam
     const totT = state.subjects.reduce((a, s) => a + s.tasks.length, 0);
@@ -5826,14 +5839,15 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     const tMin = (+parts[0]) * 60 + (+parts[1] || 0);
     const nw = new Date();
     if (nw.getHours() * 60 + nw.getMinutes() < tMin) return;
-    const r = Scheduler.generate(state, key, {});
-    const planned = Math.round(r.sessions.filter((x) => x.date === key).reduce((a, x) => a + x.hours, 0) * 60);
+    const ps = planStat(key); // v29: the plan on his timeline
+    const planned = ps.min;
     const stats = Scheduler.focusStats(state.focusLog, key);
     const doneT = Math.round(state.subjects.reduce((a, s2) => a + s2.tasks.reduce((a2, tk) =>
       a2 + (tk.done && tk.doneAt === key ? (tk.kind === 'clinic' ? (tk.workH || 0) : (tk.studyH || 0) + (tk.solveH || 0)) : 0), 0), 0) * 60);
+    if (ps.n > 0 && ps.left === 0) { rm.last = key; save(); return; } // everything he planned is done
     if (planned > 0 && stats.todayMin + doneT >= planned) { rm.last = key; save(); return; }
     rm.last = key; save();
-    try { new Notification(L().remNotifTitle, { body: L().remNotifBody, icon: 'icon-192.png' }); } catch (e) { /* ignored */ }
+    try { new Notification(L().remNotifTitle, { body: ps.left ? L().remNotifLeft(ps.left) : L().remNotifBody, icon: 'icon-192.png' }); } catch (e) { /* ignored */ }
   }
 
   function tick() {
