@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Dental Student Planner</title>
+<title>سِنّي · Senny</title>
 <meta name="theme-color" content="#0d9488">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20512%20512%22%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22bg%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%22%20stop-color%3D%22%2314b8a6%22/%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%221%22%20stop-color%3D%22%230d9488%22/%3E%0A%20%20%20%20%3C/linearGradient%3E%0A%20%20%3C/defs%3E%0A%20%20%3Crect%20width%3D%22512%22%20height%3D%22512%22%20rx%3D%22116%22%20fill%3D%22url%28%23bg%29%22/%3E%0A%20%20%3Cpath%20d%3D%22M256%2086c-60-37-139-14-152%2065-11%2060%2018%20101%2032%20157%2014%2060%2028%20129%2065%20129%2032%200%2032-64%2055-64s23%2064%2055%2064c37%200%2051-69%2065-129%2014-56%2043-97%2032-157-13-79-92-102-152-65z%22%20fill%3D%22%23ffffff%22/%3E%0A%20%20%3Ccircle%20cx%3D%22212%22%20cy%3D%22216%22%20r%3D%2215%22%20fill%3D%22%230f766e%22/%3E%0A%20%20%3Ccircle%20cx%3D%22300%22%20cy%3D%22216%22%20r%3D%2215%22%20fill%3D%22%230f766e%22/%3E%0A%20%20%3Cpath%20d%3D%22M220%20262q36%2040%2072%200%22%20stroke%3D%22%230f766e%22%20stroke-width%3D%2219%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22/%3E%0A%20%20%3Cpath%20d%3D%22M392%2092l9%2020%2020%209-20%209-9%2020-9-20-20-9%2020-9z%22%20fill%3D%22%235eead4%22/%3E%0A%3C/svg%3E">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Dental Planner">
+<meta name="apple-mobile-web-app-title" content="سِنّي">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -646,6 +646,14 @@ a.btn { display: inline-block; text-decoration: none; }
 .tourdots { display: flex; justify-content: center; gap: 6px; }
 .tourdots i { width: 8px; height: 8px; border-radius: 50%; background: var(--line-soft); }
 .tourdots i.on { background: var(--primary); width: 22px; border-radius: 6px; }
+
+/* v21.3: the name sits on top with the plain-English descriptor under it */
+.brandtxt { display: flex; flex-direction: column; line-height: 1.05; }
+/* v22: the Arabic wordmark carries a kasra and a shadda, so it needs its own
+   line box and no letter-spacing (spacing breaks the cursive join). */
+#appTitle { font-size: 22px; line-height: 1.5; padding-top: 3px; letter-spacing: 0; }
+.tagline { font-size: 9px; font-weight: 700; letter-spacing: .5px; opacity: .78; margin-top: 5px; }
+@media (max-width: 359px) { .tagline { display: none; } }
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
@@ -653,7 +661,7 @@ a.btn { display: inline-block; text-decoration: none; }
 </head>
 <body>
 <header>
-  <h1><span class="brand"><svg id="brandSvg" viewBox="0 0 512 512" aria-hidden="true"><defs><linearGradient id="bgs" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#14b8a6"/><stop offset="1" stop-color="#0d9488"/></linearGradient></defs><rect width="512" height="512" rx="116" fill="url(#bgs)"/><path d="M256 86c-60-37-139-14-152 65-11 60 18 101 32 157 14 60 28 129 65 129 32 0 32-64 55-64s23 64 55 64c37 0 51-69 65-129 14-56 43-97 32-157-13-79-92-102-152-65z" fill="#ffffff"/><circle cx="212" cy="216" r="15" fill="#0f766e"/><circle cx="300" cy="216" r="15" fill="#0f766e"/><path d="M220 262q36 40 72 0" stroke="#0f766e" stroke-width="19" fill="none" stroke-linecap="round"/><path d="M392 92l9 20 20 9-20 9-9 20-9-20-20-9 20-9z" fill="#5eead4"/></svg></span><span id="appTitle">Dental Planner</span></h1>
+  <h1><span class="brand"><svg id="brandSvg" viewBox="0 0 512 512" aria-hidden="true"><defs><linearGradient id="bgs" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#14b8a6"/><stop offset="1" stop-color="#0d9488"/></linearGradient></defs><rect width="512" height="512" rx="116" fill="url(#bgs)"/><path d="M256 86c-60-37-139-14-152 65-11 60 18 101 32 157 14 60 28 129 65 129 32 0 32-64 55-64s23 64 55 64c37 0 51-69 65-129 14-56 43-97 32-157-13-79-92-102-152-65z" fill="#ffffff"/><circle cx="212" cy="216" r="15" fill="#0f766e"/><circle cx="300" cy="216" r="15" fill="#0f766e"/><path d="M220 262q36 40 72 0" stroke="#0f766e" stroke-width="19" fill="none" stroke-linecap="round"/><path d="M392 92l9 20 20 9-20 9-9 20-9-20-20-9 20-9z" fill="#5eead4"/></svg></span><span class="brandtxt"><span id="appTitle">سِنّي</span><span class="tagline" id="appTag">Dental Student Planner</span></span></h1>
   <div class="hrow">
     <span id="syncLbl" class="sync"></span>
     <div id="todayLbl"></div>
@@ -2614,7 +2622,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       days: ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'],
       daysShort: ['أحد', 'اتنين', 'تلات', 'اربع', 'خميس', 'جمعة', 'سبت'],
       months: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'],
-      appTitle: 'Dental Student Planner',
+      appTitle: 'سِنّي',
       langBtn: 'English',
       tabs: { day: 'يومي', schedule: 'الجدول', exams: 'الامتحانات', subjects: 'المواد' },
       greetingAm: (n) => 'صباح الفل' + (n ? ' يا ' + n : ''),
@@ -2975,7 +2983,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       skipBtn: 'كمل من غير حساب',
       fillBoth: 'اكتب الإيميل والباسورد',
       authWait: 'ثانية...',
-      welcomeTitle: 'أهلًا بيك في Dental Student Planner',
+      welcomeTitle: 'أهلًا بيك في سِنّي',
       welcomeSub: 'قولنا عنك شوية عشان نظبطلك الجدول',
       yourNamePh: 'اسمك',
       pickYear: 'اختار فرقتك',
@@ -3003,7 +3011,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       days: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
       daysShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
       months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
-      appTitle: 'Dental Student Planner',
+      appTitle: 'Senny',
       langBtn: 'عربي',
       tabs: { day: 'My Day', schedule: 'Schedule', exams: 'Exams', subjects: 'Subjects' },
       greetingAm: (n) => 'Good morning' + (n ? ', ' + n : ''),
@@ -3377,7 +3385,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       skipBtn: 'Continue without an account',
       fillBoth: 'Enter the email and password',
       authWait: 'One moment...',
-      welcomeTitle: 'Welcome to Dental Student Planner',
+      welcomeTitle: 'Welcome to Senny',
       welcomeSub: 'Tell us a bit about you so we can tune the schedule',
       yourNamePh: 'Your name',
       pickYear: 'Pick your year',
@@ -5285,7 +5293,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       c.textAlign = 'center';
       c.fillStyle = '#99f6e4';
       c.font = '700 36px Cairo, sans-serif';
-      c.fillText('Dental Student Planner', W / 2, H - 60);
+      c.fillText(L().appTitle, W / 2, H - 60);
       cv.toBlob((blob) => sendBlob(blob, 'dental-schedule.png', L().shareImgSaved), 'image/png');
     } catch (e) { /* canvas unsupported: stay silent */ }
   }
@@ -5336,7 +5344,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       c.fillText(`${ws.lectures} ${esc(L().dashDoneLec)} · ${ws.minutes} ${esc(L().dashFocusMin)} · 🔥 ${sk.cur}`, 540, 900);
       c.font = '700 40px Cairo, sans-serif';
       c.fillStyle = '#99f6e4';
-      c.fillText('Dental Student Planner', 540, 1000);
+      c.fillText(L().appTitle, 540, 1000);
       cv.toBlob((blob) => sendBlob(blob, 'dental-progress.png', L().shareSaved), 'image/png');
     } catch (e) { /* canvas unsupported: stay silent */ }
   }
