@@ -664,6 +664,13 @@ a.btn { display: inline-block; text-decoration: none; }
 .pickrow { display: flex; width: 100%; gap: 10px; align-items: center; background: var(--card); border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; margin: 6px 0; color: var(--text); font: inherit; text-align: start; cursor: pointer; }
 .pickrow.on { border-color: var(--primary); background: var(--ghost-bg); }
 .planline { }
+
+/* v25 */
+.dayctl { gap: 8px; margin: 2px 0 10px; }
+.dayctl .btn:not(.ghost) { padding: 10px 12px; }
+.dayctl .btn.ghost { min-width: 44px; }
+.card.overdue { border-color: var(--warn, #f59e0b); background: color-mix(in srgb, #f59e0b 12%, var(--card)); margin: 8px 0; }
+.sess.planline .btn.sm + .btn.sm { margin-inline-start: 2px; }
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
@@ -2838,7 +2845,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       doneTodayTitle: 'خلصتها النهارده 💪',
       undoBtn: 'رجّعها',
       footNote: 'ده مش موقع رسمي، اتعمل بس للمساعدة والتسهيل على الطلاب',
-      footSuggest: 'عندك اقتراح أو مشكلة؟ قولنا',
+      footSuggest: 'عندك اقتراح أو مشكلة؟ قولنا', subjBack: 'كل المواد',
       avSec: 'الأفتار بتاعك',
       avSub: 'اختار الشكل اللي يمثلك، هيظهر في البروفايل ولوحة الشطار',
       lbTitle: 'لوحة الشطار',
@@ -3240,7 +3247,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       doneTodayTitle: 'Done today 💪',
       undoBtn: 'Undo',
       footNote: 'This is not an official site. It is only here to help students and make things easier.',
-      footSuggest: 'Got a suggestion or a problem? Tell us',
+      footSuggest: 'Got a suggestion or a problem? Tell us', subjBack: 'All subjects',
       avSec: 'Your avatar',
       avSub: 'Pick the look that represents you - it shows on your profile and the leaderboard',
       lbTitle: 'Leaderboard',
@@ -4430,6 +4437,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       duration: 'المدة', earlier: 'قدّمها', later: 'أخّرها', remove: 'امسح البلوك',
       weekTitle: 'الأسبوع', weekOverview: 'نظرة على الأسبوع',
       planned: 'المخطط', tasksLeft: 'تاسكات فاضلة', examsWeek: 'امتحانات',
+      suggest: 'اقترح جدول تلقائي', wipe: 'امسح اليوم', suggested: 'اتضاف الاقتراح', suggestNone: 'مفيش اقتراح يتضاف', overdueTitle: 'كنت حاطط دول امبارح ومخلصتهمش:',
       clearDay: 'ابدأ جدول فاضي', resetDay: 'رجّع لجدول التطبيق', resetDone: 'رجعت لجدول التطبيق',
       myDayTag: 'جدولك', autoTag: 'جدول التطبيق', changed: 'اتحفظ',
       noRoom: 'مفيش وقت كفاية في البلوك ده', pickOne: 'اختار التاسك الأول',
@@ -4442,6 +4450,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       duration: 'Length', earlier: 'Earlier', later: 'Later', remove: 'Delete block',
       weekTitle: 'Week', weekOverview: 'Week overview',
       planned: 'Planned', tasksLeft: 'Tasks left', examsWeek: 'Exams',
+      suggest: 'Suggest a schedule', wipe: 'Clear the day', suggested: 'Suggestion added', suggestNone: 'Nothing to suggest', overdueTitle: 'You planned these yesterday and did not finish them:',
       clearDay: 'Start with an empty day', resetDay: "Back to the app's plan", resetDone: "Back to the app's plan",
       myDayTag: 'Your plan', autoTag: "App's plan", changed: 'Saved',
       noRoom: 'Not enough time in this block', pickOne: 'Pick the task first',
@@ -4450,6 +4459,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
   const PT = () => PLAN_TXT[state.lang === 'en' ? 'en' : 'ar'];
 
   let planSheet = null; // { date, mode:'add'|'edit', s, e, i, subId }
+  let schedOff = 0; // v25: 0 = yesterday..+5, 1 = the week after
   let schedDate = null; // the day open in the Schedule tab (null = today)
 
   const pHM = (m) => {
@@ -4474,8 +4484,8 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
 
   // The day's blocks: the student's own when he edited that day, else the app's.
   function planBlocks(d) {
-    if (dayManual(d)) return (state.plans[d] || []).slice();
-    return autoPlanBlocks(d);
+    // v25: a day is empty until the student fills it or taps the suggest button
+    return dayManual(d) ? (state.plans[d] || []).slice() : [];
   }
 
   // Freeze a day into state.plans so an edit has something to edit.
@@ -4541,7 +4551,8 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       <div class="grow"><b>${esc(sj.name || '')}</b>${title ? ' - ' + esc(title) : ''}${t && t.done ? ' \u2714' : ''}</div>
       <span class="muted hrs" dir="ltr">${a != null && z != null ? esc(fmtClockRange(a, z)) : ''}</span>
       ${t && !t.done ? `<button class="btn ghost sm" data-act="done" data-s="${b.subjectId}" data-l="${b.taskId}">${esc(L().doneBtn)}</button>` : ''}
-      <button class="btn ghost sm" data-act="planEdit" data-d="${d}" data-i="${i}" title="${esc(PT().editTitle)}">\u270E</button></div>`;
+      <button class="btn ghost sm" data-act="planEdit" data-d="${d}" data-i="${i}" title="${esc(PT().editTitle)}">\u270E</button>
+      <button class="btn ghost sm" data-act="planX" data-d="${d}" data-i="${i}" aria-label="x">\u2715</button></div>`;
   }
 
   // One chronological timeline for a day: exams, commitments, planned study and
@@ -4572,6 +4583,51 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     if (!items.length) h += `<div class="muted" style="padding:6px 2px">${esc((opts && opts.emptyText) || L().noSessDay)}</div>`;
     items.forEach((it) => { h += it.html; });
     return h;
+  }
+
+  // v25: suggest button + wipe-the-day X, and the "you planned this yesterday" warning
+  function dayControlsHtml(d) {
+    if (d < todayStr()) return '';
+    const n = planBlocks(d).length;
+    return `<div class="row dayctl"><button class="btn grow" data-act="planSuggest" data-d="${d}">\u2728 ${esc(PT().suggest)}</button>
+      ${n ? `<button class="btn ghost" data-act="planWipe" data-d="${d}" title="${esc(PT().wipe)}" aria-label="x">\u2715</button>` : ''}</div>`;
+  }
+
+  function overdueHtml() {
+    const y = Scheduler.addDays(todayStr(), -1);
+    const seen = {};
+    const items = [];
+    (dayManual(y) ? state.plans[y] : []).forEach((b) => {
+      if (!b || !b.taskId || seen[b.subjectId + '|' + b.taskId]) return;
+      const t = taskOf(b.subjectId, b.taskId);
+      if (!t || t.done) return;
+      seen[b.subjectId + '|' + b.taskId] = 1;
+      const sj = subj(b.subjectId) || {};
+      items.push(`${sj.name || ''} - ${t.title}`);
+    });
+    if (!items.length) return '';
+    return `<div class="card warncard overdue"><b>\u26A0\uFE0F ${esc(PT().overdueTitle)}</b>${items.map((x) => `<div class="muted" style="margin-top:4px">${esc(x)}</div>`).join('')}</div>`;
+  }
+
+  // The tasks the app would study on that day that are not already on the plan.
+  function planSuggest(d) {
+    if (d < todayStr()) return;
+    ensurePlanDay(d);
+    const have = state.plans[d];
+    const taken = {};
+    have.forEach((b) => { if (b.taskId) taken[b.subjectId + '|' + b.taskId] = 1; });
+    const occ = have.map((b) => [pMin(b.start), pMin(b.end)]).filter(([a, z]) => a != null && z != null);
+    let added = 0;
+    autoPlanBlocks(d).forEach((b) => {
+      const a = pMin(b.start), z = pMin(b.end);
+      if (a == null || z == null) return;
+      if (b.taskId && taken[b.subjectId + '|' + b.taskId]) return;
+      if (occ.some(([x, y]) => a < y && x < z)) return;
+      have.push(b); occ.push([a, z]); added++;
+    });
+    sortPlan(d);
+    save(); toast(added ? PT().suggested : PT().suggestNone);
+    render();
   }
 
   function weekOverviewHtml(days) {
@@ -4770,13 +4826,12 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       return h;
     }
     // v19: week strip (Saturday-start week), tap a day to see its plan
-    const viewDate = (dayViewDate && dayViewDate !== today) ? dayViewDate : null;
+    const viewDate = (dayViewDate && dayViewDate !== today && dayViewDate >= Scheduler.addDays(today, -1)) ? dayViewDate : null;
     const schedDate = viewDate || today;
     const perDayD = {};
     (state.focusLog || []).forEach((f) => { if (f && f.date) perDayD[f.date] = (perDayD[f.date] || 0) + (f.minutes || 0); });
     state.subjects.forEach((s2) => s2.tasks.forEach((tk) => { if (tk.done && tk.doneAt) perDayD[tk.doneAt] = perDayD[tk.doneAt] || 1; }));
-    const wd0 = Scheduler.weekday(today); // 0 = Sunday
-    const weekStart = Scheduler.addDays(today, -((wd0 + 1) % 7)); // back to Saturday
+    const weekStart = Scheduler.addDays(today, -1); // v25: yesterday, today, then the next five days
     h += '<div class="wkstrip">' + [0, 1, 2, 3, 4, 5, 6].map((i) => {
       const d = Scheduler.addDays(weekStart, i);
       const sel = schedDate === d;
@@ -4784,8 +4839,8 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     }).join('') + '</div>';
 
     h += warnCards(today);
+    h += overdueHtml();
     // v20: the day's suggested plan (today only, not while previewing another day)
-    if (!viewDate) h += planCard(today, now.getHours() * 60 + now.getMinutes());
     if (!viewDate) h += reviewCard(today); // v20: lectures finished a while ago
 
     const r = Scheduler.generate(state, today, { nowMin: now.getHours() * 60 + now.getMinutes() });
@@ -4810,9 +4865,10 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
 
     // the selected day's schedule: commitments, planned study and free slots in one timeline
     const schedTitle = viewDate ? `${esc(L().daysShort[Scheduler.weekday(viewDate)])} ${+viewDate.slice(8)}/${+viewDate.slice(5, 7)}` : esc(L().todaySchedule);
-    h += `<div class="day today">${schedTitle} <span class="tag${dayManual(schedDate) ? '' : ' free'}">${esc(dayManual(schedDate) ? PT().myDayTag : PT().autoTag)}</span></div>`;
+    h += `<div class="day today">${schedTitle}</div>`;
+    h += dayControlsHtml(schedDate);
     if (viewDate) h += `<div style="margin:0 0 8px"><button class="btn ghost sm" data-act="pickDay" data-d="${today}">${esc(L().backToday)}</button></div>`;
-    h += `<div class="card">${timelineHtml(schedDate, { emptyText: viewDate ? L().emptyDay : L().emptyToday })}</div>`;
+    h += `<div class="card">${timelineHtml(schedDate, { readonly: schedDate < today, emptyText: viewDate ? L().emptyDay : L().emptyToday })}</div>`;
     if (!viewDate) h += `<div class="row" style="margin:-4px 0 12px"><button class="btn ghost sm grow" data-act="shareSchedImg">📤 ${esc(L().shareSchedImg)}</button><button class="btn ghost sm grow" data-act="shareSchedLink">🔗 ${esc(L().shareSchedLink)}</button></div>`;
 
     // v14: tasks finished today stay visible with a check and can be un-done
@@ -4872,9 +4928,11 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     const today = todayStr();
     if (!state.subjects.length) return `<div class="card empty"><div class="big">🦷</div><p>${esc(L().noPlan)}</p></div>`;
     // v24: the whole week at a glance, one day open underneath, then an overview
-    const sel = schedDate || today;
-    const weekStart = Scheduler.addDays(sel, -((Scheduler.weekday(sel) + 1) % 7)); // Saturday
+    let sel = schedDate || today;
+    // v25: the window starts at yesterday (one past day) and rolls forward with each week
+    const weekStart = Scheduler.addDays(today, -1 + 7 * schedOff);
     const days = [0, 1, 2, 3, 4, 5, 6].map((i) => Scheduler.addDays(weekStart, i));
+    if (!days.includes(sel)) { sel = schedOff === 0 ? today : days[0]; schedDate = sel; }
     let h = `<div class="row" style="margin-bottom:2px"><button class="btn ghost sm" data-act="weekPrev">\u2039</button>
       <b class="grow" style="text-align:center">${esc(PT().weekTitle)} ${esc(weekStart.slice(5).replace('-', '/'))} - ${esc(days[6].slice(5).replace('-', '/'))}</b>
       <button class="btn ghost sm" data-act="weekNext">\u203A</button></div>`;
@@ -4885,10 +4943,10 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
         <span class="wkname">${esc(L().daysShort[Scheduler.weekday(d)])}</span><b class="wknum">${+d.slice(8)}</b>
         ${hasExam ? '<i class="wkdot exam"></i>' : min ? '<i class="wkdot"></i>' : '<i class="wkdot off"></i>'}</button>`;
     }).join('') + '</div>';
-    h += `<div class="day ${sel === today ? 'today' : ''}">${esc(dayLabel(sel, today))}
-      <span class="tag${dayManual(sel) ? '' : ' free'}">${esc(dayManual(sel) ? PT().myDayTag : PT().autoTag)}</span>
-      ${dayManual(sel) ? `<button class="btn ghost sm" data-act="planReset" data-d="${sel}">${esc(PT().resetDay)}</button>` : `<button class="btn ghost sm" data-act="planClear" data-d="${sel}">${esc(PT().clearDay)}</button>`}</div>`;
-    h += `<div class="card">${timelineHtml(sel)}</div>`;
+    h += overdueHtml();
+    h += `<div class="day ${sel === today ? 'today' : ''}">${esc(dayLabel(sel, today))}</div>`;
+    h += dayControlsHtml(sel);
+    h += `<div class="card">${timelineHtml(sel, { readonly: sel < today })}</div>`;
     h += weekOverviewHtml(days);
     return h;
   }
@@ -4937,8 +4995,9 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
   function viewSubjects() {
     let h = '';
     const missing = curMissing();
+    const inSub = !!state.subjects.find((x) => x.id === openSubject); // v25: a subject opens as its own screen
 
-    if (curForYear().length) {
+    if (curForYear().length && !inSub) {
       h += `<div class="card"><b>${esc(L().curTitle)}</b><div class="muted" style="margin-top:4px">${esc(L().curSub)}</div>`;
       if (!missing.length) h += `<div class="muted" style="margin-top:8px">${esc(L().curAllAdded)}</div>`;
       missing.forEach((c) => {
@@ -4951,8 +5010,8 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     }
 
     // v14: subjects show as big square cards side by side; a tap opens the full panel below
-    h += `<div class="subjgrid">`;
-    state.subjects.forEach((s) => {
+    h += inSub ? '' : `<div class="subjgrid">`;
+    if (!inSub) state.subjects.forEach((s) => {
       const ex = examOf(s);
       const doneN = s.tasks.filter((t) => t.done).length;
       const pctS = s.tasks.length ? Math.round(doneN / s.tasks.length * 100) : 0;
@@ -4963,11 +5022,12 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
         ${s.tasks.length ? `<div class="bar" style="margin:8px 0 4px"><i style="width:${pctS}%"></i></div><div class="muted sml">${esc(L().taskCount(doneN, s.tasks.length, pctS))}</div>` : ''}
       </div>`;
     });
-    h += '</div>';
+    if (!inSub) h += '</div>';
 
     const sd = state.subjects.find((x) => x.id === openSubject);
     if (sd) {
       const s = sd;
+      h += `<div class="row" style="margin-bottom:8px"><button class="btn ghost sm" data-act="toggle" data-s="${s.id}">\u2039 ${esc(L().subjBack)}</button></div>`;
       const exOpen = openExam === s.id, ex = examOf(s);
       h += `<div class="card pcard bigsub" style="border-inline-start-color:${colorOfS(s)}">
         <div class="row subj-head">
@@ -5714,13 +5774,12 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
   function schedItems(date) {
     const out = [];
     blocksForDate(date).forEach((b) => out.push({ m: b.s, time: fmtClockRange(b.s, b.e), subject: b.label || L().kindWord[b.kind] || '', title: '' }));
-    let r = { sessions: [] };
-    try { r = Scheduler.generate(state, date, {}); } catch (e) { r = { sessions: [] }; }
-    r.sessions.filter((x) => x.date === date).forEach((x) => {
-      const sj = subj(x.subjectId);
+    planBlocks(date).forEach((b) => {
+      const sj = subj(b.subjectId);
       if (!sj) return;
-      const title = x.type === 'review' ? L().generalReview : x.type === 'examreview' ? L().examReviewTitle : x.title;
-      out.push({ m: x.startMin == null ? 1e9 : x.startMin, time: x.startMin != null ? fmtClockRange(x.startMin, x.endMin) : '', subject: sj.name, title: title || '' });
+      const t = b.taskId ? taskOf(b.subjectId, b.taskId) : null;
+      const a = pMin(b.start), z = pMin(b.end);
+      out.push({ m: a == null ? 1e9 : a, time: a != null && z != null ? fmtClockRange(a, z) : '', subject: sj.name, title: t ? t.title : (b.title || (b.type === 'review' ? L().generalReview : '')) });
     });
     out.sort((a, b) => a.m - b.m);
     return out.slice(0, 12);
@@ -6043,7 +6102,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       return;
     }
     const t = e.target.closest('[data-tab],[data-act]'); if (!t) return;
-    if (t.dataset.tab) { tab = t.dataset.tab; return render(); }
+    if (t.dataset.tab) { if (t.dataset.tab === 'subjects') openSubject = null; tab = t.dataset.tab; window.scrollTo(0, 0); return render(); }
     const a = t.dataset.act, s = t.dataset.s, l = t.dataset.l;
 
     if (a === 'lang') { state.lang = state.lang === 'en' ? 'ar' : 'en'; save({ local: true }); return render(); }
@@ -6258,7 +6317,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     }
     if (a === 'batchSync') return syncLecturesFile(true);
 
-    if (a === 'toggle') { openSubject = openSubject === s ? null : s; return render(); }
+    if (a === 'toggle') { openSubject = openSubject === s ? null : s; render(); window.scrollTo(0, 0); return; }
     if (a === 'toggleExam') { openExam = openExam === s ? null : s; return render(); }
     if (a === 'delSubject') { if (!confirm(L().delConfirm)) return; attDeleteMany((m) => m.subjectId === s); state.subjects = state.subjects.filter((x) => x.id !== s); save(); return render(); }
     if (a === 'saveExam') {
@@ -6275,7 +6334,12 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     if (a === 'pickDay') { dayViewDate = (t.dataset.d === todayStr()) ? null : t.dataset.d; return render(); }
     /* v24: the student's own plan */
     if (a === 'schedDay') { schedDate = t.dataset.d; return render(); }
-    if (a === 'weekPrev' || a === 'weekNext') { const base = schedDate || todayStr(); schedDate = Scheduler.addDays(base, a === 'weekPrev' ? -7 : 7); return render(); }
+    if (a === 'weekPrev' || a === 'weekNext') {
+      schedOff = Math.max(0, schedOff + (a === 'weekPrev' ? -1 : 1));
+      const ws = Scheduler.addDays(todayStr(), -1 + 7 * schedOff);
+      schedDate = schedOff === 0 ? todayStr() : ws;
+      return render();
+    }
     if (a === 'planSlot') { planSheet = { date: t.dataset.d, mode: 'add', s: +t.dataset.s, e: +t.dataset.e, subId: '', i: -1 }; return render(); }
     if (a === 'planEdit') {
       const pd = t.dataset.d, pi = +t.dataset.i;
@@ -6293,6 +6357,9 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     if (a === 'planUp') return planMove(-1);
     if (a === 'planDown') return planMove(1);
     if (a === 'planDel') return planDelete();
+    if (a === 'planSuggest') return planSuggest(t.dataset.d);
+    if (a === 'planWipe') { const wd = t.dataset.d; if (!state.plans) state.plans = {}; state.plans[wd] = []; save(); return render(); }
+    if (a === 'planX') { const xd = t.dataset.d, xi = +t.dataset.i; const xl = (state.plans || {})[xd]; if (xl && xl[xi]) { xl.splice(xi, 1); save(); } return render(); }
     if (a === 'planClear') { const cd = t.dataset.d; if (!state.plans) state.plans = {}; state.plans[cd] = []; save(); return render(); }
     if (a === 'planReset') { const rd = t.dataset.d; if (state.plans) delete state.plans[rd]; save(); toast(PT().resetDone); return render(); }
     if (a === 'fabAdd') { fabOpen = true; fabKind = 'lecture'; return render(); }
