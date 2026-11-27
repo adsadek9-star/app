@@ -289,6 +289,8 @@ button.danger:hover { background: #fbdcdc; filter: none; }
 .sync { font-size: 12px; font-weight: 700; color: #d7f3ee; min-width: 0; }
 .sync.synced { color: #bbf7d0; }
 .sync.error { color: #fecaca; }
+.batchstatus { font-size: 12.5px; font-weight: 600; color: var(--muted); min-width: 0; }
+.batchstatus.err { color: #fecaca; font-weight: 700; }
 .hidden { display: none; }
 .checkline { display: flex; gap: 8px; align-items: center; margin-top: 10px; font-weight: 600; font-size: 14px; }
 .checkline input { width: 18px; height: 18px; }
@@ -703,6 +705,144 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
   }
 
   return { YEARS, find, subjectsForYear, topicsFor, norm };
+});
+
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./curriculum.js'));
+  else root.BatchSync = factory(root.Curriculum);
+})(this, function (Curriculum) {
+  // Batch lecture sync from a Google Sheet the class rep keeps.
+  // Sheet layout: one header row, then one row per lecture:
+  //   subject | week | lecture | difficulty(optional)
+  // "subject" is the subject code (PHAM-2) or any common name/alias (فارماكولوجي).
+  // This module is pure parsing/matching; app.js owns fetch + state.
+
+  const AR_DIGITS = '٠١٢٣٤٥٦٧٨٩';
+  const normDigits = (s) => String(s == null ? '' : s).replace(/[٠-٩]/g, (c) => String(AR_DIGITS.indexOf(c)));
+
+  /* Small CSV parser: quotes, escaped quotes, commas/newlines inside quoted
+     cells, CRLF and a BOM. */
+  function parseCSV(text) {
+    const s = String(text == null ? '' : text).replace(/^\uFEFF/, '');
+    const rows = [];
+    let row = [], cell = '', inQ = false;
+    for (let i = 0; i < s.length; i++) {
+      const c = s[i];
+      if (inQ) {
+        if (c === '"') {
+          if (s[i + 1] === '"') { cell += '"'; i++; }
+          else inQ = false;
+        } else cell += c;
+      } else if (c === '"') inQ = true;
+      else if (c === ',') { row.push(cell); cell = ''; }
+      else if (c === '\n' || c === '\r') {
+        if (c === '\r' && s[i + 1] === '\n') i++;
+        row.push(cell); cell = '';
+        rows.push(row); row = [];
+      } else cell += c;
+    }
+    if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+    return rows;
+  }
+
+  /* Accept a published ("نشر على الويب") link or an ordinary sheet link and return
+     a URL the browser can fetch as CSV; null when it is not a Google Sheet.
+     The ordinary-link fallback (gviz) only works when the sheet itself is shared
+     "anyone with the link can view"; the published link is the documented route. */
+  function normalizeSheetUrl(url) {
+    const u = String(url || '').trim();
+    if (!/^https:\/\//i.test(u)) return null;
+    let m = /^https:\/\/docs\.google\.com\/spreadsheets\/d\/e\/([^/?#]+)\/pub([?#].*)?$/i.exec(u);
+    if (m) {
+      const q = new URLSearchParams(String(m[2] || '').replace(/^[?#]/, ''));
+      q.set('output', 'csv');
+      return 'https://docs.google.com/spreadsheets/d/e/' + m[1] + '/pub?' + q.toString();
+    }
+    m = /^https:\/\/docs\.google\.com\/spreadsheets\/d\/([A-Za-z0-9_-]{20,})(?:[/?#].*)?$/i.exec(u);
+    if (m) return 'https://docs.google.com/spreadsheets/d/' + m[1] + '/gviz/tq?tqx=out:csv';
+    return null;
+  }
+
+  // Row 0 is a header when its first cell names the subject column.
+  function looksHeader(cells) {
+    const c0 = Curriculum.norm((cells || [])[0]);
+    const c2 = Curriculum.norm((cells || [])[2]);
+    if (/subject/.test(c0)) return true;
+    if (['ماده', 'الماده', 'المقرر', 'اسم الماده'].includes(c0)) return true;
+    return c0.includes('ماده') && c2.includes('محاضره');
+  }
+
+  const DIFF_WORDS = [
+    [/^1$|سهل|easy/, 1],
+    [/^2$|عادي|وسط|متوسط|medium|normal/, 2],
+    [/^3$|صعب|hard/, 3],
+  ];
+  function parseDiff(s) {
+    const n = Curriculum.norm(normDigits(s));
+    if (!n) return 0;
+    for (const [re, d] of DIFF_WORDS) if (re.test(n)) return d;
+    return 0;
+  }
+
+  const MAX_ROWS = 500;
+
+  // Parsed rows -> lecture entries. The header row is skipped when present, rows
+  // without a lecture title are ignored, the week is 0 when not a number.
+  function parseSheetRows(rows) {
+    const out = [];
+    (rows || []).forEach((cells, ri) => {
+      const c = (cells || []).map((x) => String(x == null ? '' : x).trim());
+      if (ri === 0 && looksHeader(c)) return;
+      const subjRaw = c[0] || '', lec = c[2] || '';
+      if (!subjRaw && !lec) return;
+      if (!lec) return;
+      const wnum = Number(normDigits(c[1] || ''));
+      const week = isFinite(wnum) ? Math.min(52, Math.max(0, Math.round(wnum))) : 0;
+      out.push({ subject: subjRaw, week, lecture: lec, difficulty: parseDiff(c[3]) });
+    });
+    return out.slice(0, MAX_ROWS);
+  }
+
+  const normCode = (s) => Curriculum.norm(s).replace(/[^a-z0-9]/g, '');
+
+  // Match a sheet's subject cell to one of the student's subjects: by code,
+  // by exact normalized name, or through the curriculum aliases.
+  function matchSubject(subjects, raw) {
+    const n = Curriculum.norm(raw), nc = normCode(raw);
+    if (!n) return null;
+    let hit = (subjects || []).find((s) => s.code && normCode(s.code) === nc);
+    if (hit) return hit;
+    hit = (subjects || []).find((s) => Curriculum.norm(s.name) === n);
+    if (hit) return hit;
+    const cur = Curriculum.find(raw);
+    if (cur) hit = (subjects || []).find((s) => (s.code && s.code === cur.code) || Curriculum.find(s.name, s.code) === cur);
+    return hit || null;
+  }
+
+  const keyOf = (subjectCode, week, title) => normCode(subjectCode) + '|' + (week || 0) + '|' + Curriculum.norm(title);
+
+  // Which sheet entries become new tasks: rows whose subject is not among the
+  // student's subjects come back as unmatched; rows the student already has
+  // (from an earlier sync or added by hand) come back counted as dupes.
+  function planBatchTasks(subjects, entries) {
+    const adds = [], unmatched = [];
+    let dupes = 0;
+    const seen = {};
+    (entries || []).forEach((e) => {
+      const sj = matchSubject(subjects, e.subject);
+      if (!sj) { unmatched.push(e); return; }
+      const key = keyOf(sj.code || sj.id, e.week, e.lecture);
+      if (seen[key]) { dupes++; return; }
+      seen[key] = 1;
+      const nTitle = Curriculum.norm(e.lecture);
+      const exists = (sj.tasks || []).some((t) => (t.batchId && t.batchId === key) || Curriculum.norm(t.title) === nTitle);
+      if (exists) { dupes++; return; }
+      adds.push({ subjectId: sj.id, key, entry: e });
+    });
+    return { adds, unmatched, dupes };
+  }
+
+  return { parseCSV, normalizeSheetUrl, parseSheetRows, planBatchTasks, matchSubject, keyOf, looksHeader, normDigits, MAX_ROWS };
 });
 
 (function (root, factory) {
@@ -1484,6 +1624,20 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       pickYear: 'اختار فرقتك',
       startBtn: 'يلا نبدأ',
       needProfile: 'اكتب اسمك واختار فرقتك',
+      batchTitle: 'محاضرات الدفعة (شيت الممثل)',
+      batchSub: 'الممثل بيملى Google Sheet بالمحاضرات اللي نزلت، والتطبيق بيسحبها لوحده ويضيفها على موادك. الصق اللينك مرة واحدة بس.',
+      batchCols: 'الشيت 3 أعمدة بالترتيب: المادة، الأسبوع، المحاضرة (والصعوبة عمود اختياري رابع).',
+      batchUrlPh: 'الصق لينك الشيت هنا',
+      batchSaveBtn: 'حفظ وتحديث',
+      batchSyncBtn: 'حدّث دلوقتي',
+      batchNever: 'لسه مفيش تحديث من الشيت',
+      batchLast: (t) => 'آخر تحديث: ' + t,
+      batchStat: (added, total, un) => 'محاضرات الشيت: ' + total + ' · اتضاف جديد: ' + added + (un ? ' · سطور اتخطّت: ' + un : ''),
+      batchToast: (n) => n > 0 ? 'اتضافت ' + n + ' محاضرة جديدة من الشيت ✅' : 'الشيت اتقري، مفيش محاضرات جديدة',
+      batchErrUrl: 'اللينك ده مش شيت جوجل - الصق لينك الشيت نفسه',
+      batchErrFetch: 'مقدرناش نوصل للشيت. اتأكد من النت، وإن الممثل عامل "نشر على الويب" كـ CSV',
+      batchFromTag: 'شيت الدفعة',
+      weekShort: (w) => 'أسبوع ' + w,
     },
     en: {
       dir: 'ltr',
@@ -1678,6 +1832,20 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       pickYear: 'Pick your year',
       startBtn: "Let's start",
       needProfile: 'Enter your name and pick your year',
+      batchTitle: "Batch lectures (the rep's sheet)",
+      batchSub: 'The class rep fills one Google Sheet with the released lectures and the app pulls them into your subjects by itself. Paste the link once.',
+      batchCols: 'The sheet has 3 columns in order: subject, week, lecture (difficulty is an optional 4th).',
+      batchUrlPh: 'Paste the sheet link here',
+      batchSaveBtn: 'Save & sync',
+      batchSyncBtn: 'Sync now',
+      batchNever: 'Not synced from the sheet yet',
+      batchLast: (t) => 'Last sync: ' + t,
+      batchStat: (added, total, un) => 'Sheet lectures: ' + total + ' · newly added: ' + added + (un ? ' · unrecognized rows: ' + un : ''),
+      batchToast: (n) => n > 0 ? n + ' new lectures added from the sheet ✅' : 'Sheet read, no new lectures',
+      batchErrUrl: 'That link is not a Google Sheet - paste the sheet link itself',
+      batchErrFetch: 'Could not reach the sheet. Check the connection, and that the rep used "Publish to web" as CSV',
+      batchFromTag: 'batch sheet',
+      weekShort: (w) => 'Week ' + w,
     },
   };
 
@@ -1703,6 +1871,7 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
     subjects: [], savedAt: 0,
     focusLog: [],    // [{id, taskId, subjectId, date:'YYYY-MM-DD', minutes, at}]
     theme: 'dark',   // 'dark' (default) or 'light'
+    batchSheet: { url: '', lastSync: 0, total: 0, added: 0, unmatched: 0, error: '' }, // the rep's Google Sheet link + sync status
   });
 
   function migrate(old) {
@@ -1755,6 +1924,7 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
     });
     if (state.overrides) delete state.overrides; // the manual per-date cap was removed
     if (state.theme !== 'light') state.theme = 'dark';
+    if (!state.batchSheet || typeof state.batchSheet !== 'object') state.batchSheet = { url: '', lastSync: 0, total: 0, added: 0, unmatched: 0, error: '' };
   }
   normalizeState();
   const saveLocal = () => localStorage.setItem(KEY, JSON.stringify(state));
@@ -1967,6 +2137,67 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
   async function doLogout() {
     try { if (fbAuth) await fbAuth.signOut(); } catch (e) {}
     session = null; authSkipped = false; setSync(''); render();
+  }
+
+  /* ---------------- batch lectures from the rep's Google Sheet ---------------- */
+  // The rep keeps one Google Sheet (subject | week | lecture); the app pulls it
+  // as published CSV and adds new lectures as tasks. Adds only: a row that is
+  // edited or removed from the sheet never touches the student's own tasks.
+  let batchPromise = null;
+
+  function batchStatusText() {
+    const bs = state.batchSheet || {};
+    if (bs.error) return bs.error;
+    if (!bs.lastSync) return L().batchNever;
+    const d = new Date(bs.lastSync);
+    return L().batchLast(fmtClock(d.getHours() * 60 + d.getMinutes())) + ' · ' + L().batchStat(bs.added || 0, bs.total || 0, bs.unmatched || 0);
+  }
+
+  function applyBatch(entries) {
+    const plan = BatchSync.planBatchTasks(state.subjects, entries);
+    plan.adds.forEach(({ subjectId, key, entry }) => {
+      const sj = subj(subjectId);
+      if (!sj) return;
+      const t = mkTask(entry.lecture, 'lecture', entry.difficulty || null, 'batch');
+      t.batchId = key;
+      if (entry.week) t.week = entry.week;
+      sj.tasks.push(t);
+    });
+    return plan;
+  }
+
+  function syncBatchSheet(manual) {
+    if (batchPromise) return batchPromise;
+    const bs = state.batchSheet;
+    const url = bs && BatchSync.normalizeSheetUrl(bs.url);
+    if (!url) {
+      if (bs && bs.url && bs.error !== L().batchErrUrl) { bs.error = L().batchErrUrl; save(); render(); }
+      return Promise.resolve();
+    }
+    if (typeof fetch !== 'function') return Promise.resolve();
+    batchPromise = (async () => {
+      try {
+        const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+        const killer = ctrl ? setTimeout(() => { try { ctrl.abort(); } catch (e) {} }, 12000) : null;
+        let res;
+        try { res = await fetch(url, ctrl ? { signal: ctrl.signal } : {}); } finally { if (killer) clearTimeout(killer); }
+        if (!res || !res.ok) throw new Error('http');
+        const text = await res.text();
+        const entries = BatchSync.parseSheetRows(BatchSync.parseCSV(text));
+        const plan = applyBatch(entries);
+        bs.error = '';
+        bs.lastSync = Date.now();
+        bs.total = entries.length;
+        bs.added = plan.adds.length;
+        bs.unmatched = plan.unmatched.length;
+        save();
+        if (manual) toast(L().batchToast(plan.adds.length));
+      } catch (e) {
+        bs.error = L().batchErrFetch;
+        save();
+      }
+    })().then(() => { batchPromise = null; render(); });
+    return batchPromise;
   }
 
   /* ---------------- tasks / curriculum ---------------- */
@@ -2303,10 +2534,12 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
         }
         h += '</div>';
         s.tasks.forEach((t) => {
-          const estTxt = (t.kind === 'clinic'
+          let estTxt = (t.kind === 'clinic'
             ? L().estClinic(L().diff[t.difficulty - 1] || '', fmtHTxt(t.workH))
             : L().estLec(L().diff[t.difficulty - 1] || '', fmtHTxt(t.studyH), L().fmtM(Math.round(t.solveH * 60)))) +
             (t.src === 'est' ? ' · ' + L().estBadge : '');
+          if (t.src === 'batch') estTxt += ' · ' + L().batchFromTag;
+          if (t.week) estTxt += ' · ' + L().weekShort(t.week);
           h += `<div class="lec ${t.done ? 'done' : ''}"><input type="checkbox" data-act="check" data-s="${s.id}" data-l="${t.id}" ${t.done ? 'checked' : ''}>
             <span class="t grow">${t.kind === 'clinic' ? '🦷 ' : '📖 '}${esc(t.title)}<br><span class="muted">${esc(estTxt)}</span></span>
             ${t.done && t.kind === 'lecture' ? `<select data-act="conf" data-s="${s.id}" data-l="${t.id}"><option value="0">${esc(L().confPh)}</option>${[1, 2, 3, 4, 5].map((n) => `<option value="${n}" ${t.confidence === n ? 'selected' : ''}>${n}/5</option>`).join('')}</select>` : ''}
@@ -2395,6 +2628,13 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
     h += `</div></div>
       <div class="row" style="margin-top:10px"><label class="muted">${esc(L().uniLbl)}</label><span class="grow"><b>${esc(UNI[state.lang === 'en' ? 'en' : 'ar'])}</b></span></div>
       <div style="margin-top:10px"><button class="btn" data-act="saveProfile">${esc(L().saveBtn)}</button></div></div>`;
+    const bs = state.batchSheet || {};
+    h += `<div class="card"><b>\uD83D\uDCC4 ${esc(L().batchTitle)}</b>
+      <div class="muted" style="margin-top:4px">${esc(L().batchSub)}</div>
+      <div class="muted" style="margin-top:4px">${esc(L().batchCols)}</div>
+      <div class="row" style="margin-top:10px"><input id="batchUrl" class="grow" dir="ltr" placeholder="${esc(L().batchUrlPh)}" value="${esc(bs.url || '')}"><button class="btn" data-act="batchSave">${esc(L().batchSaveBtn)}</button></div>
+      <div class="row" style="margin-top:8px"><span class="grow batchstatus${bs.error ? ' err' : ''}">${esc(batchStatusText())}</span>
+      ${bs.url ? `<button class="btn ghost sm" data-act="batchSync">${esc(L().batchSyncBtn)}</button>` : ''}</div></div>`;
     h += `<div class="day">${esc(L().daysSecTitle)}</div>` + daysEditorHTML();
     h += `<div class="card"><b>${esc(L().accountSec)}</b>`;
     if (!cloudEnabled()) h += `<p class="muted" style="margin:8px 0 0">${esc(L().localMode)}</p>`;
@@ -2716,6 +2956,14 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
     if (a === 'authSkip') { authSkipped = true; return render(); }
     if (a === 'showAuth') { authSkipped = false; return render(); }
     if (a === 'logout') return doLogout();
+    if (a === 'batchSave') {
+      const bs = state.batchSheet;
+      bs.url = (($('batchUrl') || {}).value || '').trim();
+      if (!bs.url) { bs.error = ''; bs.lastSync = 0; bs.total = 0; bs.added = 0; bs.unmatched = 0; save(); return render(); }
+      save(); render();
+      return syncBatchSheet(true);
+    }
+    if (a === 'batchSync') return syncBatchSheet(true);
 
     if (a === 'toggle') { openSubject = openSubject === s ? null : s; return render(); }
     if (a === 'toggleExam') { openExam = openExam === s ? null : s; return render(); }
@@ -2747,11 +2995,13 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
 
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden && session && Date.now() - lastPull > 30000) loadCloud().then(render);
+    if (!document.hidden && state.batchSheet && state.batchSheet.url && Date.now() - (state.batchSheet.lastSync || 0) > 30 * 60000) syncBatchSheet(false);
   });
 
-  window.__planner = { get state() { return state; }, loadCur, render, tick, get focusRun() { return focusRun; }, get session() { return session; } };
+  window.__planner = { get state() { return state; }, loadCur, render, tick, get focusRun() { return focusRun; }, get session() { return session; }, batchIdle: () => batchPromise || Promise.resolve() };
   render();
   initCloud();
+  if (state.batchSheet && state.batchSheet.url && typeof BatchSync !== 'undefined') syncBatchSheet(false);
   setInterval(tick, 500);
 })();
 </script>
