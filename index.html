@@ -2940,6 +2940,27 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       uniLbl: 'الجامعة',
       savedOk: 'اتحفظ',
       accountSec: 'الحساب والمزامنة',
+      anonAccTitle: 'حساب مؤقت على الجهاز ده بس',
+      anonAccSub: 'الحساب ده اتعمل لوحده لما فعّلت الليدربورد، وهو مربوط بالمتصفح ده بس. عشان تفتح نفس بياناتك من جهاز تاني، اربطه بإيميل.',
+      linkBtn: 'اربطه بإيميل عشان تتزامن',
+      linkTitle: 'اربط حسابك بإيميل',
+      linkSub: 'الإيميل والباسورد بيتعملوا حساب واحد ليك، وتقدر تدخل بيه من أي جهاز. اللي على الجهاز ده هيفضل زي ما هو.',
+      linkDo: 'اربط الحساب',
+      linkOk: 'اتربط. دلوقتي تقدر تدخل بنفس الإيميل من جهاز تاني',
+      linkSwitched: 'الإيميل ده كان معمول قبل كده، فدخلنا عليه وبياناتك اتدمجت',
+      linkNeedEmail: 'اكتب إيميل صح',
+      linkNeedPass: 'الباسورد لازم 6 حروف أو أرقام على الأقل',
+      linkErr: 'مقدرتش أربط الحساب. جرب تاني',
+      authTwoDevices: 'بتستخدم جهازين؟ سجّل بنفس الإيميل في الاتنين عشان البيانات تتزامن.',
+      anonNudge: 'النقط شغالة، بس التزامن محتاج إيميل. تقدر تربطه من البروفايل.',
+      anonChip: 'على الجهاز ده بس',
+      outConfirmTitle: 'تسجيل الخروج',
+      outConfirmAcc: 'هتسجل خروج؟ بياناتك محفوظة على حسابك وهتلاقيها لما تسجل دخول تاني.',
+      outConfirmAnon: 'الحساب ده على الجهاز ده بس، ومش مربوط بإيميل. لو سجلت خروج، كل اللي عملته هيتمسح من الجهاز ده ومش هيرجع.',
+      outConfirmFiles: 'وكمان الملفات اللي رفعتها هتتمسح.',
+      outConfirm: 'سجل خروج',
+      outCancel: 'إلغاء',
+      outDone: 'تم تسجيل الخروج. التطبيق بقى زي أول مرة.',
       localMode: 'الحسابات لسه مش متفعلة، فبياناتك بتتحفظ على الجهاز ده بس.',
       logoutBtn: 'تسجيل خروج',
       syncing: 'بيترفع...',
@@ -3321,6 +3342,27 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       uniLbl: 'University',
       savedOk: 'Saved',
       accountSec: 'Account & sync',
+      anonAccTitle: 'Temporary account on this device only',
+      anonAccSub: 'This account was created automatically when you turned the leaderboard on, and it lives in this browser only. Link it to an email to open the same data on another device.',
+      linkBtn: 'Link it to an email to sync',
+      linkTitle: 'Link your account to an email',
+      linkSub: 'The email and password become one account you can sign in with anywhere. What is on this device stays as it is.',
+      linkDo: 'Link the account',
+      linkOk: 'Linked. You can now sign in with the same email on another device',
+      linkSwitched: 'That email already existed, so we signed in to it and merged your data',
+      linkNeedEmail: 'Type a valid email',
+      linkNeedPass: 'The password needs at least 6 characters',
+      linkErr: 'Could not link the account. Try again',
+      authTwoDevices: 'Using two devices? Sign in with the same email on both so your data syncs.',
+      anonNudge: 'Points are working, but syncing needs an email. You can link one from the profile.',
+      anonChip: 'This device only',
+      outConfirmTitle: 'Sign out',
+      outConfirmAcc: 'Sign out? Your data is saved on your account and you will find it when you sign in again.',
+      outConfirmAnon: 'This account lives on this device only and is not linked to an email. If you sign out, everything you did is erased from this device and cannot be recovered.',
+      outConfirmFiles: 'The files you uploaded will be erased too.',
+      outConfirm: 'Sign out',
+      outCancel: 'Cancel',
+      outDone: 'Signed out. The app is like a fresh install now.',
       localMode: 'Accounts are not set up yet, so your data is saved on this device only.',
       logoutBtn: 'Log out',
       syncing: 'Syncing...',
@@ -3506,7 +3548,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
   let focusOpen = false, focusSel = null, focusPreset = 0, focusRun = null, beepCtx = null;
   let dayViewDate = null, fabOpen = false, fabKind = 'lecture', noteOpen = null; // v19
   // v21: a shared-schedule link (#s=...) opens a read-only view; home-screen shortcuts open #today / #focus / #add
-  let sharedData = null;
+  let sharedData = null, linkOpen = false, outAsk = false; // v21.2: link an anonymous account to an email, sign-out confirm
   (function readHash() {
     try {
       const h = location.hash || '';
@@ -3692,17 +3734,19 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
   // v20: every task and subject carries its own change stamp, so two devices can
   // be merged item by item instead of one whole copy replacing the other.
   let stateSnap = (typeof SyncMerge !== 'undefined') ? SyncMerge.snapshot(state) : null;
-  function save() {
+  function save(opts) {
+    // v21.1: { local: true } keeps a cosmetic change (theme, language) on this device
     state.savedAt = Date.now();
     if (typeof SyncMerge !== 'undefined') stateSnap = SyncMerge.stamp(state, stateSnap, state.savedAt);
     saveLocal();
+    if (opts && opts.local) return;
     if (session && fbDb) {
       setSync('syncing');
       clearTimeout(pushTimer);
       pushTimer = setTimeout(pushCloud, 1200);
       if (state.leaderboard && state.leaderboard.on) {
         clearTimeout(lbTimer);
-        lbTimer = setTimeout(pushLbScore, 5000);
+        lbTimer = setTimeout(pushLbScore, 30000); // v21.1: was 5s
       }
       if ((state.challenge || {}).code) {
         clearTimeout(chTimer);
@@ -3737,15 +3781,23 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     return { avatar: (avatarById(state.profile.avatar) || {}).id || 'av01', score: ws.score, updatedAt: Date.now(), name: nm };
   }
 
-  async function pushLbScore() {
+  let lbPushKey = '', lbPushAt = 0;
+  const lbKeyOf = (p) => p.avatar + '|' + p.score + '|' + p.name;
+  async function pushLbScore(force) {
     if (!session || !fbDb || !(state.leaderboard && state.leaderboard.on)) return;
-    try { await lbEntryRef().set(lbPayload()); lbWriteErr = ''; }
-    catch (e) { lbWriteErr = String((e && (e.code || e.message)) || e); }
+    const payload = lbPayload();
+    const key = lbKeyOf(payload);
+    // v21.1: the same score does not need publishing again, so an idle student costs no writes
+    if (!force && key === lbPushKey && Date.now() - lbPushAt < 600000) return;
+    lbPushKey = key; lbPushAt = Date.now(); // reserve before the await so two callers cannot both write
+    try { await lbEntryRef().set(payload); lbWriteErr = ''; }
+    catch (e) { lbPushKey = ''; lbWriteErr = String((e && (e.code || e.message)) || e); }
     const el = $('lbList'); if (el) el.innerHTML = lbListHtml();
   }
 
   async function fetchLbTop() {
     if (!fbDb) return;
+    if (Date.now() - lbFetchedAt < 3000) return; // v21.1: one board read per burst
     lbFetchedAt = Date.now();
     try {
       const snap = await lbWeekRef().collection('entries').orderBy('score', 'desc').limit(10).get();
@@ -3755,18 +3807,24 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     const el = $('lbList'); if (el) el.innerHTML = lbListHtml();
   }
 
-  async function pushChScore() {
+  let chPushKey = '', chPushAt = 0;
+  async function pushChScore(force) {
     if (!session || !fbDb || !chCode()) return;
-    try { await chEntryRef().set(lbPayload()); chErr = ''; }
-    catch (e) { chErr = String((e && (e.code || e.message)) || e); }
+    const payload = lbPayload();
+    const key = lbKeyOf(payload);
+    if (!force && key === chPushKey && Date.now() - chPushAt < 600000) return; // v21.1
+    chPushKey = key; chPushAt = Date.now();
+    try { await chEntryRef().set(payload); chErr = ''; }
+    catch (e) { chPushKey = ''; chErr = String((e && (e.code || e.message)) || e); }
     const el = $('chList'); if (el) el.innerHTML = chListHtml();
   }
 
   async function fetchCh() {
     if (!fbDb || !chCode()) return;
+    if (Date.now() - chFetchedAt < 3000) return; // v21.1
     chFetchedAt = Date.now();
     try {
-      const snap = await chRef().collection('entries').orderBy('score', 'desc').limit(20).get();
+      const snap = await chRef().collection('entries').orderBy('score', 'desc').limit(10).get(); // v21.1: 20 rows cost 20 reads on every refresh
       chRows = snap.docs.map((d) => { const v = d.data() || {}; return { id: d.id, avatar: v.avatar, score: Number(v.score) || 0, name: String(v.name || '') }; });
       chErr = '';
     } catch (e) { chErr = String((e && (e.code || e.message)) || e); }
@@ -3844,8 +3902,14 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
         if (session) {
           await loadCloud();
           if (state.leaderboard && state.leaderboard.on) { pushLbScore(); fetchLbTop(); }
-          if (chCode()) { pushChScore(); fetchCh(); }
-        } else fetchLbTop();
+        } else if (state.leaderboard && state.leaderboard.on) fetchLbTop(); // v21.1: only when the board is on
+        // v21.2: tell them once that an anonymous account does not travel between devices
+        if (session && !session.email) {
+          try {
+            if (!localStorage.getItem(KEY + '.anonNudge')) { localStorage.setItem(KEY + '.anonNudge', '1'); setTimeout(() => toast(L().anonNudge), 1200); }
+          } catch (e) { /* ignore */ }
+        }
+
         render();
       });
     } catch (e) { /* offline: stay local */ }
@@ -3862,9 +3926,69 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     } catch (e) { $('authMsg').textContent = String(e && e.message || e); }
   }
 
+  // v21.2: keep the anonymous uid and give it an email, so nothing on this device moves
+  async function doLink() {
+    const email = (($('lkEmail') || {}).value || '').trim();
+    const pass = (($('lkPass') || {}).value || '');
+    const msg = $('lkMsg');
+    const say = (t) => { if (msg) msg.textContent = t; };
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return say(L().linkNeedEmail);
+    if (pass.length < 6) return say(L().linkNeedPass);
+    if (!fbAuth || !session) return say(L().linkErr);
+    say(L().syncing || '');
+    try {
+      const cred = window.firebase.auth.EmailAuthProvider.credential(email, pass);
+      await session.linkWithCredential(cred);
+      session = fbAuth.currentUser || session;
+      linkOpen = false; render(); toast(L().linkOk);
+    } catch (e) {
+      const code = String((e && (e.code || e.message)) || e);
+      if (/email-already-in-use|credential-already-in-use|email-exists/i.test(code)) {
+        try {
+          await fbAuth.signInWithEmailAndPassword(email, pass);
+          linkOpen = false; render(); toast(L().linkSwitched);
+        } catch (e2) { say(String((e2 && (e2.code || e2.message)) || e2)); }
+      } else say(fbErrText(code) || L().linkErr);
+    }
+  }
+
+  // v21.2: signing out leaves the app like a fresh install. Pending edits are pushed
+  // first so an email account keeps them; an anonymous device loses what was never
+  // linked to an email, which the confirm card says out loud.
   async function doLogout() {
-    try { if (fbAuth) await fbAuth.signOut(); } catch (e) {}
-    session = null; authSkipped = false; setSync(''); render();
+    try {
+      if (pushTimer) { clearTimeout(pushTimer); pushTimer = null; }
+      if (session && fbDb && session.email) { try { await pushCloud(); } catch (e) { /* ignore */ } }
+    } catch (e) { /* ignore */ }
+    try { if (fbAuth) await fbAuth.signOut(); } catch (e) { /* ignore */ }
+    await wipeLocal();
+    session = null; authSkipped = false; setSync('');
+    tab = 'day'; prevTab = 'day'; openSubject = null; fabOpen = false; focusRun = null;
+    try { localStorage.removeItem(FKEY); } catch (e) { /* ignore */ }
+    attMeta = {}; attOpen = null; attPlay = null; attUsage = null;
+    tourDone = false; tourStep = null;
+    render();
+    toast(L().outDone);
+  }
+
+  // Everything this device holds: the saved state, its keys, and the uploaded files.
+  async function wipeLocal() {
+    try {
+      Object.keys(localStorage).forEach((k) => { if (k.indexOf(KEY) === 0) localStorage.removeItem(k); });
+      localStorage.removeItem(FKEY);
+    } catch (e) { /* ignore */ }
+    try {
+      if (attDB) { attDB.close(); attDB = null; }
+      await new Promise((res) => {
+        const rq = indexedDB.deleteDatabase('dental-planner-files');
+        rq.onsuccess = res; rq.onerror = res; rq.onblocked = res;
+        setTimeout(res, 1500);
+      });
+    } catch (e) { /* ignore */ }
+    state = empty();
+    normalizeState();
+    try { saveLocal(); } catch (e) { /* ignore */ }
+    if (typeof SyncMerge !== 'undefined') stateSnap = SyncMerge.snapshot(state);
   }
 
   /* ---------------- batch lectures from the year's lectures file ---------------- */
@@ -4537,6 +4661,9 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       <div class="muted sml" style="margin-top:6px">${esc(L().woAddBlock)}</div></div>`;
     h += `<div class="card"><b>${esc(L().accountSec)}</b>`;
     if (!cloudEnabled()) h += `<p class="muted" style="margin:8px 0 0">${esc(L().localMode)}</p>`;
+    else if (session && !session.email) h += `<div style="margin-top:8px"><b>${esc(L().anonAccTitle)}</b>
+      <div class="muted" style="margin-top:4px">${esc(L().anonAccSub)}</div>
+      <div class="row" style="margin-top:8px"><button class="btn grow" data-act="linkOpen">${esc(L().linkBtn)}</button><button class="btn ghost" data-act="logout">${esc(L().logoutBtn)}</button></div></div>`;
     else if (session) h += `<div class="row" style="margin-top:8px"><span class="grow">${esc(session.email || '')} <span class="sync ${syncState}">${syncState === 'synced' ? '☁️ ' + esc(L().synced) : syncState === 'syncing' ? esc(L().syncing) : syncState === 'error' ? esc(L().syncErr) : ''}</span></span><button class="btn ghost" data-act="logout">${esc(L().logoutBtn)}</button></div>`;
     else h += `<p class="muted" style="margin:8px 0 6px">${esc(L().authSub)}</p><button class="btn" data-act="showAuth">${esc(L().authTitle)}</button>`;
     h += '</div>';
@@ -5221,6 +5348,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     if (cloudEnabled() && !session && !authSkipped) {
       h += `<div class="overlay"><div class="sheet"><b style="font-size:17px">${esc(L().authTitle)}</b>
         <p class="muted">${esc(L().authSub)}</p>
+        <p class="muted sml">${esc(L().authTwoDevices)}</p>
         <input id="aEmail" type="email" placeholder="${esc(L().emailPh)}" dir="ltr">
         <input id="aPass" type="password" placeholder="${esc(L().passPh)}" dir="ltr">
         <div id="authMsg" class="muted" style="min-height:18px;margin-top:6px"></div>
@@ -5229,6 +5357,22 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
         <div style="text-align:center;margin-top:10px"><button class="linklike" data-act="authSkip">${esc(L().skipBtn)}</button></div></div></div>`;
       return h;
     }
+    if (outAsk) {
+      const anon = !(session && session.email);
+      const hasFiles = Object.keys(attMeta).some((k) => (attMeta[k] || []).length);
+      return `<div class="overlay"><div class="sheet"><b style="font-size:17px">${esc(L().outConfirmTitle)}</b>
+        <p class="muted" style="margin-top:8px">${esc(anon ? L().outConfirmAnon : L().outConfirmAcc)}</p>
+        ${anon && hasFiles ? `<p class="muted err">${esc(L().outConfirmFiles)}</p>` : ''}
+        <div class="row" style="margin-top:12px"><button class="btn grow danger" data-act="outYes">${esc(L().outConfirm)}</button>
+        <button class="btn ghost grow" data-act="outNo">${esc(L().outCancel)}</button></div></div></div>`;
+    }
+    if (linkOpen) return `<div class="overlay"><div class="sheet"><b style="font-size:17px">${esc(L().linkTitle)}</b>
+      <p class="muted">${esc(L().linkSub)}</p>
+      <input id="lkEmail" type="email" placeholder="${esc(L().emailPh)}" dir="ltr">
+      <input id="lkPass" type="password" placeholder="${esc(L().passPh)}" dir="ltr">
+      <div id="lkMsg" class="muted" style="min-height:18px;margin-top:6px"></div>
+      <div class="row" style="margin-top:8px"><button class="btn grow" data-act="linkDo">${esc(L().linkDo)}</button>
+      <button class="btn ghost" data-act="linkClose">${esc(L().closeBtn)}</button></div></div></div>`;
     if (tourStep != null) return tourHtml();
     if (fabOpen) {
       const opts = state.subjects.map((s2) => `<option value="${s2.id}">${esc(s2.name)}</option>`).join('');
@@ -5353,8 +5497,8 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     if (focusRun) updateFocusText();
     // v17/v20: refresh the board and the challenge whenever the profile shows and they are stale
     if (tab === 'profile' && fbDb) {
-      if (state.leaderboard && state.leaderboard.on && Date.now() - lbFetchedAt > 60000) fetchLbTop();
-      if (chCode() && Date.now() - chFetchedAt > 60000) fetchCh();
+      if (state.leaderboard && state.leaderboard.on && Date.now() - lbFetchedAt > 300000) fetchLbTop(); // v21.1: was 60s
+      if (chCode() && Date.now() - chFetchedAt > 300000) fetchCh(); // v21.1: was 60s
     }
   }
 
@@ -5409,8 +5553,8 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     if (t.dataset.tab) { tab = t.dataset.tab; return render(); }
     const a = t.dataset.act, s = t.dataset.s, l = t.dataset.l;
 
-    if (a === 'lang') { state.lang = state.lang === 'en' ? 'ar' : 'en'; save(); return render(); }
-    if (a === 'theme') { state.theme = state.theme === 'light' ? 'dark' : 'light'; save(); return render(); }
+    if (a === 'lang') { state.lang = state.lang === 'en' ? 'ar' : 'en'; save({ local: true }); return render(); }
+    if (a === 'theme') { state.theme = state.theme === 'light' ? 'dark' : 'light'; save({ local: true }); return render(); }
     if (a === 'openProfile') { prevTab = tab === 'profile' ? prevTab : tab; tab = 'profile'; return render(); }
     if (a === 'backFromProfile') { tab = prevTab || 'day'; return render(); }
     if (a === 'focusOpen') { focusOpen = true; return render(); }
@@ -5524,7 +5668,12 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     if (a === 'authSignup') return doAuth('up');
     if (a === 'authSkip') { authSkipped = true; return render(); }
     if (a === 'showAuth') { authSkipped = false; return render(); }
-    if (a === 'logout') return doLogout();
+    if (a === 'linkOpen') { linkOpen = true; return render(); }
+    if (a === 'linkClose') { linkOpen = false; return render(); }
+    if (a === 'linkDo') { doLink(); return; }
+    if (a === 'logout') { outAsk = true; return render(); }
+    if (a === 'outNo') { outAsk = false; return render(); }
+    if (a === 'outYes') { outAsk = false; doLogout(); return; }
     if (a === 'pickAv') { state.profile.avatar = t.dataset.v; save(); return render(); }
     if (a === 'lbJoin') {
       (state.leaderboard = state.leaderboard || { on: true, showName: false }).on = true;
@@ -5532,7 +5681,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       (async () => {
         if (!cloudEnabled() || !fbAuth) return render();
         if (!session) { try { await fbAuth.signInAnonymously(); } catch (e) { return toast(L().lbAnonErr); } }
-        await pushLbScore(); await fetchLbTop(); render();
+        await pushLbScore(true); await fetchLbTop(); render(); // v21.1: force the row on join
       })();
       return render();
     }
