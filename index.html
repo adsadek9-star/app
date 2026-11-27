@@ -536,9 +536,9 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
 .foot .btn { margin-top: 8px; }
 a.btn { display: inline-block; text-decoration: none; }
 /* v17: avatars + leaderboard */
-#profileBtn svg { width: 24px; height: 24px; display: block; }
-.avgrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
-.avpick { background: var(--soft); border: 2px solid transparent; border-radius: 14px; padding: 5px; cursor: pointer; transition: transform 0.12s, border-color 0.12s; }
+#profileBtn svg { width: 32px; height: 32px; display: block; }
+.avgrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.avpick { background: transparent; border: 2px solid transparent; border-radius: 14px; padding: 3px; cursor: pointer; transition: transform 0.12s, border-color 0.12s; }
 .avpick svg { width: 100%; height: auto; display: block; }
 .avpick:hover { transform: translateY(-1px); }
 .avpick.on { border-color: var(--primary); background: var(--ghost-bg); }
@@ -546,6 +546,19 @@ a.btn { display: inline-block; text-decoration: none; }
 .avchip svg { width: 100%; height: 100%; display: block; }
 .lbrank { width: 22px; text-align: center; color: var(--muted); font-weight: 800; flex: none; }
 .lbrow.me b { color: var(--primary); }
+.tilesrow { display: flex; flex-direction: row; justify-content: space-around; gap: 8px; }
+nav button { display: flex; align-items: center; justify-content: center; gap: 6px; }
+nav button svg { width: 16px; height: 16px; flex: none; }
+.lbtop { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+.lbtopcard { background: var(--soft); border: 2px solid transparent; border-radius: 16px; padding: 10px 4px 8px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.lbtopcard.me { border-color: var(--primary); }
+.lbtopcard .lbmedal { font-size: 15px; line-height: 1; }
+.lbtopcard .lbav { width: 58px; height: 58px; display: block; }
+.lbtopcard .lbav svg { width: 100%; height: 100%; display: block; }
+.lbtopcard .lbscore { font-size: 18px; }
+.barch { width: 100%; height: 84px; margin-top: 8px; }
+.barch rect { fill: var(--primary); opacity: 0.9; }
+.barch rect.dim { opacity: 0.35; }
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
@@ -1103,14 +1116,17 @@ const MOTIV_AR = [
   'العمر بيجري، خليه يجري وانت بتحقق حاجة',
 ];
 
-/* 15 tooth avatars (v17). Pure SVG, no external assets. Each avatar is a
-   string with a full <svg viewBox="0 0 96 96"> so it can be dropped anywhere.
-   The tooth shape matches the app logo. */
+/* 15 tooth avatars (v17, restyled v18: no colored tile - just the tooth,
+   re-centered and scaled up, with a thin outline so it reads on any theme).
+   Pure SVG, no external assets. Each avatar is a string with a full
+   <svg viewBox="0 0 96 96"> so it can be dropped anywhere. */
+// v18: artwork bbox is about x 41..85, y 12..80 -> wrap everything in a group
+// that centers it on (48,48) and scales x1.3.
 const AVATARS = (function () {
   const TOOTH = 'M256 86c-60-37-139-14-152 65-11 60 18 101 32 157 14 60 28 129 65 129 32 0 32-64 55-64s23 64 55 64c37 0 51-69 65-129 14-56 43-97 32-157-13-79-92-102-152-65z';
   const INK = '#0f766e';
-  const open = (bg) => `<svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg"><circle cx="48" cy="48" r="46" fill="${bg}"/><g transform="translate(27 20) scale(0.135)"><path d="${TOOTH}" fill="#ffffff"/></g>`;
-  const close = '</svg>';
+  const open = () => `<svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg"><g transform="translate(48 48) scale(1.3) translate(-63 -46)"><g transform="translate(27 20) scale(0.135)"><path d="${TOOTH}" fill="#ffffff" stroke="#0f766e" stroke-width="8"/></g>`;
+  const close = '</g></svg>';
   const eye = (x) => `<circle cx="${x}" cy="49.2" r="2.1" fill="${INK}"/>`;
   const eyes = () => eye(55.6) + eye(67.5);
   const smile = `<path d="M55.7 55.4 q4.9 5.4 9.8 0" stroke="${INK}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`;
@@ -3018,11 +3034,17 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     if (!lbRows) return `<div class="muted">${esc(L().lbWait)}</div>`;
     if (!lbRows.length) return `<div class="muted">${esc(L().lbEmpty)}</div>`;
     const uid0 = session && session.uid;
+    const medals = ['🥇', '🥈', '🥉'];
+    const isMe = (r) => !!(uid0 && r.id === uid0);
     let h = '', mine = false;
-    lbRows.forEach((r, i) => {
-      const me = !!(uid0 && r.id === uid0);
-      if (me) mine = true;
-      h += `<div class="row lbrow${me ? ' me' : ''}" style="margin-top:6px"><span class="lbrank">${i + 1}</span><span class="avchip">${avatarSvg(r.avatar)}</span><span class="grow muted">${me ? esc(L().lbYou) : ''}</span><b>${r.score} ${esc(L().lbPts)}</b></div>`;
+    const top = lbRows.slice(0, 3), rest = lbRows.slice(3);
+    h += '<div class="lbtop">' + top.map((r, i) => {
+      const me = isMe(r); if (me) mine = true;
+      return `<div class="lbtopcard${me ? ' me' : ''}"><span class="lbmedal">${medals[i]}</span><span class="lbav">${avatarSvg(r.avatar)}</span><b class="lbscore">${r.score}</b><span class="muted sml">${esc(L().lbPts)}${me ? ' · ' + esc(L().lbYou) : ''}</span></div>`;
+    }).join('') + '</div>';
+    rest.forEach((r, i) => {
+      const me = isMe(r); if (me) mine = true;
+      h += `<div class="row lbrow${me ? ' me' : ''}" style="margin-top:6px"><span class="lbrank">${i + 4}</span><span class="avchip">${avatarSvg(r.avatar)}</span><span class="grow muted">${me ? esc(L().lbYou) : ''}</span><b>${r.score} ${esc(L().lbPts)}</b></div>`;
     });
     if (!mine && uid0) h += `<div class="muted" style="margin-top:8px">${esc(L().lbOut)}</div>`;
     return h;
@@ -3773,11 +3795,13 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     // ring geometry
     const RR = 26, CC = 2 * Math.PI * RR;
     const ringOff = (CC * (1 - readyPct / 100)).toFixed(1);
-    // last-7-days area chart
+    // last-7-days bar chart (v18: simple bars, today highlighted)
     const W = 300, H = 84, maxM = Math.max(30, ...last7.map((x) => x.m));
-    const pts = last7.map((x, i) => [Math.round(i * (W / 6)), Math.round(H - 8 - (x.m / maxM) * (H - 20))]);
-    const line = pts.map((p) => p.join(',')).join(' ');
-    const area = `0,${H} ` + line + ` ${W},${H}`;
+    const bw = 26, bgap = (W - 7 * bw) / 6;
+    const bars = last7.map((x, i) => {
+      const bh = Math.max(3, Math.round((x.m / maxM) * (H - 12)));
+      return `<rect x="${Math.round(i * (bw + bgap))}" y="${H - bh}" width="${bw}" height="${bh}" rx="6"${x.d === today ? '' : ' class="dim"'}><title>${x.m}</title></rect>`;
+    }).join('');
     // heatmap: last 12 weeks x 7 weekdays
     const todayW = Scheduler.weekday(today);
     let heat = '';
@@ -3792,21 +3816,21 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       }
       heat += '</div>';
     }
+    const ringOffW = (CC * (1 - weekPct / 100)).toFixed(1);
     let h = `<div class="day">${esc(L().dashTitle)}</div>`;
-    h += `<div class="card"><div class="muted">${esc(L().dashWeek)}</div>
-      <div class="row" style="margin-top:6px;align-items:baseline"><b style="font-size:22px">${weekPct}%</b>
-      <span class="muted grow" dir="auto">${esc(fmtDur(weekMin))}${planMin ? ' / ' + esc(fmtDur(planMin)) + ' ' + esc(L().dashPlan) : ''}</span></div>
-      <div class="bar" style="margin-top:8px"><i style="width:${weekPct}%"></i></div></div>`;
     h += `<div class="dashrow">
+      <div class="card dashcard"><div class="muted">${esc(L().dashWeek)}</div>
+        <svg class="ring" viewBox="0 0 64 64"><circle cx="32" cy="32" r="${RR}" class="ringbg"/><circle cx="32" cy="32" r="${RR}" class="ringfg" style="stroke-dasharray:${CC.toFixed(1)};stroke-dashoffset:${ringOffW}"/><text x="32" y="37" text-anchor="middle" class="ringtxt">${weekPct}%</text></svg>
+        <div class="muted sml" style="text-align:center">${esc(fmtDur(weekMin))}${planMin ? ' / ' + esc(fmtDur(planMin)) + ' ' + esc(L().dashPlan) : ''}</div></div>
       <div class="card dashcard"><div class="muted">${esc(L().dashReady)}</div>
         <svg class="ring" viewBox="0 0 64 64"><circle cx="32" cy="32" r="${RR}" class="ringbg"/><circle cx="32" cy="32" r="${RR}" class="ringfg" style="stroke-dasharray:${CC.toFixed(1)};stroke-dashoffset:${ringOff}"/><text x="32" y="37" text-anchor="middle" class="ringtxt">${readyPct}%</text></svg>
         <div class="muted sml" style="text-align:center">${doneT}/${totT} ${esc(L().dashTasksDone)}${nx ? ' · ' + esc(L().daysLeft(Scheduler.diffDays(today, nx.date))) : ' · ' + esc(L().dashNoExam)}</div></div>
-      <div class="card dashcard"><div class="tile"><div class="tnum">${lecDone}</div><div class="muted sml">${esc(L().dashDoneLec)}</div></div>
-        <div class="tile"><div class="tnum">${focusMin}</div><div class="muted sml">${esc(L().dashFocusMin)}</div></div>
-        <div class="tile"><div class="tnum">${streak}</div><div class="muted sml">${esc(L().dashStreak)}</div></div></div>
     </div>`;
+    h += `<div class="card tilesrow"><div class="tile"><div class="tnum">${lecDone}</div><div class="muted sml">${esc(L().dashDoneLec)}</div></div>
+      <div class="tile"><div class="tnum">${focusMin}</div><div class="muted sml">${esc(L().dashFocusMin)}</div></div>
+      <div class="tile"><div class="tnum">${streak}</div><div class="muted sml">${esc(L().dashStreak)}</div></div></div>`;
     h += `<div class="card"><div class="muted">${esc(L().dashLast7)}</div>
-      <svg class="area" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><polygon class="areafill" points="${area}"/><polyline class="arealine" points="${line}"/>${pts.map((p) => `<circle cx="${p[0]}" cy="${p[1]}" r="3" class="areadot"/>`).join('')}</svg>
+      <svg class="barch" viewBox="0 0 ${W} ${H}">${bars}</svg>
       <div class="row" style="justify-content:space-between">${last7.map((x) => `<span class="muted sml">${esc(L().daysShort[Scheduler.weekday(x.d)])}</span>`).join('')}</div></div>`;
     h += `<div class="card"><div class="muted">${esc(L().dashHeat)}</div>
       <div class="heat" dir="ltr">${heat}</div>
@@ -3967,7 +3991,13 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     $('appTitle').textContent = l.appTitle;
     $('langBtn').textContent = l.langBtn;
     $('themeBtn').textContent = state.theme === 'light' ? '☾' : '☀';
-    document.querySelectorAll('#tabs button').forEach((b) => { b.textContent = l.tabs[b.dataset.tab]; });
+    const TAB_ICON = {
+      day: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.3M12 19.1v2.3M2.6 12h2.3M19.1 12h2.3M5.1 5.1l1.6 1.6M17.3 17.3l1.6 1.6M18.9 5.1l-1.6 1.6M6.7 17.3l-1.6 1.6"/></svg>',
+      schedule: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
+      exams: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2.5"/><path d="M9 4.2V2.8h6v1.4M9 13l2.3 2.3L15.8 10.8"/></svg>',
+      subjects: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.2C6.7 4.1 9.3 4.1 12 5.7c2.7-1.6 5.3-1.6 8-.5v13c-2.7-1.1-5.3-1.1-8 .5-2.7-1.6-5.3-1.6-8-.5z"/><path d="M12 5.7v13"/></svg>',
+    };
+    document.querySelectorAll('#tabs button').forEach((b) => { b.innerHTML = (TAB_ICON[b.dataset.tab] || '') + '<span>' + esc(l.tabs[b.dataset.tab]) + '</span>'; });
   }
 
   function render() {
@@ -4204,7 +4234,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     if (!document.hidden && canSyncLectures() && Date.now() - (state.batchSync.lastSync || 0) > 30 * 60000) syncLecturesFile(false);
   });
 
-  window.__planner = { get state() { return state; }, loadCur, render, tick, get focusRun() { return focusRun; }, get session() { return session; }, batchIdle: () => batchPromise || Promise.resolve() };
+  window.__planner = { get state() { return state; }, loadCur, render, tick, get focusRun() { return focusRun; }, get session() { return session; }, batchIdle: () => batchPromise || Promise.resolve(), lbDemo: (rows) => { lbRows = rows; lbError = ''; const el = $('lbList'); if (el) el.innerHTML = lbListHtml(); } };
   render();
   initCloud();
   if (canSyncLectures()) syncLecturesFile(false);
