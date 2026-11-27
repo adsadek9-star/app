@@ -711,11 +711,17 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
   if (typeof module === 'object' && module.exports) module.exports = factory(require('./curriculum.js'));
   else root.BatchSync = factory(root.Curriculum);
 })(this, function (Curriculum) {
-  // Batch lecture sync from a Google Sheet the class rep keeps.
-  // Sheet layout: one header row, then one row per lecture:
-  //   subject | week | lecture | difficulty(optional)
+  // Batch lecture sync from one Google Sheet per study year (1..5), edited by
+  // that year's rep in the normal Sheets grid. A small sheets.json shipped next
+  // to the app maps year -> sheet link (or bare sheet id); the app converts it
+  // to a CSV endpoint and reads it. Sheet layout: one header row, then one row
+  // per lecture: subject | week | lecture | difficulty(optional)
+  // Rows whose first cell starts with '#' are notes for the rep and skipped.
   // "subject" is the subject code (PHAM-2) or any common name/alias (فارماكولوجي).
-  // This module is pure parsing/matching; app.js owns fetch + state.
+  // The sync is FULL: new rows are added, changed rows update the task in place
+  // (progress kept), rows removed from the sheet delete only the tasks that came
+  // from the sheet. The student's own tasks are never touched.
+  // This module is pure parsing/matching/planning; app.js owns fetch + state.
 
   const AR_DIGITS = '٠١٢٣٤٥٦٧٨٩';
   const normDigits = (s) => String(s == null ? '' : s).replace(/[٠-٩]/g, (c) => String(AR_DIGITS.indexOf(c)));
@@ -745,12 +751,15 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
     return rows;
   }
 
-  /* Accept a published ("نشر على الويب") link or an ordinary sheet link and return
-     a URL the browser can fetch as CSV; null when it is not a Google Sheet.
-     The ordinary-link fallback (gviz) only works when the sheet itself is shared
-     "anyone with the link can view"; the published link is the documented route. */
+  /* Accept a published ("نشر على الويب") link, an ordinary sheet link or a bare
+     sheet id, and return a URL the browser can fetch as CSV; null when it is
+     not a Google Sheet. The ordinary-link/id fallback (gviz) works when the
+     sheet is shared "anyone with the link can view"; the published link is
+     the other documented route. */
   function normalizeSheetUrl(url) {
     const u = String(url || '').trim();
+    if (!u) return null;
+    if (/^[A-Za-z0-9_-]{20,}$/.test(u)) return 'https://docs.google.com/spreadsheets/d/' + u + '/gviz/tq?tqx=out:csv';
     if (!/^https:\/\//i.test(u)) return null;
     let m = /^https:\/\/docs\.google\.com\/spreadsheets\/d\/e\/([^/?#]+)\/pub([?#].*)?$/i.exec(u);
     if (m) {
@@ -786,13 +795,15 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
 
   const MAX_ROWS = 500;
 
-  // Parsed rows -> lecture entries. The header row is skipped when present, rows
-  // without a lecture title are ignored, the week is 0 when not a number.
+  // Parsed rows -> lecture entries. The header row is skipped when present,
+  // '#' rows are rep notes, rows without a lecture title are ignored, the
+  // week is 0 when not a number.
   function parseSheetRows(rows) {
     const out = [];
     (rows || []).forEach((cells, ri) => {
       const c = (cells || []).map((x) => String(x == null ? '' : x).trim());
       if (ri === 0 && looksHeader(c)) return;
+      if (/^#/.test(c[0] || '')) return; // a note for the rep, not data
       const subjRaw = c[0] || '', lec = c[2] || '';
       if (!subjRaw && !lec) return;
       if (!lec) return;
@@ -805,7 +816,7 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
 
   const normCode = (s) => Curriculum.norm(s).replace(/[^a-z0-9]/g, '');
 
-  // Match a sheet's subject cell to one of the student's subjects: by code,
+  // Match a file's subject cell to one of the student's subjects: by code,
   // by exact normalized name, or through the curriculum aliases.
   function matchSubject(subjects, raw) {
     const n = Curriculum.norm(raw), nc = normCode(raw);
@@ -819,30 +830,77 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
     return hit || null;
   }
 
-  const keyOf = (subjectCode, week, title) => normCode(subjectCode) + '|' + (week || 0) + '|' + Curriculum.norm(title);
+  // A lecture's identity in the file is its subject + week (the file keeps one
+  // row per lecture and lectures do not share a week inside a subject). When
+  // the rep edits a title, the identity survives, so progress survives too.
+  // Repeated subject+week rows get a |#n suffix so nothing is silently lost.
+  const keyOf = (subjectCode, week) => normCode(subjectCode) + '|' + (week || 0);
 
-  // Which sheet entries become new tasks: rows whose subject is not among the
-  // student's subjects come back as unmatched; rows the student already has
-  // (from an earlier sync or added by hand) come back counted as dupes.
-  function planBatchTasks(subjects, entries) {
-    const adds = [], unmatched = [];
+  /* Full-sync plan. Every task that carries a batchId came from the file:
+     - its key is still in the file          -> kept (updated when the row changed)
+     - its key is gone but the same week has exactly one unclaimed row
+       (or its title matches one)            -> adopted: re-keyed and updated
+       (covers tasks synced by older app versions whose keys included the title)
+     - nothing in the file claims it         -> removed
+     Unclaimed file rows are added, unless the student already has a task he
+     added by hand with the same title (counted as a dupe and left alone). */
+  function planFullSync(subjects, entries) {
+    const adds = [], updates = [], removals = [], unmatched = [];
     let dupes = 0;
-    const seen = {};
+
+    // Assign a stable key to every row, grouped by matched subject.
+    const perSubject = new Map(); // subjectId -> [{key, entry}]
+    const keyCount = {};
     (entries || []).forEach((e) => {
       const sj = matchSubject(subjects, e.subject);
       if (!sj) { unmatched.push(e); return; }
-      const key = keyOf(sj.code || sj.id, e.week, e.lecture);
-      if (seen[key]) { dupes++; return; }
-      seen[key] = 1;
-      const nTitle = Curriculum.norm(e.lecture);
-      const exists = (sj.tasks || []).some((t) => (t.batchId && t.batchId === key) || Curriculum.norm(t.title) === nTitle);
-      if (exists) { dupes++; return; }
-      adds.push({ subjectId: sj.id, key, entry: e });
+      const base = keyOf(sj.code || sj.id, e.week);
+      const n = (keyCount[base] = (keyCount[base] || 0) + 1);
+      const key = n === 1 ? base : base + '|#' + n;
+      if (!perSubject.has(sj.id)) perSubject.set(sj.id, []);
+      perSubject.get(sj.id).push({ key, entry: e });
     });
-    return { adds, unmatched, dupes };
+
+    (subjects || []).forEach((sj) => {
+      const file = perSubject.get(sj.id) || [];
+      const remaining = new Map(file.map((f) => [f.key, f]));
+
+      (sj.tasks || []).forEach((t) => {
+        if (!t.batchId) return; // the student's own task: never touched
+        let claim = null;
+        if (remaining.has(t.batchId)) {
+          claim = remaining.get(t.batchId);
+        } else {
+          // adopt a task synced by an older app version: same week with one
+          // unclaimed row, else same normalized title
+          const sameWeek = file.filter((f) => remaining.has(f.key) && f.entry.week === (t.week || 0));
+          if (sameWeek.length === 1) claim = sameWeek[0];
+          else {
+            const nt = Curriculum.norm(t.title);
+            claim = file.find((f) => remaining.has(f.key) && Curriculum.norm(f.entry.lecture) === nt) || null;
+          }
+        }
+        if (!claim) { removals.push({ subjectId: sj.id, task: t }); return; }
+        remaining.delete(claim.key);
+        const changed = claim.key !== t.batchId
+          || claim.entry.lecture !== t.title
+          || (claim.entry.difficulty && claim.entry.difficulty !== t.difficulty)
+          || (claim.entry.week || 0) !== (t.week || 0);
+        if (changed) updates.push({ subjectId: sj.id, task: t, entry: claim.entry, key: claim.key });
+      });
+
+      remaining.forEach((f) => {
+        const nt = Curriculum.norm(f.entry.lecture);
+        const handAdded = (sj.tasks || []).some((t) => !t.batchId && Curriculum.norm(t.title) === nt);
+        if (handAdded) { dupes++; return; }
+        adds.push({ subjectId: sj.id, key: f.key, entry: f.entry });
+      });
+    });
+
+    return { adds, updates, removals, unmatched, dupes };
   }
 
-  return { parseCSV, normalizeSheetUrl, parseSheetRows, planBatchTasks, matchSubject, keyOf, looksHeader, normDigits, MAX_ROWS };
+  return { parseCSV, parseSheetRows, planFullSync, matchSubject, keyOf, looksHeader, normDigits, parseDiff, normalizeSheetUrl, MAX_ROWS };
 });
 
 (function (root, factory) {
@@ -1624,18 +1682,19 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       pickYear: 'اختار فرقتك',
       startBtn: 'يلا نبدأ',
       needProfile: 'اكتب اسمك واختار فرقتك',
-      batchTitle: 'محاضرات الدفعة (شيت الممثل)',
-      batchSub: 'الممثل بيملى Google Sheet بالمحاضرات اللي نزلت، والتطبيق بيسحبها لوحده ويضيفها على موادك. الصق اللينك مرة واحدة بس.',
-      batchCols: 'الشيت 3 أعمدة بالترتيب: المادة، الأسبوع، المحاضرة (والصعوبة عمود اختياري رابع).',
-      batchUrlPh: 'الصق لينك الشيت هنا',
-      batchSaveBtn: 'حفظ وتحديث',
+      batchTitle: 'محاضرات الدفعة (شيت الدفعة)',
+      batchSub: 'ممثل كل فرقة بيظبط شيت جوجل فيه محاضرات دفعته، والتطبيق بيقراه لوحده: الجديد بيتضاف، المتغير بيتحدّث، واللي اتشال من الشيت بيتمسح. مهامك الشخصية مش بتتمسح، وتقدمك في المحاضرات اللي لسه موجودة بيفضل زي ما هو.',
+      batchCols: 'التعديل بيوصل للكل خلال دقائق من ما الممثل يحفظ، والتطبيق بيعيد القراءة مع كل فتح.',
       batchSyncBtn: 'حدّث دلوقتي',
-      batchNever: 'لسه مفيش تحديث من الشيت',
-      batchLast: (t) => 'آخر تحديث: ' + t,
-      batchStat: (added, total, un) => 'محاضرات الشيت: ' + total + ' · اتضاف جديد: ' + added + (un ? ' · سطور اتخطّت: ' + un : ''),
-      batchToast: (n) => n > 0 ? 'اتضافت ' + n + ' محاضرة جديدة من الشيت ✅' : 'الشيت اتقري، مفيش محاضرات جديدة',
-      batchErrUrl: 'اللينك ده مش شيت جوجل - الصق لينك الشيت نفسه',
-      batchErrFetch: 'مقدرناش نوصل للشيت. اتأكد من النت، وإن الممثل عامل "نشر على الويب" كـ CSV',
+      batchNever: 'لسه مفيش قراءة لشيت المحاضرات',
+      batchNoSheet: 'شيت سنتك لسه متظبطش عند صاحب التطبيق',
+      batchLast: (t) => 'آخر قراءة: ' + t,
+      batchStat: (added, updated, removed, total, un) => 'محاضرات الشيت: ' + total + ' · اتضاف: ' + added + ' · اتحدّث: ' + updated + ' · اتمسح: ' + removed + (un ? ' · سطور اتخطّت: ' + un : ''),
+      batchToast: (a, u, r) => (a + u + r) > 0 ? 'الشيت اتحدّث: ' + a + ' جديدة · ' + u + ' اتعدلت · ' + r + ' اتمسحت ✅' : 'الشيت اتقري، مفيش تغيير',
+      batchErrFetch: 'مقدرناش نوصل لشيت المحاضرات. اتأكد من النت وجرب "حدّث دلوقتي"',
+      batchErrShare: 'الشيت مش متاح للقراءة - لازم يتشارك "أي حد معاه اللينك يشوف"',
+      batchErrUrl: 'اللينك المتسجل لسنتك مش لينك شيت جوجل',
+      batchNoYear: 'شيت المحاضرات بيشتغل من أولى لخامسة بس',
       batchFromTag: 'شيت الدفعة',
       weekShort: (w) => 'أسبوع ' + w,
     },
@@ -1832,18 +1891,19 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
       pickYear: 'Pick your year',
       startBtn: "Let's start",
       needProfile: 'Enter your name and pick your year',
-      batchTitle: "Batch lectures (the rep's sheet)",
-      batchSub: 'The class rep fills one Google Sheet with the released lectures and the app pulls them into your subjects by itself. Paste the link once.',
-      batchCols: 'The sheet has 3 columns in order: subject, week, lecture (difficulty is an optional 4th).',
-      batchUrlPh: 'Paste the sheet link here',
-      batchSaveBtn: 'Save & sync',
+      batchTitle: "Batch lectures (the year's sheet)",
+      batchSub: "Each year's rep keeps a Google Sheet with that year's lectures and the app reads it by itself: new lectures are added, edits are updated, and rows removed from the sheet are removed here. Your own tasks are never deleted, and progress on lectures that still exist is kept.",
+      batchCols: 'Edits reach everyone within minutes of the rep saving, and the app re-reads the sheet on every open.',
       batchSyncBtn: 'Sync now',
-      batchNever: 'Not synced from the sheet yet',
-      batchLast: (t) => 'Last sync: ' + t,
-      batchStat: (added, total, un) => 'Sheet lectures: ' + total + ' · newly added: ' + added + (un ? ' · unrecognized rows: ' + un : ''),
-      batchToast: (n) => n > 0 ? n + ' new lectures added from the sheet ✅' : 'Sheet read, no new lectures',
-      batchErrUrl: 'That link is not a Google Sheet - paste the sheet link itself',
-      batchErrFetch: 'Could not reach the sheet. Check the connection, and that the rep used "Publish to web" as CSV',
+      batchNever: 'Lectures sheet not read yet',
+      batchNoSheet: "The owner has not set up your year's sheet yet",
+      batchLast: (t) => 'Last read: ' + t,
+      batchStat: (added, updated, removed, total, un) => 'Sheet lectures: ' + total + ' · added: ' + added + ' · updated: ' + updated + ' · removed: ' + removed + (un ? ' · unrecognized rows: ' + un : ''),
+      batchToast: (a, u, r) => (a + u + r) > 0 ? 'Sheet synced: ' + a + ' added · ' + u + ' updated · ' + r + ' removed ✅' : 'Sheet read, no changes',
+      batchErrFetch: 'Could not reach the lectures sheet. Check the connection and try "Sync now"',
+      batchErrShare: 'The sheet is not readable - it must be shared "anyone with the link can view"',
+      batchErrUrl: "The link registered for your year is not a Google Sheet",
+      batchNoYear: 'The lectures sheet works for years 1-5 only',
       batchFromTag: 'batch sheet',
       weekShort: (w) => 'Week ' + w,
     },
@@ -1871,7 +1931,7 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
     subjects: [], savedAt: 0,
     focusLog: [],    // [{id, taskId, subjectId, date:'YYYY-MM-DD', minutes, at}]
     theme: 'dark',   // 'dark' (default) or 'light'
-    batchSheet: { url: '', lastSync: 0, total: 0, added: 0, unmatched: 0, error: '' }, // the rep's Google Sheet link + sync status
+    batchSync: { lastSync: 0, total: 0, added: 0, updated: 0, removed: 0, unmatched: 0, error: '' }, // lectures-N.csv read status
   });
 
   function migrate(old) {
@@ -1924,7 +1984,16 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
     });
     if (state.overrides) delete state.overrides; // the manual per-date cap was removed
     if (state.theme !== 'light') state.theme = 'dark';
-    if (!state.batchSheet || typeof state.batchSheet !== 'object') state.batchSheet = { url: '', lastSync: 0, total: 0, added: 0, unmatched: 0, error: '' };
+    // v10 -> v11: the per-student Google Sheet link was replaced by the
+    // lectures-N.csv file shipped with the app; keep the old counters.
+    if (state.batchSheet && typeof state.batchSheet === 'object') {
+      const old = state.batchSheet;
+      if (!state.batchSync || typeof state.batchSync !== 'object') {
+        state.batchSync = { lastSync: old.lastSync || 0, total: old.total || 0, added: old.added || 0, updated: 0, removed: 0, unmatched: old.unmatched || 0, error: '' };
+      }
+      delete state.batchSheet;
+    }
+    if (!state.batchSync || typeof state.batchSync !== 'object') state.batchSync = { lastSync: 0, total: 0, added: 0, updated: 0, removed: 0, unmatched: 0, error: '' };
   }
   normalizeState();
   const saveLocal = () => localStorage.setItem(KEY, JSON.stringify(state));
@@ -2139,22 +2208,54 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
     session = null; authSkipped = false; setSync(''); render();
   }
 
-  /* ---------------- batch lectures from the rep's Google Sheet ---------------- */
-  // The rep keeps one Google Sheet (subject | week | lecture); the app pulls it
-  // as published CSV and adds new lectures as tasks. Adds only: a row that is
-  // edited or removed from the sheet never touches the student's own tasks.
+  /* ---------------- batch lectures from the year's lectures file ---------------- */
+  // Each study year (1..5) has one Google Sheet edited by that year's rep in
+  // the normal Sheets grid. A tiny sheets.json shipped next to the app (repo
+  // root) maps year -> sheet link or id, so students never paste anything.
+  // The app reads the sheet that matches the student's year on every open, on
+  // return after 30+ minutes and via the manual button, and runs a FULL sync:
+  // new rows are added, changed rows update the task in place (progress kept),
+  // rows removed from the sheet delete only the tasks that came from the
+  // sheet - the student's own tasks are never touched.
   let batchPromise = null;
 
+  function lecturesYear() {
+    const y = state.profile && state.profile.year;
+    return y >= 1 && y <= 5 ? y : 0;
+  }
+  const canSyncLectures = () => !!(state.profile && state.profile.onboarded && lecturesYear() && typeof BatchSync !== 'undefined');
+
   function batchStatusText() {
-    const bs = state.batchSheet || {};
+    const bs = state.batchSync || {};
     if (bs.error) return bs.error;
+    if (!lecturesYear()) return L().batchNoYear;
+    if (bs.noSheet) return L().batchNoSheet;
     if (!bs.lastSync) return L().batchNever;
     const d = new Date(bs.lastSync);
-    return L().batchLast(fmtClock(d.getHours() * 60 + d.getMinutes())) + ' · ' + L().batchStat(bs.added || 0, bs.total || 0, bs.unmatched || 0);
+    return L().batchLast(fmtClock(d.getHours() * 60 + d.getMinutes())) + ' · ' + L().batchStat(bs.added || 0, bs.updated || 0, bs.removed || 0, bs.total || 0, bs.unmatched || 0);
   }
 
-  function applyBatch(entries) {
-    const plan = BatchSync.planBatchTasks(state.subjects, entries);
+  function applyLectures(entries) {
+    const plan = BatchSync.planFullSync(state.subjects, entries);
+    plan.updates.forEach(({ task, entry, key }) => {
+      task.batchId = key;
+      task.src = 'batch';
+      task.title = entry.lecture;
+      if (entry.week) task.week = entry.week; else delete task.week;
+      if (entry.difficulty && entry.difficulty !== task.difficulty) {
+        // Recount hours from the new difficulty only while the task is
+        // untouched; once the student put time into it, his hours stay.
+        const od = task.difficulty;
+        const fresh = !task.done && task.kind !== 'clinic'
+          && task.studyH === Scheduler.STUDY_H[od - 1] && task.solveH === Scheduler.SOLVE_H[od - 1];
+        task.difficulty = entry.difficulty;
+        if (fresh) { task.studyH = Scheduler.STUDY_H[entry.difficulty - 1]; task.solveH = Scheduler.SOLVE_H[entry.difficulty - 1]; }
+      }
+    });
+    plan.removals.forEach(({ subjectId, task }) => {
+      const sj = subj(subjectId);
+      if (sj) sj.tasks = sj.tasks.filter((x) => x.id !== task.id);
+    });
     plan.adds.forEach(({ subjectId, key, entry }) => {
       const sj = subj(subjectId);
       if (!sj) return;
@@ -2166,33 +2267,61 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
     return plan;
   }
 
-  function syncBatchSheet(manual) {
+  async function fetchText(url, ms) {
+    const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+    const killer = ctrl ? setTimeout(() => { try { ctrl.abort(); } catch (e) {} }, ms || 12000) : null;
+    let res;
+    // no-cache: always revalidate so the rep's edits show up within minutes
+    try { res = await fetch(url, ctrl ? { signal: ctrl.signal, cache: 'no-cache' } : { cache: 'no-cache' }); }
+    finally { if (killer) clearTimeout(killer); }
+    if (!res || !res.ok) { const err = new Error('http'); err.status = res && res.status; throw err; }
+    return res.text();
+  }
+
+  function syncLecturesFile(manual) {
     if (batchPromise) return batchPromise;
-    const bs = state.batchSheet;
-    const url = bs && BatchSync.normalizeSheetUrl(bs.url);
-    if (!url) {
-      if (bs && bs.url && bs.error !== L().batchErrUrl) { bs.error = L().batchErrUrl; save(); render(); }
-      return Promise.resolve();
-    }
-    if (typeof fetch !== 'function') return Promise.resolve();
+    const bs = state.batchSync;
+    const year = lecturesYear();
+    if (!year || typeof fetch !== 'function') return Promise.resolve();
     batchPromise = (async () => {
       try {
-        const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
-        const killer = ctrl ? setTimeout(() => { try { ctrl.abort(); } catch (e) {} }, 12000) : null;
-        let res;
-        try { res = await fetch(url, ctrl ? { signal: ctrl.signal } : {}); } finally { if (killer) clearTimeout(killer); }
-        if (!res || !res.ok) throw new Error('http');
-        const text = await res.text();
+        // step 1: which sheet belongs to this year (owner keeps sheets.json)
+        let manifest = null;
+        try { manifest = JSON.parse(await fetchText('sheets.json', 8000)); }
+        catch (e) {
+          if (e && e.name === 'SyntaxError') { /* broken sheets.json: treat as not set up */ }
+          else if (!e || e.status !== 404) throw e; // offline/server trouble is an error, not "no sheet"
+        }
+        const ref = manifest && typeof manifest === 'object' && (manifest[year] || manifest[String(year)]);
+        if (!ref) {
+          bs.noSheet = true; bs.error = ''; save();
+          if (manual) toast(L().batchNoSheet);
+          return;
+        }
+        const url = BatchSync.normalizeSheetUrl(ref);
+        if (!url) { bs.noSheet = false; bs.error = L().batchErrUrl; save(); return; }
+        // step 2: the sheet itself as CSV
+        const text = await fetchText(url, 12000);
+        if (/^\s*<(!doctype|html)/i.test(text.slice(0, 300))) {
+          // Google answered with a sign-in page: the sheet is not shared
+          bs.noSheet = false; bs.error = L().batchErrShare; save();
+          if (manual) toast(L().batchErrShare);
+          return;
+        }
         const entries = BatchSync.parseSheetRows(BatchSync.parseCSV(text));
-        const plan = applyBatch(entries);
+        const plan = applyLectures(entries);
         bs.error = '';
+        bs.noSheet = false;
         bs.lastSync = Date.now();
         bs.total = entries.length;
         bs.added = plan.adds.length;
+        bs.updated = plan.updates.length;
+        bs.removed = plan.removals.length;
         bs.unmatched = plan.unmatched.length;
         save();
-        if (manual) toast(L().batchToast(plan.adds.length));
+        if (manual) toast(L().batchToast(plan.adds.length, plan.updates.length, plan.removals.length));
       } catch (e) {
+        bs.noSheet = false;
         bs.error = L().batchErrFetch;
         save();
       }
@@ -2628,13 +2757,12 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
     h += `</div></div>
       <div class="row" style="margin-top:10px"><label class="muted">${esc(L().uniLbl)}</label><span class="grow"><b>${esc(UNI[state.lang === 'en' ? 'en' : 'ar'])}</b></span></div>
       <div style="margin-top:10px"><button class="btn" data-act="saveProfile">${esc(L().saveBtn)}</button></div></div>`;
-    const bs = state.batchSheet || {};
+    const bs = state.batchSync || {};
     h += `<div class="card"><b>\uD83D\uDCC4 ${esc(L().batchTitle)}</b>
       <div class="muted" style="margin-top:4px">${esc(L().batchSub)}</div>
       <div class="muted" style="margin-top:4px">${esc(L().batchCols)}</div>
-      <div class="row" style="margin-top:10px"><input id="batchUrl" class="grow" dir="ltr" placeholder="${esc(L().batchUrlPh)}" value="${esc(bs.url || '')}"><button class="btn" data-act="batchSave">${esc(L().batchSaveBtn)}</button></div>
-      <div class="row" style="margin-top:8px"><span class="grow batchstatus${bs.error ? ' err' : ''}">${esc(batchStatusText())}</span>
-      ${bs.url ? `<button class="btn ghost sm" data-act="batchSync">${esc(L().batchSyncBtn)}</button>` : ''}</div></div>`;
+      <div class="row" style="margin-top:10px"><span class="grow batchstatus${bs.error ? ' err' : ''}">${esc(batchStatusText())}</span>
+      ${lecturesYear() ? `<button class="btn ghost sm" data-act="batchSync">${esc(L().batchSyncBtn)}</button>` : ''}</div></div>`;
     h += `<div class="day">${esc(L().daysSecTitle)}</div>` + daysEditorHTML();
     h += `<div class="card"><b>${esc(L().accountSec)}</b>`;
     if (!cloudEnabled()) h += `<p class="muted" style="margin:8px 0 0">${esc(L().localMode)}</p>`;
@@ -2944,7 +3072,8 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
           state.subjects.push({ id: uid(), name: curName(c), code: c.code, icon: c.icon || '', exam: null, tasks: [] });
         });
       }
-      save(); return render();
+      save(); render();
+      return syncLecturesFile(false); // pull the year's lectures file right away
     }
     if (a === 'saveProfile') {
       state.profile.name = ($('pName').value || '').trim();
@@ -2956,14 +3085,7 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
     if (a === 'authSkip') { authSkipped = true; return render(); }
     if (a === 'showAuth') { authSkipped = false; return render(); }
     if (a === 'logout') return doLogout();
-    if (a === 'batchSave') {
-      const bs = state.batchSheet;
-      bs.url = (($('batchUrl') || {}).value || '').trim();
-      if (!bs.url) { bs.error = ''; bs.lastSync = 0; bs.total = 0; bs.added = 0; bs.unmatched = 0; save(); return render(); }
-      save(); render();
-      return syncBatchSheet(true);
-    }
-    if (a === 'batchSync') return syncBatchSheet(true);
+    if (a === 'batchSync') return syncLecturesFile(true);
 
     if (a === 'toggle') { openSubject = openSubject === s ? null : s; return render(); }
     if (a === 'toggleExam') { openExam = openExam === s ? null : s; return render(); }
@@ -2995,13 +3117,13 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
 
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden && session && Date.now() - lastPull > 30000) loadCloud().then(render);
-    if (!document.hidden && state.batchSheet && state.batchSheet.url && Date.now() - (state.batchSheet.lastSync || 0) > 30 * 60000) syncBatchSheet(false);
+    if (!document.hidden && canSyncLectures() && Date.now() - (state.batchSync.lastSync || 0) > 30 * 60000) syncLecturesFile(false);
   });
 
   window.__planner = { get state() { return state; }, loadCur, render, tick, get focusRun() { return focusRun; }, get session() { return session; }, batchIdle: () => batchPromise || Promise.resolve() };
   render();
   initCloud();
-  if (state.batchSheet && state.batchSheet.url && typeof BatchSync !== 'undefined') syncBatchSheet(false);
+  if (canSyncLectures()) syncLecturesFile(false);
   setInterval(tick, 500);
 })();
 </script>
