@@ -490,6 +490,43 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
 .sess { flex-wrap: wrap; }
 .sess .grow { flex: 1 1 46%; }
 .sess .hrs { font-size: 12px; }
+
+/* v14 */
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.card { animation: rise 0.25s ease both; }
+.subjline { border-inline-start: 3px solid transparent; padding-inline-start: 8px; border-radius: 6px; }
+.sess, .lec { transition: background 0.15s ease; }
+.subjgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin-bottom: 12px; }
+.subjcard { background: var(--card); border: 1.5px solid var(--line); border-radius: 18px; padding: 14px 12px; text-align: center; cursor: pointer; transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease; }
+.subjcard:active { transform: scale(0.97); }
+.subjcard.on { border-color: var(--primary); box-shadow: 0 6px 16px -8px rgba(13, 148, 136, 0.55); }
+.subjcard .sicon.big { display: inline-flex; margin-bottom: 8px; }
+.subjcard .subjname { display: block; font-size: 15px; }
+.subjcard .sml { font-size: 12px; }
+.subjcard .bar { margin-inline: 6px; }
+.sml { font-size: 12px; }
+.dashrow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.dashcard { display: flex; flex-direction: column; gap: 8px; justify-content: center; }
+.tile { display: flex; align-items: baseline; gap: 8px; }
+.tile .tnum { font-size: 20px; font-weight: 800; }
+.ring { width: 84px; height: 84px; margin: 4px auto 0; display: block; }
+.ringbg { fill: none; stroke: var(--line); stroke-width: 7; }
+.ringfg { fill: none; stroke: var(--primary); stroke-width: 7; stroke-linecap: round; transform: rotate(-90deg); transform-origin: center; transition: stroke-dashoffset 0.6s ease; }
+.ringtxt { font-size: 15px; font-weight: 800; fill: var(--text); }
+.area { width: 100%; height: 84px; margin-top: 8px; }
+.areafill { fill: rgba(13, 148, 136, 0.18); }
+.arealine { fill: none; stroke: var(--primary); stroke-width: 2; }
+.areadot { fill: var(--primary); }
+.heat { display: flex; gap: 3px; margin-top: 8px; overflow-x: auto; }
+.hcol { display: flex; flex-direction: column; gap: 3px; }
+.hcell { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+.hcell.hx { visibility: hidden; }
+.hcell.h0 { background: var(--line-soft, var(--line)); }
+.hcell.h1 { background: rgba(13, 148, 136, 0.25); }
+.hcell.h2 { background: rgba(13, 148, 136, 0.55); }
+.hcell.h3 { background: var(--primary); }
+.day.today { color: var(--primary); font-weight: 800; }
+@media (max-width: 420px) { .dashrow { grid-template-columns: 1fr; } }
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
@@ -1426,7 +1463,49 @@ const MOTIV_AR = [
     return { adds, updates, removals, unmatched, dupes };
   }
 
-  return { parseCSV, parseSheetRows, planFullSync, matchSubject, keyOf, looksHeader, normDigits, parseDiff, normalizeSheetUrl, MAX_ROWS };
+  // v14: optional "exams" tab in the same sheet: subject, date, nature, time, covered.
+  // Rows without a parseable date (including the header row) are skipped.
+  function parseDateCell(s) {
+    const v = normDigits(String(s == null ? '' : s).trim());
+    let m = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (m) return m[1] + '-' + m[2].padStart(2, '0') + '-' + m[3].padStart(2, '0');
+    m = v.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})$/);
+    if (m) return m[3] + '-' + m[2].padStart(2, '0') + '-' + m[1].padStart(2, '0');
+    return null;
+  }
+
+  function parseExamsRows(rows) {
+    const out = [];
+    (rows || []).forEach((r) => {
+      const subject = String(r[0] || '').trim();
+      if (!subject) return;
+      const date = parseDateCell(r[1]);
+      if (!date) return;
+      const nat = String(r[2] || '').trim();
+      out.push({
+        subject, date,
+        nature: /عملي|pract/i.test(nat) ? 'practical' : 'theory',
+        time: normDigits(String(r[3] || '').trim()),
+        covered: parseInt(normDigits(String(r[4] || '')), 10) || 0,
+      });
+    });
+    return out;
+  }
+
+  // v14: optional "quizzes" tab: subject, week (quizzes are weekly per section, no single date)
+  function parseQuizRows(rows) {
+    const out = [];
+    (rows || []).forEach((r) => {
+      const subject = String(r[0] || '').trim();
+      if (!subject) return;
+      const week = parseInt(normDigits(String(r[1] || '')), 10);
+      if (!week || week < 1) return;
+      out.push({ subject, week });
+    });
+    return out;
+  }
+
+  return { parseCSV, parseSheetRows, planFullSync, matchSubject, keyOf, looksHeader, normDigits, parseDiff, normalizeSheetUrl, parseDateCell, parseExamsRows, parseQuizRows, MAX_ROWS };
 });
 
 (function (root, factory) {
@@ -2109,6 +2188,28 @@ const MOTIV_AR = [
       generalReview: 'مراجعة عامة',
       examReviewTitle: 'مراجعة قبل الامتحان',
       doneBtn: 'خلصت',
+      doneTodayTitle: 'خلصتها النهارده 💪',
+      undoBtn: 'رجّعها',
+      quizzesTitle: 'كويزات السكاشن',
+      quizzesSub: 'كل سكشن ليه يوم، فانت اللي تحدد أسابيع كويزاتك',
+      noQuizzesYet: 'لسه مضفتش كويزات. ضيف أول واحد تحت.',
+      quizAddBtn: 'ضيف',
+      quizWeekPh: 'الأسبوع',
+      quizAdded: 'اتضاف الكويز',
+      quizExists: 'الأسبوع ده متسجل قبل كده',
+      dashTitle: 'لوحة تقدمك',
+      dashWeek: 'مذاكرة آخر ٧ أيام',
+      dashPlan: 'المخطط',
+      dashReady: 'جاهزيتك',
+      dashTasksDone: 'من التاسكات',
+      dashNoExam: 'لسه مفيش امتحان محدد',
+      dashDoneLec: 'محاضرة خلصت',
+      dashFocusMin: 'دقيقة تركيز',
+      dashStreak: 'يوم متواصل',
+      dashLast7: 'آخر ٧ أيام (بالدقائق)',
+      dashHeat: 'انتظام المذاكرة - آخر ١٢ أسبوع',
+      dashLess: 'أقل',
+      dashMore: 'أكتر',
       examWord: { exam: 'امتحان', quiz: 'كويز' },
       natureWord: { theory: 'نظري', practical: 'عملي' },
       examLine: (k, d, t, n) => I18N.ar.examWord[k] + ' ' + n + ' يوم ' + d + (t ? ' الساعة ' + t : ''),
@@ -2327,6 +2428,28 @@ const MOTIV_AR = [
       generalReview: 'General review',
       examReviewTitle: 'Pre-exam review',
       doneBtn: 'Done',
+      doneTodayTitle: 'Done today 💪',
+      undoBtn: 'Undo',
+      quizzesTitle: 'Section quizzes',
+      quizzesSub: 'Each section has its own day, so you set your own quiz weeks',
+      noQuizzesYet: 'No quizzes yet. Add your first one below.',
+      quizAddBtn: 'Add',
+      quizWeekPh: 'Week',
+      quizAdded: 'Quiz added',
+      quizExists: 'That week is already there',
+      dashTitle: 'Your progress',
+      dashWeek: 'Last 7 days of studying',
+      dashPlan: 'planned',
+      dashReady: 'Your readiness',
+      dashTasksDone: 'of tasks',
+      dashNoExam: 'No exam set yet',
+      dashDoneLec: 'lectures done',
+      dashFocusMin: 'focus minutes',
+      dashStreak: 'day streak',
+      dashLast7: 'Last 7 days (minutes)',
+      dashHeat: 'Study consistency - last 12 weeks',
+      dashLess: 'Less',
+      dashMore: 'More',
       examWord: { exam: 'Exam', quiz: 'Quiz' },
       natureWord: { theory: 'theory', practical: 'practical' },
       examLine: (k, d, t, n) => I18N.en.examWord[k] + ' (' + n + ') on ' + d + (t ? ' at ' + t : ''),
@@ -2533,6 +2656,10 @@ const MOTIV_AR = [
     }
     if (!state.batchSync || typeof state.batchSync !== 'object') state.batchSync = { lastSync: 0, total: 0, added: 0, updated: 0, removed: 0, unmatched: 0, error: '' };
     if (!state.pace || typeof state.pace !== 'object') state.pace = { study: 60, solve: 20 };
+    (state.subjects || []).forEach((s) => {
+      if (!Array.isArray(s.quizzes)) s.quizzes = [];
+      if (s.exam && typeof s.exam.src === 'undefined') s.exam.src = ''; // '' = set by the student, 'batch' = from the sheet
+    });
     // v13: a student on a locked year goes back to onboarding; his subjects,
     // tasks, busy days and progress stay untouched for when his year opens.
     if (state.profile && state.profile.year && OPEN_YEARS.indexOf(state.profile.year) === -1) {
@@ -2813,6 +2940,42 @@ const MOTIV_AR = [
     return plan;
   }
 
+  // v14: sheet-sourced exam dates. A hand-set exam (src '') always wins;
+  // a sheet row removed from the tab removes only a sheet-sourced exam.
+  function applyExamRows(rows) {
+    const today = todayStr();
+    const byId = {};
+    (rows || []).forEach((r) => {
+      const hit = BatchSync.matchSubject(state.subjects, r.subject);
+      if (hit) (byId[hit.id] = byId[hit.id] || []).push(r);
+    });
+    Object.keys(byId).forEach((id) => {
+      const sj = subj(id);
+      if (!sj || (sj.exam && sj.exam.src !== 'batch')) return;
+      const list = byId[id];
+      const upcoming = list.filter((r) => r.date >= today).sort((a, b) => a.date.localeCompare(b.date))[0];
+      const pick = upcoming || list.slice().sort((a, b) => b.date.localeCompare(a.date))[0];
+      sj.exam = { kind: 'exam', date: pick.date, time: pick.time || '', nature: pick.nature, covered: pick.covered || (sj.exam && sj.exam.covered) || 0, src: 'batch' };
+    });
+    state.subjects.forEach((sj) => {
+      if (sj.exam && sj.exam.src === 'batch' && !byId[sj.id]) sj.exam = null;
+    });
+  }
+
+  // v14: sheet-sourced weekly quizzes (per section, so week numbers, no dates)
+  function applyQuizRows(rows) {
+    const byId = {};
+    (rows || []).forEach((r) => {
+      const hit = BatchSync.matchSubject(state.subjects, r.subject);
+      if (hit) (byId[hit.id] = byId[hit.id] || []).push(r.week);
+    });
+    state.subjects.forEach((sj) => {
+      const keep = (sj.quizzes || []).filter((q) => q.src !== 'batch');
+      const weeks = [...new Set(byId[sj.id] || [])].sort((a, b) => a - b);
+      sj.quizzes = keep.concat(weeks.map((w) => ({ id: uid(), week: w, src: 'batch' })));
+    });
+  }
+
   async function fetchText(url, ms) {
     const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
     const killer = ctrl ? setTimeout(() => { try { ctrl.abort(); } catch (e) {} }, ms || 12000) : null;
@@ -2856,6 +3019,16 @@ const MOTIV_AR = [
         }
         const entries = BatchSync.parseSheetRows(BatchSync.parseCSV(text));
         const plan = applyLectures(entries);
+        // step 3 (v14, optional tabs in the same sheet): exam dates + weekly quizzes.
+        // A missing tab just 404s; that is normal and leaves exams/quizzes alone.
+        try {
+          const exText = await fetchText(url + '&sheet=exams', 8000);
+          if (!/^\s*<(!doctype|html)/i.test(exText.slice(0, 300))) applyExamRows(BatchSync.parseExamsRows(BatchSync.parseCSV(exText)));
+        } catch (e) { /* no exams tab yet */ }
+        try {
+          const qzText = await fetchText(url + '&sheet=quizzes', 8000);
+          if (!/^\s*<(!doctype|html)/i.test(qzText.slice(0, 300))) applyQuizRows(BatchSync.parseQuizRows(BatchSync.parseCSV(qzText)));
+        } catch (e) { /* no quizzes tab yet */ }
         bs.error = '';
         bs.noSheet = false;
         bs.lastSync = Date.now();
@@ -2949,7 +3122,7 @@ const MOTIV_AR = [
     const title = s.type === 'review' ? L().generalReview : s.type === 'examreview' ? L().examReviewTitle : s.title;
     const doneable = s.lectureId && (s.type === 'study' || s.type === 'solve' || s.type === 'clinic');
     const time = s.startMin != null ? `<span class="muted hrs" dir="ltr">${fmtClockRange(s.startMin, s.endMin)}</span>` : '';
-    return `<div class="sess"><span class="sicon" style="background:${colorOfS(sj)}22">${iconOf(sj)}</span><div class="grow"><b>${esc(sj.name)}</b> - ${esc(title)} ${sessionTag(s)}</div>${time}<span class="muted hrs">${fmtHTxt(s.hours)}</span>` +
+    return `<div class="sess subjline" style="border-inline-start-color:${colorOfS(sj)}"><span class="sicon" style="background:${colorOfS(sj)}22">${iconOf(sj)}</span><div class="grow"><b>${esc(sj.name)}</b> - ${esc(title)} ${sessionTag(s)}</div>${time}<span class="muted hrs">${fmtHTxt(s.hours)}</span>` +
       (doneable ? `<button class="btn ghost" data-act="done" data-s="${sj.id}" data-l="${s.lectureId}">${esc(L().doneBtn)}</button>` : '') + '</div>';
   }
 
@@ -3037,6 +3210,19 @@ const MOTIV_AR = [
     items.forEach((it) => { h += it.html; });
     h += '</div>';
 
+    // v14: tasks finished today stay visible with a check and can be un-done
+    const doneToday = [];
+    state.subjects.forEach((s) => s.tasks.forEach((t) => { if (t.done && t.doneAt === today) doneToday.push({ s, t }); }));
+    if (doneToday.length) {
+      h += `<div class="day">${esc(L().doneTodayTitle)}</div><div class="card">`;
+      doneToday.forEach(({ s, t }) => {
+        h += `<div class="lec done"><span class="sicon" style="background:${colorOfS(s)}22">${iconOf(s)}</span>
+          <span class="t grow">✔ ${esc(t.title)}<br><span class="muted">${esc(s.name)} · ${esc(L().diff[t.difficulty - 1] || '')}</span></span>
+          <button class="btn ghost sm" data-act="undone" data-s="${s.id}" data-l="${t.id}">${esc(L().undoBtn)}</button></div>`;
+      });
+      h += '</div>';
+    }
+
     // required tasks
     const open = [];
     state.subjects.forEach((s) => s.tasks.forEach((t) => { if (!t.done) open.push({ s, t, rem: Scheduler.taskRemainingMin(t) }); }));
@@ -3112,9 +3298,9 @@ const MOTIV_AR = [
   function viewExams() {
     const today = todayStr();
     const ups = state.subjects.filter((s) => examOf(s) && s.exam.date >= today).sort((a, b) => a.exam.date.localeCompare(b.exam.date));
-    if (!ups.length) return `<div class="card empty"><div class="big">📝</div><p>${esc(L().noExamsCenter)}</p></div>`;
     const nx = Scheduler.nextExam(state, today);
     let h = '';
+    if (!ups.length) h += `<div class="card empty"><div class="big">📝</div><p>${esc(L().noExamsCenter)}</p></div>`;
     if (nx) {
       const target = new Date(nx.date + 'T' + (Scheduler.hmToMin(nx.time) != null ? nx.time : '09:00') + ':00').getTime();
       const sj = subj(nx.subjectId);
@@ -3124,13 +3310,36 @@ const MOTIV_AR = [
         <b class="grow">${esc(nx.name)}</b><span class="muted">${esc(L().examLine(nx.kind, nx.date, fmtClock(nx.time), L().natureWord[nx.nature] || nx.nature))}</span></div>
         <div class="cdnum" data-cd="${target}" dir="auto">${esc(cdText(target))}</div></div>`;
     }
-    h += `<div class="day">${esc(L().examTableTitle)}</div>`;
-    ups.forEach((s) => {
+    if (ups.length) {
+      h += `<div class="day">${esc(L().examTableTitle)}</div>`;
+      ups.forEach((s) => {
       const ex = s.exam, dleft = Scheduler.diffDays(today, ex.date);
       h += `<div class="card pcard" style="border-inline-start-color:${colorOfS(s)}"><div class="row"><span class="sicon" style="background:${colorOfS(s)}22">${iconOf(s)}</span>
         <div class="grow"><b>${esc(s.name)}</b><div class="muted">${esc(L().examLine(ex.kind, ex.date, fmtClock(ex.time), L().natureWord[ex.nature] || ex.nature))}${ex.covered ? ' · ' + esc(L().coveredShort(ex.covered)) : ''}</div></div>
         <span class="tag">${esc(L().daysLeft(dleft))}</span></div></div>`;
+      });
+    }
+    // v15: quizzes are set by the student himself (each section has its own day);
+    // sheet-tab quizzes (src 'batch') can still show alongside if a rep adds them
+    const qz = [];
+    state.subjects.forEach((s) => (s.quizzes || []).forEach((q) => qz.push({ s, q })));
+    h += `<div class="day">${esc(L().quizzesTitle)}</div><div class="card">
+      <div class="muted" style="margin-bottom:6px">${esc(L().quizzesSub)}</div>`;
+    if (!qz.length) h += `<div class="muted" style="padding:6px 2px">${esc(L().noQuizzesYet)}</div>`;
+    qz.sort((a, b) => a.q.week - b.q.week).forEach(({ s, q }) => {
+      const icon = `<span class="sicon" style="background:${colorOfS(s)}22">${iconOf(s)}</span>`;
+      if (q.src === 'batch') {
+        h += `<div class="sess subjline" style="border-inline-start-color:${colorOfS(s)}">${icon}<div class="grow"><b>${esc(s.name)}</b></div><span class="tag review">${esc(L().weekShort(q.week))}</span><span class="tag">${esc(L().batchFromTag)}</span></div>`;
+      } else {
+        h += `<div class="sess subjline" style="border-inline-start-color:${colorOfS(s)}">${icon}<div class="grow"><b>${esc(s.name)}</b></div>
+          <select data-act="quizWeek" data-s="${s.id}" data-l="${q.id}">${Array.from({ length: 20 }, (_, i) => `<option value="${i + 1}" ${q.week === i + 1 ? 'selected' : ''}>${esc(L().weekShort(i + 1))}</option>`).join('')}</select>
+          <button class="btn ghost sm" data-act="quizDel" data-s="${s.id}" data-l="${q.id}" title="${esc(L().delBtn)}">✕</button></div>`;
+      }
     });
+    h += `<div class="row" style="margin-top:10px">
+      <select id="qzSubj" class="grow">${state.subjects.map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select>
+      <input id="qzWeek" type="number" min="1" max="20" placeholder="${esc(L().quizWeekPh)}" style="width:90px">
+      <button class="btn sm" data-act="quizAdd">${esc(L().quizAddBtn)}</button></div></div>`;
     h += `<div class="day">${esc(L().revTitle)}</div>`;
     Scheduler.revisionPlan(state, today).forEach((p) => {
       const sj = subj(p.subjectId);
@@ -3178,27 +3387,40 @@ const MOTIV_AR = [
       h += '</div>';
     }
 
+    // v14: subjects show as big square cards side by side; a tap opens the full panel below
+    h += `<div class="subjgrid">`;
     state.subjects.forEach((s) => {
-      const open = openSubject === s.id, exOpen = openExam === s.id, ex = examOf(s);
+      const ex = examOf(s);
       const doneN = s.tasks.filter((t) => t.done).length;
       const pctS = s.tasks.length ? Math.round(doneN / s.tasks.length * 100) : 0;
+      h += `<div class="subjcard${openSubject === s.id ? ' on' : ''}" data-act="toggle" data-s="${s.id}">
+        <span class="sicon big" style="background:${colorOfS(s)}22">${iconOf(s)}</span>
+        <b class="subjname">${esc(s.name)}</b>
+        <div class="muted sml">${ex ? esc(L().examLine(ex.kind, ex.date, fmtClock(ex.time), L().natureWord[ex.nature] || ex.nature)) : esc(L().noExamYet)}</div>
+        ${s.tasks.length ? `<div class="bar" style="margin:8px 0 4px"><i style="width:${pctS}%"></i></div><div class="muted sml">${esc(L().taskCount(doneN, s.tasks.length, pctS))}</div>` : ''}
+      </div>`;
+    });
+    h += '</div>';
+
+    const sd = state.subjects.find((x) => x.id === openSubject);
+    if (sd) {
+      const s = sd;
+      const exOpen = openExam === s.id, ex = examOf(s);
       h += `<div class="card pcard bigsub" style="border-inline-start-color:${colorOfS(s)}">
         <div class="row subj-head">
           <span class="sicon big" style="background:${colorOfS(s)}22">${iconOf(s)}</span>
           <div class="grow"><b class="subjname">${esc(s.name)}</b>
-            <div class="muted">${ex ? esc(L().examLine(ex.kind, ex.date, fmtClock(ex.time), L().natureWord[ex.nature] || ex.nature)) + (ex.covered ? ' \u00b7 ' + esc(L().coveredShort(ex.covered)) : '') : esc(L().noExamYet)}</div></div>
+            <div class="muted">${ex ? esc(L().examLine(ex.kind, ex.date, fmtClock(ex.time), L().natureWord[ex.nature] || ex.nature)) + (ex.covered ? ' \u00b7 ' + esc(L().coveredShort(ex.covered)) : '') : esc(L().noExamYet)}${ex && ex.src === 'batch' ? ' \u00b7 ' + esc(L().batchFromTag) : ''}</div></div>
           <button class="btn ghost sm" data-act="delSubject" data-s="${s.id}" title="${esc(L().delBtn)}">\u2715</button>
         </div>
-        ${s.tasks.length ? `<div class="bar" style="margin:10px 0 4px"><i style="width:${pctS}%"></i></div><div class="muted">${esc(L().taskCount(doneN, s.tasks.length, pctS))}</div>` : ''}
         <div class="row subj-actions">
           <button class="btn ghost grow${exOpen ? ' on' : ''}" data-act="toggleExam" data-s="${s.id}">\uD83D\uDCC5 ${exOpen ? esc(L().closeBtn) : ex ? esc(L().editExam) : esc(L().addExamBtn)}</button>
-          <button class="btn ghost grow${open ? ' on' : ''}" data-act="toggle" data-s="${s.id}">\uD83D\uDCD6 ${open ? esc(L().closeBtn) : esc(L().tasksBtn(s.tasks.length))}</button>
         </div>`;
       if (exOpen) {
         h += examForm(s, 'e-' + s.id + '-');
         if (ex) h += `<button class="btn ghost" data-act="clearExam" data-s="${s.id}" style="margin-top:6px">${esc(L().clearExam)}</button>`;
       }
-      if (open) {
+      {
         const k = taskKind[s.id] || 'lecture';
         h += `<div class="addtask"><b>${esc(L().addTaskTitle)}</b>
           <div class="pick" style="margin:8px 0">
@@ -3236,7 +3458,7 @@ const MOTIV_AR = [
         });
       }
       h += '</div>';
-    });
+    }
     return h;
   }
 
@@ -3341,7 +3563,88 @@ const MOTIV_AR = [
     if (!cloudEnabled()) h += `<p class="muted" style="margin:8px 0 0">${esc(L().localMode)}</p>`;
     else if (session) h += `<div class="row" style="margin-top:8px"><span class="grow">${esc(session.email || '')} <span class="sync ${syncState}">${syncState === 'synced' ? '☁️ ' + esc(L().synced) : syncState === 'syncing' ? esc(L().syncing) : syncState === 'error' ? esc(L().syncErr) : ''}</span></span><button class="btn ghost" data-act="logout">${esc(L().logoutBtn)}</button></div>`;
     else h += `<p class="muted" style="margin:8px 0 6px">${esc(L().authSub)}</p><button class="btn" data-act="showAuth">${esc(L().authTitle)}</button>`;
-    return h + '</div>';
+    h += '</div>';
+    h += dashHTML(); // v14: progress dashboard at the very bottom of the profile
+    return h;
+  }
+
+  // v14: progress dashboard - every number comes from data the app really has
+  // (tasks done + focus log); nothing here is estimated or faked.
+  function dashHTML() {
+    if (!state.subjects.length) return '';
+    const today = todayStr();
+    // minutes per day = focus sessions + hours of tasks finished that day
+    const perDay = {};
+    (state.focusLog || []).forEach((f) => { if (f && f.date) perDay[f.date] = (perDay[f.date] || 0) + (f.minutes || 0); });
+    state.subjects.forEach((s) => s.tasks.forEach((t) => {
+      if (t.done && t.doneAt) perDay[t.doneAt] = (perDay[t.doneAt] || 0) + Math.round(((t.studyH || 0) + (t.solveH || 0) + (t.workH || 0)) * 60);
+    }));
+    const last7 = [];
+    for (let i = 6; i >= 0; i--) { const d = Scheduler.addDays(today, -i); last7.push({ d, m: perDay[d] || 0 }); }
+    const weekMin = last7.reduce((a, x) => a + x.m, 0);
+    // planned minutes for the same 7 days, from the generated schedule
+    const now = new Date();
+    const r = Scheduler.generate(state, today, { nowMin: now.getHours() * 60 + now.getMinutes() });
+    const in7 = {};
+    last7.forEach((x) => { in7[x.d] = 1; });
+    const planMin = Math.round(r.sessions.filter((x) => in7[x.date]).reduce((a, x) => a + x.hours, 0) * 60);
+    const weekPct = planMin > 0 ? Math.min(100, Math.round(weekMin / planMin * 100)) : (weekMin > 0 ? 100 : 0);
+    // readiness: share of all tasks done, and days to the nearest exam
+    const totT = state.subjects.reduce((a, s) => a + s.tasks.length, 0);
+    const doneT = state.subjects.reduce((a, s) => a + s.tasks.filter((t) => t.done).length, 0);
+    const readyPct = totT ? Math.round(doneT / totT * 100) : 0;
+    const nx = Scheduler.nextExam(state, today);
+    // streak: consecutive studied days, not breaking on a still-young today
+    let streak = 0;
+    for (let d = today; ; d = Scheduler.addDays(d, -1)) {
+      if (perDay[d]) streak++;
+      else if (d === today) continue;
+      else break;
+    }
+    const lecDone = state.subjects.reduce((a, s) => a + s.tasks.filter((t) => t.done && t.kind === 'lecture').length, 0);
+    const focusMin = (state.focusLog || []).reduce((a, f) => a + (f.minutes || 0), 0);
+    // ring geometry
+    const RR = 26, CC = 2 * Math.PI * RR;
+    const ringOff = (CC * (1 - readyPct / 100)).toFixed(1);
+    // last-7-days area chart
+    const W = 300, H = 84, maxM = Math.max(30, ...last7.map((x) => x.m));
+    const pts = last7.map((x, i) => [Math.round(i * (W / 6)), Math.round(H - 8 - (x.m / maxM) * (H - 20))]);
+    const line = pts.map((p) => p.join(',')).join(' ');
+    const area = `0,${H} ` + line + ` ${W},${H}`;
+    // heatmap: last 12 weeks x 7 weekdays
+    const todayW = Scheduler.weekday(today);
+    let heat = '';
+    for (let col = 11; col >= 0; col--) {
+      heat += '<div class="hcol">';
+      for (let row = 0; row < 7; row++) {
+        const d = Scheduler.addDays(today, -(col * 7 + (todayW - row)));
+        const future = d > today;
+        const m = future ? -1 : (perDay[d] || 0);
+        const lv = m < 0 ? 'hx' : m === 0 ? 'h0' : m < 30 ? 'h1' : m < 90 ? 'h2' : 'h3';
+        heat += `<i class="hcell ${lv}" title="${d}"></i>`;
+      }
+      heat += '</div>';
+    }
+    let h = `<div class="day">${esc(L().dashTitle)}</div>`;
+    h += `<div class="card"><div class="muted">${esc(L().dashWeek)}</div>
+      <div class="row" style="margin-top:6px;align-items:baseline"><b style="font-size:22px">${weekPct}%</b>
+      <span class="muted grow" dir="auto">${esc(fmtDur(weekMin))}${planMin ? ' / ' + esc(fmtDur(planMin)) + ' ' + esc(L().dashPlan) : ''}</span></div>
+      <div class="bar" style="margin-top:8px"><i style="width:${weekPct}%"></i></div></div>`;
+    h += `<div class="dashrow">
+      <div class="card dashcard"><div class="muted">${esc(L().dashReady)}</div>
+        <svg class="ring" viewBox="0 0 64 64"><circle cx="32" cy="32" r="${RR}" class="ringbg"/><circle cx="32" cy="32" r="${RR}" class="ringfg" style="stroke-dasharray:${CC.toFixed(1)};stroke-dashoffset:${ringOff}"/><text x="32" y="37" text-anchor="middle" class="ringtxt">${readyPct}%</text></svg>
+        <div class="muted sml" style="text-align:center">${doneT}/${totT} ${esc(L().dashTasksDone)}${nx ? ' · ' + esc(L().daysLeft(Scheduler.diffDays(today, nx.date))) : ' · ' + esc(L().dashNoExam)}</div></div>
+      <div class="card dashcard"><div class="tile"><div class="tnum">${lecDone}</div><div class="muted sml">${esc(L().dashDoneLec)}</div></div>
+        <div class="tile"><div class="tnum">${focusMin}</div><div class="muted sml">${esc(L().dashFocusMin)}</div></div>
+        <div class="tile"><div class="tnum">${streak}</div><div class="muted sml">${esc(L().dashStreak)}</div></div></div>
+    </div>`;
+    h += `<div class="card"><div class="muted">${esc(L().dashLast7)}</div>
+      <svg class="area" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><polygon class="areafill" points="${area}"/><polyline class="arealine" points="${line}"/>${pts.map((p) => `<circle cx="${p[0]}" cy="${p[1]}" r="3" class="areadot"/>`).join('')}</svg>
+      <div class="row" style="justify-content:space-between">${last7.map((x) => `<span class="muted sml">${esc(L().daysShort[Scheduler.weekday(x.d)])}</span>`).join('')}</div></div>`;
+    h += `<div class="card"><div class="muted">${esc(L().dashHeat)}</div>
+      <div class="heat" dir="ltr">${heat}</div>
+      <div class="row" style="justify-content:flex-end;gap:4px;align-items:center;margin-top:6px"><span class="muted sml">${esc(L().dashLess)}</span><i class="hcell h0"></i><i class="hcell h1"></i><i class="hcell h2"></i><i class="hcell h3"></i><span class="muted sml">${esc(L().dashMore)}</span></div></div>`;
+    return h;
   }
 
   /* ---------------- focus mode (pomodoro) ---------------- */
@@ -3538,6 +3841,7 @@ const MOTIV_AR = [
     if (!a) return;
     if (a === 'check') { const x = taskOf(t.dataset.s, t.dataset.l); x.done = t.checked; if (t.checked) x.doneAt = todayStr(); else { x.confidence = 0; delete x.doneAt; } }
     else if (a === 'conf') taskOf(t.dataset.s, t.dataset.l).confidence = +t.value;
+    else if (a === 'quizWeek') { const q = ((subj(t.dataset.s) || {}).quizzes || []).find((x) => x.id === t.dataset.l); if (q) q.week = +t.value; }
     else if (a === 'tdiff') { /* difficulty select re-renders chip */ const el = $('est-' + t.dataset.s); if (el) el.textContent = estChipText(t.dataset.s); return; }
     else return;
     save(); render();
@@ -3682,10 +3986,27 @@ const MOTIV_AR = [
       if (!date) return alert(L().needExam);
       const time = tpRead(p + 'Time', true) || '';
       if (examInPast(date, time)) return alert(L().examPastErr);
-      subj(s).exam = { kind: $(p + 'Kind').value, date, time, nature: $(p + 'Nature').value, covered: +$(p + 'Cov').value || 0 };
+      subj(s).exam = { kind: $(p + 'Kind').value, date, time, nature: $(p + 'Nature').value, covered: +$(p + 'Cov').value || 0, src: '' };
       save(); return render();
     }
     if (a === 'clearExam') { subj(s).exam = null; save(); return render(); }
+    // v15: the student's own quizzes (add / delete here, edit week below)
+    if (a === 'quizAdd') {
+      const sid = ($('qzSubj') || {}).value;
+      const w = +(($('qzWeek') || {}).value || 0);
+      const sj = subj(sid);
+      if (!sj || !w || w < 1 || w > 20) return render();
+      sj.quizzes = sj.quizzes || [];
+      if (sj.quizzes.some((q) => q.week === w)) { toast(L().quizExists); return render(); }
+      sj.quizzes.push({ id: uid(), week: w, src: '' });
+      sj.quizzes.sort((a2, b2) => a2.week - b2.week);
+      save(); toast(L().quizAdded); return render();
+    }
+    if (a === 'quizDel') {
+      const sj = subj(s);
+      if (sj) sj.quizzes = (sj.quizzes || []).filter((q) => q.id !== l);
+      save(); return render();
+    }
     if (a === 'pickKind') { taskKind[s] = t.dataset.k; return render(); }
     if (a === 'addTask') {
       const sj = subj(s), title = $('tt-' + s).value.trim();
@@ -3699,6 +4020,7 @@ const MOTIV_AR = [
     }
     if (a === 'delTask') { const sj = subj(s); sj.tasks = sj.tasks.filter((x) => x.id !== l); save(); return render(); }
     if (a === 'done') { const x = taskOf(s, l); if (x) { x.done = true; x.doneAt = todayStr(); } save(); return render(); }
+    if (a === 'undone') { const x = taskOf(s, l); if (x) { x.done = false; delete x.doneAt; delete x.confidence; } save(); return render(); }
   });
 
   document.addEventListener('visibilitychange', () => {
