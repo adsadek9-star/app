@@ -2508,6 +2508,8 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     const f = {};
     const sleep = (state && state.sleep) || {};
     Object.keys(sleep).forEach((k) => { if (sleep[k] != null && sleep[k] !== '') f['sl:' + k] = sleep[k]; });
+    const cap = (state && state.studyCap) || {};
+    Object.keys(cap).forEach((k) => { if (cap[k] != null && cap[k] !== '') f['sc:' + k] = +cap[k] || 0; }); // v28: study-hours limit per weekday (0 = no limit)
     const busy = (state && state.busy) || {};
     Object.keys(busy).forEach((k) => { if ((busy[k] || []).length) f['bu:' + k] = busy[k]; });
     const once = (state && state.busyOnce) || {};
@@ -2636,7 +2638,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     Object.keys(lg).forEach((k) => { if (keys.indexOf(k) === -1) keys.push(k); });
     Object.keys(cg).forEach((k) => { if (keys.indexOf(k) === -1) keys.push(k); });
 
-    const sleep = {}, busy = {}, once = {}, planOut = {}, fm = {};
+    const sleep = {}, busy = {}, once = {}, planOut = {}, capOut = {}, fm = {};
     let profile = out.profile, woDays = ((out.workout || {}).days || []), pace = out.pace;
     let lb = out.leaderboard, rem = { on: !!(out.remind || {}).on, time: (out.remind || {}).time || '' };
 
@@ -2653,6 +2655,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       if (stampOf) fm[k] = stampOf;
       if (val === undefined) return;
       if (k.indexOf('sl:') === 0) sleep[k.slice(3)] = val;
+      else if (k.indexOf('sc:') === 0) capOut[k.slice(3)] = val;
       else if (k.indexOf('bu:') === 0) busy[k.slice(3)] = val;
       else if (k.indexOf('bo:') === 0) once[k.slice(3)] = val;
       else if (k.indexOf('pl:') === 0) planOut[k.slice(3)] = val;
@@ -2667,6 +2670,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     out.busy = busy;
     out.busyOnce = once;
     out.plans = planOut;
+    out.studyCap = capOut;
     out.profile = profile;
     out.pace = pace;
     out.leaderboard = lb;
@@ -3057,6 +3061,8 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       kindWord: { class: 'لكتشر/سكشن', gym: 'ورك أوت', sleep: 'نوم', other: 'حاجة تانية' },
       sleepTag: '6 س ثابتة',
       saveDay: 'حفظ اليوم',
+      capLbl: 'ساعات المذاكرة في اليوم ده', capNone: 'من غير حد', capH: (h) => h + ' ساعة', capHint: 'الاقتراح مش هيزوّد عن كده.',
+      collTitle: 'جدول الكلية', collSub: 'اختار الأيام ومن أول محاضرة لآخر واحدة، وهنضيفها كبلوك "كلية" في كل يوم. مفيش حاجة بتتمسح.', collBtn: 'ضيف للأيام المختارة', collNone: 'اختار يوم واحد على الأقل', collDone: (n) => 'اتضاف على ' + n + ' يوم', collName: 'كلية',
       draftTag: 'لسه مترحفظش',
       dayOffTitle: 'يوم أجازة',
       dayOffSub: 'حدد يوم يتقفل خالص - مفيش مذاكرة بتتحط فيه.',
@@ -3459,6 +3465,8 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       kindWord: { class: 'Lecture/section', gym: 'Workout', sleep: 'Sleep', other: 'Other' },
       sleepTag: 'fixed 6 h',
       saveDay: 'Save day',
+      capLbl: 'Study hours on this day', capNone: 'No limit', capH: (h) => h + ' h', capHint: 'The suggestion will not go over this.',
+      collTitle: 'College timetable', collSub: 'Pick the days and the first to last lecture time. A "College" block is added to each day. Nothing is deleted.', collBtn: 'Add to selected days', collNone: 'Pick at least one day', collDone: (n) => 'Added to ' + n + ' day(s)', collName: 'College',
       draftTag: 'not saved yet',
       dayOffTitle: 'Day off',
       dayOffSub: 'Pick a date to switch off completely - no study is planned on it.',
@@ -3581,6 +3589,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     busy: {},        // weekly busy blocks per weekday 0..6: [{id,label,kind,start,end}]
     busyOnce: {},    // one-date busy blocks: {date: [{id,label,kind,start,end}]}
     sleep: {},       // fixed 6h sleep start per weekday 0..6 ('HH:MM'); missing = default
+    studyCap: {},    // v28: most study minutes per weekday 0..6 (0 or missing = no limit)
     plans: {},       // v24: the student's own plan per date; missing date = the app's plan
     blocked: [],     // dates switched fully off (day off): no study is planned
     subjects: [], savedAt: 0,
@@ -3634,6 +3643,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     if (!Array.isArray(state.focusLog)) state.focusLog = [];
     if (!Array.isArray(state.blocked)) state.blocked = [];
     if (!state.sleep || typeof state.sleep !== 'object') state.sleep = {};
+    if (!state.studyCap || typeof state.studyCap !== 'object' || Array.isArray(state.studyCap)) state.studyCap = {};
     if (!state.plans || typeof state.plans !== 'object' || Array.isArray(state.plans)) state.plans = {};
     // v24: a subject created before v24 carries the Arabic name; switch it to the
     // English one once. A name the student typed himself is never touched.
@@ -4409,7 +4419,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     let el = $('toast');
     el.textContent = msg; el.className = 'show';
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { el.className = ''; }, 2200);
+    toastTimer = setTimeout(() => { el.className = ''; }, msg.length > 40 ? 4500 : 2200);
   }
 
   const sessionTag = (s) =>
@@ -4451,7 +4461,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       weekTitle: 'الأسبوع', weekOverview: 'نظرة على الأسبوع',
       planned: 'المخطط', tasksLeft: 'تاسكات فاضلة', examsWeek: 'امتحانات',
       focusNoPlan: 'مفيش بلان لليوم. ضيف مذاكرة لجدولك الأول.', addToDay: 'ضيف بنفسي', movedFrom: 'اتأجلت من', movedTo: 'اتأجلت لـ', todayWord: 'النهارده',
-      suggest: 'اقترح جدول تلقائي', wipe: 'امسح اليوم', suggested: 'اتضاف الاقتراح', suggestNone: 'مفيش اقتراح يتضاف', overdueTitle: 'كنت حاطط دول امبارح ومخلصتهمش:',
+      suggest: 'اقترح جدول تلقائي', wipe: 'امسح اليوم', suggested: 'اتضاف الاقتراح', suggestNone: 'مفيش اقتراح يتضاف', crowded: (n) => 'اليوم زحمة: ' + n + ' مذاكرة مش لاقيلها مكان أو ساعات المذاكرة خلصت',  overdueTitle: 'كنت حاطط دول امبارح ومخلصتهمش:',
       clearDay: 'ابدأ جدول فاضي', resetDay: 'رجّع لجدول التطبيق', resetDone: 'رجعت لجدول التطبيق',
       myDayTag: 'جدولك', autoTag: 'جدول التطبيق', changed: 'اتحفظ',
       noRoom: 'مفيش وقت كفاية في البلوك ده', pickOne: 'اختار التاسك الأول',
@@ -4465,7 +4475,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       weekTitle: 'Week', weekOverview: 'Week overview',
       planned: 'Planned', tasksLeft: 'Tasks left', examsWeek: 'Exams',
       focusNoPlan: 'Nothing on your plan today. Add some study to your day first.', addToDay: 'Add it myself', movedFrom: 'Moved from', movedTo: 'Moved to', todayWord: 'today',
-      suggest: 'Suggest a schedule', wipe: 'Clear the day', suggested: 'Suggestion added', suggestNone: 'Nothing to suggest', overdueTitle: 'You planned these yesterday and did not finish them:',
+      suggest: 'Suggest a schedule', wipe: 'Clear the day', suggested: 'Suggestion added', suggestNone: 'Nothing to suggest', crowded: (n) => 'This day is too crowded: ' + n + ' task(s) did not fit (no gap or study limit reached)',  overdueTitle: 'You planned these yesterday and did not finish them:',
       clearDay: 'Start with an empty day', resetDay: "Back to the app's plan", resetDone: "Back to the app's plan",
       myDayTag: 'Your plan', autoTag: "App's plan", changed: 'Saved',
       noRoom: 'Not enough time in this block', pickOne: 'Pick the task first',
@@ -4638,8 +4648,10 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     try { const n = new Date(); r = Scheduler.generate(state, todayStr(), { nowMin: n.getHours() * 60 + n.getMinutes() }); } catch (e) { r = { sessions: [] }; }
     const sess = r.sessions.filter((x) => x.date >= d && x.date <= Scheduler.addDays(d, 6)).sort((x, y) => (x.date < y.date ? -1 : x.date > y.date ? 1 : (x.startMin || 0) - (y.startMin || 0)));
     const target = Math.round(sess.filter((x) => x.date === d).reduce((a, x) => a + (x.hours || 0), 0) * 60);
-    let got = 0, added = 0;
+    let got = 0, added = 0, skipped = 0;
     const tried = {};
+    const capMin = +((state.studyCap || {})[Scheduler.weekday(d)]) || 0;
+    const plannedMin = () => have.reduce((a, b) => { const x = pMin(b.start), z = pMin(b.end); return a + (x != null && z != null && z > x ? z - x : 0); }, 0);
     for (const x of sess) {
       if (got >= target) break;
       if (!x.lectureId) continue;
@@ -4650,12 +4662,18 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       if (!t || t.done || plannedElsewhere(x.subjectId, x.lectureId, d)) continue;
       let dur = Math.min(120, Math.ceil(Scheduler.taskRemainingMin(t) / 15) * 15);
       if (dur < 15) continue;
+      if (capMin) {
+        const room = capMin - plannedMin();
+        if (room < 45 && room < dur) { skipped++; continue; }
+        if (dur > room) dur = Math.floor(room / 15) * 15;
+        if (dur < 15) { skipped++; continue; }
+      }
       const wins = openWindows(d).map(([a, z]) => [Math.ceil(a / 5) * 5, z]).filter(([a, z]) => z > a);
       let win = wins.find(([a, z]) => z - a >= dur);
       if (!win) {
         // no gap holds the whole time: take the biggest gap, only when it covers most of it
         win = wins.slice().sort((x, y) => (y[1] - y[0]) - (x[1] - x[0]))[0];
-        if (!win || win[1] - win[0] < 45 || (win[1] - win[0]) < dur * 0.6) continue;
+        if (!win || win[1] - win[0] < 45 || (win[1] - win[0]) < dur * 0.6) { skipped++; continue; }
         dur = Math.floor((win[1] - win[0]) / 15) * 15;
         if (dur < 45) continue;
       }
@@ -4664,7 +4682,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       taken[key] = 1; got += dur; added++;
     }
     sortPlan(d);
-    save(); toast(added ? PT().suggested : PT().suggestNone);
+    save(); toast(skipped ? PT().crowded(skipped) : (added ? PT().suggested : PT().suggestNone));
     render();
   }
 
@@ -4765,11 +4783,16 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
         'Start Studying بيعرض اللي في خطة يومك بس.',
         'كل مادة بتفتح شاشتها لوحدها، وأسماء المواد بالإنجليزي.',
         'إعدادات اليوم (النوم والمواعيد والورك أوت) بتتزامن صح بين الجهازين.',
+        'جديد: حدد ساعات المذاكرة لكل يوم، وضيف جدول الكلية لكذا يوم مرة واحدة. الاقتراح بيملى الأوقات الفاضية بس ويحذرك لو اليوم زحمة.',
       ],
       steps: 'الخطوات',
       why: 'بتفيدك ازاي',
       fix: 'لو حاجة مش مظبوطة',
       topics: [
+        { i: '🕘', t: 'يومك: النوم والكلية وساعات المذاكرة',
+          steps: ['من تاب الوقت افتح اليوم اللي عايزه. حدد وقت نومك (اختياري).', 'من "جدول الكلية" اختار الأيام ومن أول محاضرة لآخر واحدة ودوس "ضيف للأيام المختارة".', 'ضيف أي مواعيد ثابتة تانية (صلاة، مواصلات، شغل، كورس) كبلوك في اليوم.', 'اختار "ساعات المذاكرة في اليوم ده" لو عايز حد أقصى (مثلا ٣ ساعات).', 'في الجدول دوس "اقترح جدول تلقائي".'],
+          why: 'الاقتراح بيحط المذاكرة في الأوقات الفاضية بس، ومش هيزوّد عن ساعاتك، ولو اليوم زحمة بيقولك.',
+          fix: 'لو اقتراح مش ظاهر في يوم: اليوم يمكن مفيهوش وقت فاضي أو ساعات المذاكرة خلصت. قلل مواعيدك أو زوّد الساعات. كل ده اختياري ومفيش حاجة بتتمسح.' },
         { i: '🚀', t: 'ابدأ من هنا (٣ دقايق)',
           steps: ['من البروفايل اكتب اسمك واختار سنتك، ومواد سنتك بتتحمل لوحدها.', 'حدد نومك ومواعيدك الثابتة (سكاشن، محاضرات، مشاوير) وأيام الورك أوت.', 'افتح كل مادة من تاب "المواد" وضيف امتحانها ومحاضراتها.', 'افتح تاب "الجدول" وابني يومك، أو دوس "اقترح جدول تلقائي".', 'دوس "ابدأ المذاكرة" في تاب "يومي" وخلص المهمة، وبعدين دوس "خلصت".'],
           why: 'كل حاجة بعد كده بتتحسب على الأوقات الفاضية اللي عندك وعلى مواعيد امتحاناتك، فلازم تبدأ بالنوم والمواعيد والامتحانات.',
@@ -4828,6 +4851,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       newsBtn: 'Open the updates channel',
       latest: 'Latest changes',
       latestList: [
+        'New: set study hours per day and add your college timetable to several days at once. Suggest fills real free gaps only and warns when a day is too crowded.',
         'The schedule is now a timeline: put your own study in the free gaps.',
         '"Suggest a schedule" builds a full day for the time you have.',
         'A task you planned and did not finish moves to the next day with room, with a warning.',
@@ -4839,6 +4863,10 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       why: 'Why it helps',
       fix: 'If something looks wrong',
       topics: [
+        { i: '🕘', t: 'Your day: sleep, college and study hours',
+          steps: ['In the Time tab open the day you want and set your sleep time (optional).', 'In College timetable pick the days and the first to last lecture time, then tap Add to selected days.', 'Add any other fixed times (prayer, transport, work, course) as blocks on that day.', 'Pick Study hours on this day if you want a maximum (for example 3 hours).', 'In the schedule tap Suggest a schedule.'],
+          why: 'The suggestion only fills real free gaps, never goes over your hours, and warns you when a day is too crowded.',
+          fix: 'If nothing is suggested on a day, it may have no free gap or the study hours are used up. Shorten your fixed times or raise the hours. All of this is optional and nothing is deleted.' },
         { i: '🚀', t: 'Start here (3 minutes)',
           steps: ['In Profile enter your name and year. Your year\'s subjects load by themselves.', 'Set your sleep, fixed times (sections, lectures, errands) and workout days.', 'Open each subject in the Subjects tab and add its exam and lectures.', 'Open the Schedule tab and build your day, or tap "Suggest a schedule".', 'Tap "Start studying" on My Day, finish the task, then tap Done.'],
           why: 'Everything after this is worked out from your free time and exam dates, so start with sleep, fixed times and exams.',
@@ -5381,6 +5409,10 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     const wdToday = Scheduler.weekday(today);
     if (timeDay == null) timeDay = wdToday;
     let h = `<div class="card"><b>${esc(L().busyTitle)}</b><div class="muted" style="margin-top:4px">${esc(L().busySub)}</div></div>`;
+    h += `<div class="card"><b>${esc(L().collTitle)}</b><div class="muted" style="margin-top:4px">${esc(L().collSub)}</div>
+      <div class="row" style="margin-top:8px;flex-wrap:wrap">${L().days.map((nm, k) => `<label class="tag"><input type="checkbox" id="cd${k}"> ${esc(nm)}</label>`).join('')}</div>
+      <div class="row" style="margin-top:8px;flex-wrap:wrap"><span class="muted">${esc(L().fromPh)}</span>${tpHTML('cs', '09:00')}<span class="muted">${esc(L().toPh)}</span>${tpHTML('ce', '15:00')}</div>
+      <div class="row" style="margin-top:8px"><button class="btn grow" data-act="collApply">${esc(L().collBtn)}</button></div></div>`;
     L().days.forEach((name, i) => {
       const blocks = (state.busy[i] || []).map(Scheduler.normBlock)
         .filter((b) => b.start != null && b.end != null && b.start !== b.end && b.kind !== 'sleep')
@@ -5399,6 +5431,8 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
         h += `<div class="lec sleepfix"><span class="sicon" style="background:#64748b22">${KIND_ICON.sleep}</span>
           <span class="t grow">${esc(L().kindWord.sleep)} <span class="tag">${esc(L().sleepTag)}</span><br>
           <span class="muted">${esc(L().fromPh)}</span> ${tpHTML('sl' + i, sb.start)} <span class="muted" dir="ltr">&rarr; ${sbEnd}</span></span></div>`;
+        const capV = +((state.studyCap || {})[i]) || 0;
+        h += `<div class="row" style="margin:8px 0"><span class="muted grow">${esc(L().capLbl)}</span><select id="cap${i}" data-act="cap" data-i="${i}"><option value="0">${esc(L().capNone)}</option>${[1,2,3,4,5,6,7,8,9,10].map((k) => `<option value="${k * 60}"${capV === k * 60 ? ' selected' : ''}>${esc(L().capH(k))}</option>`).join('')}</select></div>`;
         blocks.forEach((b) => {
           h += `<div class="lec"><span class="sicon" style="background:#64748b22">${KIND_ICON[b.kind]}</span>
             <span class="t grow">${esc(b.label || L().kindWord[b.kind])}<br><span class="muted" dir="ltr">${fmtClockRange(b.start, b.end)}</span></span>
@@ -6369,6 +6403,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     else if (a === 'conf') taskOf(t.dataset.s, t.dataset.l).confidence = +t.value;
     else if (a === 'tdiff') { /* difficulty select re-renders chip */ const el = $('est-' + t.dataset.s); if (el) el.textContent = estChipText(t.dataset.s); return; }
     else if (a === 'note') { const tk = taskOf(t.dataset.s, t.dataset.l); if (tk) tk.note = t.value; }
+    else if (a === 'cap') { const v = +t.value || 0; state.studyCap = state.studyCap || {}; if (v) state.studyCap[t.dataset.i] = v; else delete state.studyCap[t.dataset.i]; }
     else if (a === 'remTime') { state.remind.time = t.value || '20:00'; state.remind.last = ''; }
     else return;
     save(); render();
@@ -6429,6 +6464,22 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       const clashList = Scheduler.blocksForWd(state, i).concat(draftBusy[i] || []);
       if (Scheduler.blockClashes(clashList, sm, em)) return alert(L().errOverlap);
       (draftBusy[i] = draftBusy[i] || []).push({ id: uid(), label, kind, start: s, end: e });
+      return render();
+    }
+    if (a === 'collApply') {
+      const s0 = tpRead('cs'), e0 = tpRead('ce');
+      if (s0 == null || e0 == null || s0 === e0) return alert(L().errTime);
+      const sm = Scheduler.hmToMin(s0), em = Scheduler.hmToMin(e0);
+      let n = 0, any = false;
+      for (let k = 0; k < 7; k++) {
+        const cb = $('cd' + k); if (!cb || !cb.checked) continue;
+        any = true;
+        if (Scheduler.blockClashes(Scheduler.blocksForWd(state, k), sm, em)) continue;
+        state.busy[k] = (state.busy[k] || []).concat([{ id: uid(), label: L().collName, kind: 'class', start: s0, end: e0 }]);
+        n++;
+      }
+      if (!any) { toast(L().collNone); return; }
+      if (n) { save(); toast(L().collDone(n)); } else alert(L().errOverlap);
       return render();
     }
     if (a === 'delDraft') { const i = +t.dataset.i; (draftBusy[i] || []).splice(+t.dataset.d, 1); return render(); }
