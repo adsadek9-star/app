@@ -684,6 +684,26 @@ a.btn { display: inline-block; text-decoration: none; }
 .guideol, .guideul { margin: 0; padding-inline-start: 20px; line-height: 1.75; }
 .guidep { margin: 0; line-height: 1.75; }
 .gtopic.on { border-color: var(--primary); }
+
+/* v30: peeking mascot. Only the mascot itself takes touch; it sits below the bottom bar and the add button. */
+.mascot { position: fixed; z-index: 25; pointer-events: auto; cursor: pointer; opacity: 0; transition: transform .45s cubic-bezier(.2,.9,.3,1.1), opacity .3s; -webkit-tap-highlight-color: transparent; max-width: calc(100vw - 8px); }
+.mascot .mbody { display: flex; align-items: center; gap: 6px; }
+.mascot .mav { width: 64px; flex: 0 0 64px; filter: drop-shadow(0 3px 6px rgba(0,0,0,.35)); }
+.mascot .mav svg { width: 100%; height: auto; display: block; }
+.mascot .mbub { max-width: 190px; background: var(--card); color: var(--ink); border: 1.5px solid var(--line); border-radius: 14px; padding: 8px 11px; font-size: 13px; font-weight: 700; line-height: 1.5; box-shadow: 0 6px 18px rgba(0,0,0,.25); }
+.mascot.m-r { right: 0; transform: translateX(110%); }
+.mascot.m-r.in { transform: translateX(-4px); opacity: 1; }
+.mascot.m-r .mbody { flex-direction: row-reverse; }
+.mascot.m-r .mav { transform: rotate(-12deg); margin-right: -18px; }
+.mascot.m-l { left: 0; transform: translateX(-110%); }
+.mascot.m-l.in { transform: translateX(4px); opacity: 1; }
+.mascot.m-l .mav { transform: rotate(12deg); margin-left: -18px; }
+.mascot.m-t { transform: translateY(-110%); }
+.mascot.m-t.in { transform: translateY(0); opacity: 1; }
+.mascot.m-t .mbody { flex-direction: column; gap: 4px; }
+@media (prefers-reduced-motion: reduce) { .mascot { transition: opacity .2s; transform: none !important; } }
+.mascot { direction: ltr; }
+html[dir="rtl"] .mascot .mbub { direction: rtl; }
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
@@ -1242,61 +1262,397 @@ const MOTIV_AR = [
   'العمر بيجري، خليه يجري وانت بتحقق حاجة',
 ];
 
-/* 15 tooth avatars (v17, restyled v18: no colored tile - just the tooth,
-   re-centered and scaled up, with a thin outline so it reads on any theme).
-   Pure SVG, no external assets. Each avatar is a string with a full
-   <svg viewBox="0 0 96 96"> so it can be dropped anywhere. */
-// v18: artwork bbox is about x 41..85, y 12..80 -> wrap everything in a group
-// that centers it on (48,48) and scales x1.3.
+/* 25 tooth avatars. v30: redrawn av01-av15 (one white body and outline, bolder details, varied moods)
+   plus av16-av25. Ids and slot order are unchanged so saved choices stay valid. Pure SVG. */
 const AVATARS = (function () {
   const TOOTH = 'M256 86c-60-37-139-14-152 65-11 60 18 101 32 157 14 60 28 129 65 129 32 0 32-64 55-64s23 64 55 64c37 0 51-69 65-129 14-56 43-97 32-157-13-79-92-102-152-65z';
-  const INK = '#0f766e';
-  const open = () => `<svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg"><g transform="translate(48 48) scale(1.3) translate(-63 -46)"><g transform="translate(27 20) scale(0.135)"><path d="${TOOTH}" fill="#ffffff" stroke="#0f766e" stroke-width="8"/></g>`;
+  const INK = '#0b4a45', OUT = '#0f766e';
+  // same frame and same tooth as before: one white body, one outline, for every avatar
+  const open = () => `<svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg"><g transform="translate(48 48) scale(1.3) translate(-63 -46)"><g transform="translate(27 20) scale(0.135)"><path d="${TOOTH}" fill="#ffffff" stroke="${OUT}" stroke-width="9" stroke-linejoin="round"/></g><path d="M45 38 q-1.5 7 0.5 14" stroke="#d9efec" stroke-width="2.6" fill="none" stroke-linecap="round"/>`;
   const close = '</g></svg>';
-  const eye = (x) => `<circle cx="${x}" cy="49.2" r="2.1" fill="${INK}"/>`;
-  const eyes = () => eye(55.6) + eye(67.5);
-  const smile = `<path d="M55.7 55.4 q4.9 5.4 9.8 0" stroke="${INK}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`;
-  const bigSmile = `<path d="M54.5 54.8 q7.1 8.2 14.3 0" stroke="${INK}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`;
-  const line = (x1, y1, x2, y2, c, w) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c || INK}" stroke-width="${w || 1.6}" stroke-linecap="round"/>`;
-  const blush = `<circle cx="50.5" cy="54" r="2.6" fill="#fda4af" opacity="0.85"/><circle cx="72.5" cy="54" r="2.6" fill="#fda4af" opacity="0.85"/>`;
-  const star = (x, y, s, c) => `<path d="M${x} ${y - s} l${s * 0.3} ${s * 0.62} ${s * 0.7} ${s * 0.08} -${s * 0.5} ${s * 0.5} ${s * 0.15} ${s * 0.7} -${s * 0.62} -${s * 0.38} -${s * 0.62} ${s * 0.38} ${s * 0.15} -${s * 0.7} -${s * 0.5} -${s * 0.5} ${s * 0.7} -${s * 0.08} z" fill="${c}"/>`;
-
+  const EX = [55.6, 67.5], EY = 49.2;
+  const dot = (x, r) => `<circle cx="${x}" cy="${EY}" r="${r || 2.9}" fill="${INK}"/><circle cx="${x + 0.9}" cy="${EY - 1}" r="0.95" fill="#fff"/>`;
+  const dots = (r) => dot(EX[0], r) + dot(EX[1], r);
+  const arch = (x, y) => `<path d="M${x - 3.3} ${y + 1.2} q3.3 -5.2 6.6 0" stroke="${INK}" stroke-width="2.8" fill="none" stroke-linecap="round"/>`;
+  const sw = (c, w) => `stroke="${c}" stroke-width="${w}" fill="none" stroke-linecap="round" stroke-linejoin="round"`;
+  const smile = `<path d="M54.6 55 q7 7.4 14 0" ${sw(INK, 2.9)}/>`;
+  const grin = `<path d="M53.6 53.6 h16 q-1 9 -8 9 t-8 -9z" fill="${INK}" stroke="${INK}" stroke-width="1.4" stroke-linejoin="round"/><path d="M57 59.6 q4.6 -2.6 9.2 0 q-1.2 2.8 -4.6 2.8 t-4.6 -2.8z" fill="#fb7185"/>`;
+  const blush = `<ellipse cx="50.6" cy="55" rx="3" ry="2.1" fill="#fb7185" opacity="0.7"/><ellipse cx="72.6" cy="55" rx="3" ry="2.1" fill="#fb7185" opacity="0.7"/>`;
+  const star = (x, y, s, c) => { let d = ''; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? s * 0.45 : s; d += (i ? 'L' : 'M') + (x + r * Math.cos(a)).toFixed(2) + ' ' + (y + r * Math.sin(a)).toFixed(2); } return `<path d="${d}z" fill="${c}" stroke="#b45309" stroke-width="0.9" stroke-linejoin="round"/>`; };
   const ARR = [
-    // 1: the classic (matches the logo)
-    { id: 'av01', g: 'n', svg: open('#14b8a6') + eyes() + smile + close },
-    // 2: wink
-    { id: 'av02', g: 'n', svg: open('#8b5cf6') + eye(55.6) + `<path d="M65.2 49.2 q2.3 -2.2 4.6 0" stroke="${INK}" stroke-width="1.8" fill="none" stroke-linecap="round"/>` + bigSmile + close },
-    // 3: round glasses
-    { id: 'av03', g: 'm', svg: open('#3b82f6') + eyes() + `<circle cx="55.6" cy="49.2" r="4.6" fill="none" stroke="#1e3a5f" stroke-width="1.5"/><circle cx="67.5" cy="49.2" r="4.6" fill="none" stroke="#1e3a5f" stroke-width="1.5"/>` + line(60.2, 49.2, 62.9, 49.2, '#1e3a5f', 1.5) + smile + close },
-    // 4: sunglasses
-    { id: 'av04', g: 'm', svg: open('#334155') + `<rect x="50.4" y="45.4" width="9.4" height="6.6" rx="2.4" fill="#0f172a"/><rect x="63.3" y="45.4" width="9.4" height="6.6" rx="2.4" fill="#0f172a"/>` + line(59.8, 47.6, 63.3, 47.6, '#0f172a', 1.8) + bigSmile + close },
-    // 5: pink bow
-    { id: 'av05', g: 'f', svg: open('#ec4899') + `<g transform="translate(61.5 21)"><path d="M0 0 l-8 -5.5 v11 z" fill="#f472b6"/><path d="M0 0 l8 -5.5 v11 z" fill="#f472b6"/><circle r="2.6" fill="#be185d"/></g>` + eyes() + smile + close },
-    // 6: flower
-    { id: 'av06', g: 'f', svg: open('#f97316') + `<g transform="translate(47 23)"><circle cx="0" cy="-4" r="2.7" fill="#fcd34d"/><circle cx="3.8" cy="-1.2" r="2.7" fill="#fcd34d"/><circle cx="2.3" cy="3.2" r="2.7" fill="#fcd34d"/><circle cx="-2.3" cy="3.2" r="2.7" fill="#fcd34d"/><circle cx="-3.8" cy="-1.2" r="2.7" fill="#fcd34d"/><circle r="2.2" fill="#f59e0b"/></g>` + eyes() + bigSmile + close },
-    // 7: lashes + blush
-    { id: 'av07', g: 'f', svg: open('#fb7185') + eyes() + line(52.6, 45.6, 51.2, 43.6) + line(55.6, 44.9, 55.6, 42.6) + line(58.6, 45.6, 60, 43.6) + line(64.5, 45.6, 63.1, 43.6) + line(67.5, 44.9, 67.5, 42.6) + line(70.5, 45.6, 71.9, 43.6) + blush + smile + close },
-    // 8: sport headband
-    { id: 'av08', g: 'f', svg: open('#22c55e') + `<path d="M37 33 q24 -14 49 0 l-1.6 5.4 q-22.8 -12.6 -45.8 0 z" fill="#15803d"/>` + eyes() + bigSmile + close },
-    // 9: cap
-    { id: 'av09', g: 'm', svg: open('#1d4ed8') + `<path d="M38.5 30 q23 -16 46 0 l-1 6 q-22 -14 -44 0 z" fill="#1e40af"/><path d="M60 24.5 q16 1.4 22 7.4 l-13 2.4 q-5 -5 -9 -9.8 z" fill="#1e40af"/>` + eyes() + smile + close },
-    // 10: mustache
-    { id: 'av10', g: 'm', svg: open('#a16207') + eyes() + `<path d="M61.5 56.5 q-4 -4 -8.5 -1 q4 3.6 8.5 1 q4.5 3.6 8.5 1 q-4.5 -4 -8.5 -1 z" fill="#713f12"/>` + close },
-    // 11: dental mask
-    { id: 'av11', g: 'm', svg: open('#06b6d4') + eyes() + `<path d="M51 52.5 q10.5 5 21 0 l0 8.5 q-10.5 5 -21 0 z" fill="#e0f2fe" stroke="#7dd3fc" stroke-width="1.2"/>` + line(51, 53.5, 44.5, 50.5, '#7dd3fc', 1.2) + line(72, 53.5, 78.5, 50.5, '#7dd3fc', 1.2) + close },
-    // 12: braces
-    { id: 'av12', g: 'm', svg: open('#eab308') + eyes() + `<path d="M54.5 54.8 q7.1 8.2 14.3 0" stroke="${INK}" stroke-width="2.4" fill="none" stroke-linecap="round"/>` + line(54.8, 56.9, 68.4, 56.9, '#94a3b8', 1.3) + `<rect x="58.4" y="55.7" width="2.4" height="2.4" fill="#cbd5e1"/><rect x="62.6" y="55.7" width="2.4" height="2.4" fill="#cbd5e1"/>` + close },
-    // 13: sleepy
-    { id: 'av13', g: 'n', svg: open('#64748b') + `<path d="M52.8 49.2 q2.8 1.8 5.6 0" stroke="${INK}" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M64.7 49.2 q2.8 1.8 5.6 0" stroke="${INK}" stroke-width="1.8" fill="none" stroke-linecap="round"/>` + `<circle cx="68" cy="56.5" r="1.9" fill="none" stroke="${INK}" stroke-width="1.6"/>` + `<text x="72" y="42" font-size="8" fill="#cbd5e1" font-weight="700">z</text><text x="76" y="36" font-size="10" fill="#e2e8f0" font-weight="700">z</text>` + close },
-    // 14: star eyes
-    { id: 'av14', g: 'n', svg: open('#d946ef') + star(55.6, 49.4, 4.4, '#facc15') + star(67.5, 49.4, 4.4, '#facc15') + bigSmile + close },
-    // 15: dentist head mirror
-    { id: 'av15', g: 'n', svg: open('#6366f1') + `<path d="M37.5 31.5 q24 -14 48 0 l-1.4 4.6 q-22.6 -12.4 -45.2 0 z" fill="#4338ca"/><circle cx="61.5" cy="27.5" r="5.2" fill="#e0e7ff" stroke="#4338ca" stroke-width="1.6"/><circle cx="61.5" cy="27.5" r="1.6" fill="#4338ca"/>` + eyes() + smile + close },
+    // 01 classic: big happy open smile
+    { id: 'av01', g: 'n', svg: open() + dots() + grin + blush + close },
+    // 02 wink with tongue
+    { id: 'av02', g: 'n', svg: open() + dot(EX[0]) + `<path d="M64.2 49.8 q3.3 -4 6.6 0" ${sw(INK, 2.9)}/>` + `<path d="M53.8 53.8 h15.6 q-1 6.4 -7.8 6.4 t-7.8 -6.4z" fill="${INK}" stroke="${INK}" stroke-width="1.4" stroke-linejoin="round"/><path d="M58.4 58.6 q3.4 -1.6 6.4 0 v4.4 q-3.2 2.4 -6.4 0z" fill="#fb7185"/>` + close },
+    // 03 dental loupes (magnifier glasses)
+    { id: 'av03', g: 'm', svg: open() + dots(2.5) + `<circle cx="55.6" cy="49.2" r="5.4" fill="#e0f2fe" fill-opacity="0.5" stroke="#1e3a8a" stroke-width="2.3"/><circle cx="67.5" cy="49.2" r="5.4" fill="#e0f2fe" fill-opacity="0.5" stroke="#1e3a8a" stroke-width="2.3"/><path d="M61 48.4 h1.2" ${sw('#1e3a8a', 2.3)}/><path d="M44.5 47 l5.8 1.2 M78.6 47 l-5.8 1.2" ${sw('#1e3a8a', 2.2)}/><path d="M52.4 47 q1 -1.8 3 -2" ${sw('#fff', 1.4)}/>` + smile + close },
+    // 04 sunglasses, cool smirk
+    { id: 'av04', g: 'm', svg: open() + `<path d="M48.6 45 h13 v4.6 q0 4.8 -6.5 4.8 t-6.5 -4.8z M62.6 45 h13 v4.6 q0 4.8 -6.5 4.8 t-6.5 -4.8z" fill="#111827" stroke="#111827" stroke-width="1.4" stroke-linejoin="round"/><path d="M60.8 46.4 h2.4" ${sw('#111827', 2.4)}/><path d="M50.6 47 l3.6 -1.2 M64.6 47 l3.6 -1.2" ${sw('#93c5fd', 1.5)}/><path d="M55.4 57.2 q7 4.6 13.4 -2.2" ${sw(INK, 2.9)}/>` + close },
+    // 05 pink bow, sweet look with lashes
+    { id: 'av05', g: 'f', svg: open() + `<g transform="translate(61.6 24.5)"><path d="M0 0 l-9.5 -6.5 q-2 6.5 0 13z" fill="#ec4899" stroke="#be185d" stroke-width="1.1" stroke-linejoin="round"/><path d="M0 0 l9.5 -6.5 q2 6.5 0 13z" fill="#ec4899" stroke="#be185d" stroke-width="1.1" stroke-linejoin="round"/><circle r="3" fill="#f472b6" stroke="#be185d" stroke-width="1.1"/></g>` + dots() + `<path d="M52 46.6 l-2.4 -1.6 M53.6 45.4 l-1.2 -2.2" ${sw(INK, 1.8)}/><path d="M71 46.6 l2.4 -1.6 M69.4 45.4 l1.2 -2.2" ${sw(INK, 1.8)}/>` + smile + blush + close },
+    // 06 flower, happy closed eyes
+    { id: 'av06', g: 'f', svg: open() + `<g transform="translate(50 25)">${[0, 72, 144, 216, 288].map((a) => `<circle cx="${(4.2 * Math.sin(a * Math.PI / 180)).toFixed(2)}" cy="${(-4.2 * Math.cos(a * Math.PI / 180)).toFixed(2)}" r="3.4" fill="#fb923c" stroke="#c2410c" stroke-width="0.9"/>`).join('')}<circle r="2.6" fill="#fde047" stroke="#ca8a04" stroke-width="0.9"/></g>` + arch(EX[0], EY) + arch(EX[1], EY) + `<path d="M54.6 54.6 q7 7.6 14 0" ${sw(INK, 2.9)}/>` + blush + close },
+    // 07 lashes, kiss
+    { id: 'av07', g: 'f', svg: open() + dots() + `<path d="M52.2 47 l-3 -2 M53.6 45.8 l-1.6 -2.8 M71 47 l3 -2 M69.6 45.8 l1.6 -2.8" ${sw(INK, 2.2)}/><path d="M57.6 55 q4 -2.8 8 0 q-0.8 4.4 -4 4.4 t-4 -4.4z" fill="#f43f5e" stroke="#be123c" stroke-width="0.9" stroke-linejoin="round"/>` + blush + close },
+    // 08 sport headband, determined
+    { id: 'av08', g: 'f', svg: open() + dots() + `<path d="M51.4 43.6 l7 2.2 M71.7 43.6 l-7 2.2" ${sw(INK, 2.6)}/><path d="M40.4 36.6 q21.2 -9.6 42.4 0 l-0.8 6.4 q-20.4 -8.4 -40.8 0z" fill="#22c55e" stroke="#15803d" stroke-width="1.4" stroke-linejoin="round"/><path d="M66 31 l3 5 M72 32.4 l2.2 4.6" ${sw('#dcfce7', 1.6)}/><path d="M56 56 h11 q-1 4.6 -5.5 4.6 t-5.5 -4.6z" fill="${INK}" stroke="${INK}" stroke-width="1.2" stroke-linejoin="round"/><path d="M80 52 q1.4 3.2 0 4.6 q-1.8 -1.4 0 -4.6z" fill="#7dd3fc" stroke="#0284c7" stroke-width="0.8"/>` + close },
+    // 09 surgical cap (blue scrub cap)
+    { id: 'av09', g: 'm', svg: open() + `<path d="M40.6 38 q0.6 -15 21 -15.6 q20.8 0.6 21.4 15.6 q-21.2 -7.6 -42.4 0z" fill="#2563eb" stroke="#1e3a8a" stroke-width="1.4" stroke-linejoin="round"/><path d="M42 38.6 q20 -6.8 40 0 v2.6 q-20 -6.2 -40 0z" fill="#1d4ed8" stroke="#1e3a8a" stroke-width="1.2" stroke-linejoin="round"/><circle cx="52" cy="30" r="1.5" fill="#bfdbfe"/><circle cx="61.6" cy="27" r="1.5" fill="#bfdbfe"/><circle cx="71.2" cy="30" r="1.5" fill="#bfdbfe"/><circle cx="56.6" cy="34.4" r="1.2" fill="#bfdbfe"/><circle cx="66.6" cy="34.4" r="1.2" fill="#bfdbfe"/>` + dots() + smile + close },
+    // 10 big mustache, raised brow
+    { id: 'av10', g: 'm', svg: open() + dots() + `<path d="M51.6 43.4 l7 -1.2 M65 43.4 l7 -2.4" ${sw(INK, 2.6)}/><path d="M61.6 54.4 q-3.4 -3.6 -8.6 -2.6 q-3.6 0.8 -3.6 4 q4.6 -1.2 8.2 0.2 q3 1.2 4 -1.6 q1 2.8 4 1.6 q3.6 -1.4 8.2 -0.2 q0 -3.2 -3.6 -4 q-5.2 -1 -8.6 2.6z" fill="#7c2d12" stroke="#431407" stroke-width="1.1" stroke-linejoin="round"/><path d="M58.4 60.4 q3.2 2.6 6.4 0" ${sw(INK, 2.6)}/>` + close },
+    // 11 dental mask, smiling eyes
+    { id: 'av11', g: 'm', svg: open() + arch(EX[0], EY) + arch(EX[1], EY) + `<path d="M44 53 l5.6 1.6 M79.4 53 l-5.6 1.6" ${sw('#0891b2', 1.6)}/><path d="M48.6 52.4 q13 -3.6 26 0 v4.6 q-1 8.4 -13 9.4 q-12 -1 -13 -9.4z" fill="#67e8f9" stroke="#0e7490" stroke-width="1.5" stroke-linejoin="round"/><path d="M50 56 h23 M50.4 59.4 h22.4 M52 62.8 h19.6" ${sw('#0e7490', 1.3)}/>` + close },
+    // 12 braces, wide grin
+    { id: 'av12', g: 'm', svg: open() + dots() + `<path d="M52.6 53 h18 q-0.6 9.6 -9 9.6 t-9 -9.6z" fill="#ffffff" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/><path d="M53.4 56.2 h16.4" ${sw('#64748b', 1.8)}/>${[55.2, 58.4, 61.6, 64.8, 68].map((x, i) => `<rect x="${x - 1.4}" y="54.4" width="2.8" height="3.6" rx="0.7" fill="${i % 2 ? '#f59e0b' : '#38bdf8'}" stroke="#334155" stroke-width="0.6"/>`).join('')}` + close },
+    // 13 sleepy: calm closed eyes, soft smile, bold Zz
+    { id: 'av13', g: 'n', svg: open() + `<path d="M52.2 49.2 q3.4 3.8 6.8 0 M64.1 49.2 q3.4 3.8 6.8 0" ${sw(INK, 2.8)}/><path d="M57.6 56.6 q4 3.2 8 0" ${sw(INK, 2.6)}/><g fill="none" stroke="#6366f1" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M76 31 h6 l-6 6.4 h6"/><path d="M82.6 21.6 h4.2 l-4.2 4.6 h4.2" stroke-width="1.6"/></g>` + blush + close },
+    // 14 star eyes, open smile
+    { id: 'av14', g: 'n', svg: open() + star(EX[0], 49, 5.2, '#facc15') + star(EX[1], 49, 5.2, '#facc15') + grin + close },
+    // 15 headlamp (dentist head mirror/light)
+    { id: 'av15', g: 'n', svg: open() + `<path d="M42.4 37.6 q19.2 -9 38.4 0" fill="none" stroke="#4338ca" stroke-width="4.4" stroke-linecap="round"/><circle cx="61.6" cy="30.6" r="6.6" fill="#e0e7ff" stroke="#4338ca" stroke-width="2"/><circle cx="61.6" cy="30.6" r="3.2" fill="#fde047" stroke="#ca8a04" stroke-width="1"/><path d="M61.6 22 v-3 M54 24 l-2 -2 M69.2 24 l2 -2" ${sw('#fbbf24', 1.8)}/>` + dots() + smile + close },
+
+    // 16 crown, proud grin
+    { id: 'av16', g: 'n', svg: open() + `<path d="M46.6 33.4 l-2 -12.4 l6.6 5.4 l5 -9 l4.4 8.6 l4.4 -8.6 l5 9 l6.6 -5.4 l-2 12.4z" fill="#facc15" stroke="#a16207" stroke-width="1.5" stroke-linejoin="round"/><circle cx="61.6" cy="29.6" r="1.9" fill="#ef4444" stroke="#7f1d1d" stroke-width="0.7"/><circle cx="52" cy="29.8" r="1.3" fill="#3b82f6"/><circle cx="71.2" cy="29.8" r="1.3" fill="#3b82f6"/>` + dots() + grin + close },
+    // 17 graduation cap
+    { id: 'av17', g: 'n', svg: open() + `<path d="M61.6 20 l22 8.6 l-22 8.6 l-22 -8.6z" fill="#475569" stroke="#0f172a" stroke-width="1.4" stroke-linejoin="round"/><path d="M50.4 33 v5.6 q11.2 4.4 22.4 0 v-5.6 l-11.2 4.4z" fill="#64748b" stroke="#0f172a" stroke-width="1.2" stroke-linejoin="round"/><path d="M81.4 29.4 v10.4" ${sw('#facc15', 1.8)}/><circle cx="81.4" cy="41" r="2.2" fill="#facc15" stroke="#a16207" stroke-width="0.8"/>` + dots() + smile + blush + close },
+    // 18 tired, eye bags, coffee
+    { id: 'av18', g: 'n', svg: open() + `<path d="M52.2 49.4 h6.8 M64.1 49.4 h6.8" ${sw(INK, 2.8)}/><path d="M52.4 53.4 q3.2 2.4 6.4 0 M64.3 53.4 q3.2 2.4 6.4 0" ${sw('#7c6bd6', 2.1)}/><path d="M56.8 59.6 q4.8 -3.2 9.6 0" ${sw(INK, 2.8)}/><g transform="translate(86 71)"><path d="M-6.4 -7 h12.8 l-1.4 12.6 q-0.4 2.4 -2.8 2.4 h-4.4 q-2.4 0 -2.8 -2.4z" fill="#fef3c7" stroke="#92400e" stroke-width="1.5" stroke-linejoin="round"/><path d="M6 -4.4 q4.6 0.4 3.6 4.4 q-1 3 -5 2.6" ${sw('#92400e', 1.5)}/><path d="M-5.6 -3 h11.2 l-0.4 4.2 h-10.4z" fill="#92400e"/><path d="M-2.6 -10 q-1.6 -2 0 -4 M2.2 -10 q-1.6 -2 0 -4" ${sw('#94a3b8', 1.4)}/></g>` + close },
+    // 19 thumbs-up bubble
+    { id: 'av19', g: 'n', svg: open() + dots() + smile + blush + `<g transform="translate(79 28)"><path d="M-9 -8.6 h18 q3 0 3 3 v8.4 q0 3 -3 3 h-7 l-5 5 v-5 h-6 q-3 0 -3 -3 v-8.4 q0 -3 3 -3z" fill="#ecfdf5" stroke="#059669" stroke-width="1.5" stroke-linejoin="round"/><path d="M-4.6 2.4 v-5.2 h2.2 l2.4 -4.6 q1.8 0.2 1.8 2 v2 h3.4 q1.2 0.2 1 1.6 l-0.8 4.4 q-0.4 1.4 -1.6 1.4 h-6.4z" fill="#10b981" stroke="#047857" stroke-width="0.8" stroke-linejoin="round"/></g>` + close },
+    // 20 party
+    { id: 'av20', g: 'n', svg: open() + `<path d="M61.6 14 l-12.4 22 q12.4 4 24.8 0z" fill="#a855f7" stroke="#6b21a8" stroke-width="1.4" stroke-linejoin="round"/><path d="M55.2 25 l12.8 4.2 M52 31 l19.6 3.2" ${sw('#f9a8d4', 2)}/><circle cx="61.6" cy="14" r="3" fill="#facc15" stroke="#a16207" stroke-width="0.9"/><circle cx="43" cy="22" r="1.6" fill="#38bdf8"/><circle cx="82" cy="19" r="1.6" fill="#f43f5e"/><rect x="85" y="30" width="3.4" height="1.8" fill="#22c55e" transform="rotate(30 86 31)"/><rect x="40" y="31" width="3.4" height="1.8" fill="#f59e0b" transform="rotate(-30 41 32)"/>` + arch(EX[0], EY) + arch(EX[1], EY) + grin + blush + close },
+    // 21 angry-cute
+    { id: 'av21', g: 'n', svg: open() + dots() + `<path d="M50.6 42.4 l8.2 3.6 M72.6 42.4 l-8.2 3.6" ${sw(INK, 3)}/><path d="M56.4 59.4 q5.2 -4.6 10.4 0" ${sw(INK, 2.8)}/><ellipse cx="50.4" cy="54.4" rx="3.2" ry="2.3" fill="#f87171" opacity="0.85"/><ellipse cx="72.8" cy="54.4" rx="3.2" ry="2.3" fill="#f87171" opacity="0.85"/><g ${sw('#ef4444', 1.9)}><path d="M77 31 l3 -3 l-0.4 4 l3.6 -1.6 M44 31 l-3 -3 l0.4 4 l-3.6 -1.6"/></g>` + close },
+    // 22 headphones, cool
+    { id: 'av22', g: 'n', svg: open() + `<path d="M42.4 49 q-1.6 -22.6 19.2 -22.6 q20.8 0 19.2 22.6" fill="none" stroke="#1f2937" stroke-width="5.4" stroke-linecap="round"/><path d="M42.4 49 q-1.6 -22.6 19.2 -22.6 q20.8 0 19.2 22.6" fill="none" stroke="#94a3b8" stroke-width="2.6" stroke-linecap="round"/><rect x="38" y="44.6" width="7.4" height="13" rx="3.4" fill="#ef4444" stroke="#1f2937" stroke-width="1.6"/><rect x="77.8" y="44.6" width="7.4" height="13" rx="3.4" fill="#ef4444" stroke="#1f2937" stroke-width="1.6"/>` + dots() + `<path d="M54.8 55 q8 6.6 14 -1.2" ${sw(INK, 2.9)}/>` + close },
+    // 23 stethoscope, caring wink
+    { id: 'av23', g: 'n', svg: open() + dot(EX[0]) + `<path d="M64.2 49.8 q3.3 -4 6.6 0" ${sw(INK, 2.9)}/>` + smile + `<path d="M46 60 q-3 10 5.4 13 q8 2.6 10.2 -4" ${sw('#475569', 2.4)}/><path d="M77 60 q3 10 -5.4 13 q-4 1.4 -7 0.4" ${sw('#475569', 2.4)}/><circle cx="61.6" cy="71" r="4.6" fill="#cbd5e1" stroke="#334155" stroke-width="1.6"/><circle cx="61.6" cy="71" r="1.6" fill="#64748b"/><circle cx="46" cy="60" r="1.8" fill="#334155"/><circle cx="77" cy="60" r="1.8" fill="#334155"/>` + close },
+    // 24 lab goggles, surprised
+    { id: 'av24', g: 'n', svg: open() + `<path d="M43.6 48 h-2.6 M79.6 48 h2.6" ${sw('#1d4ed8', 3)}/><rect x="47" y="42.4" width="29.2" height="13.4" rx="6.4" fill="#bae6fd" fill-opacity="0.6" stroke="#1d4ed8" stroke-width="2.4"/><path d="M61.6 43 v12" ${sw('#1d4ed8', 1.6)}/>` + dot(EX[0], 3.2) + dot(EX[1], 3.2) + `<ellipse cx="61.6" cy="61" rx="3.2" ry="3.9" fill="${INK}"/><path d="M50.6 46.6 q1.6 -1.6 4 -1.6" ${sw('#fff', 1.5)}/>` + close },
+    // 25 books on the head, focused
+    { id: 'av25', g: 'n', svg: open() + `<rect x="48.6" y="30" width="26" height="5.6" rx="1.2" fill="#ef4444" stroke="#7f1d1d" stroke-width="1.1"/><rect x="51.6" y="24.2" width="21" height="5.8" rx="1.2" fill="#3b82f6" stroke="#1e3a8a" stroke-width="1.1"/><rect x="54" y="18.6" width="16.4" height="5.6" rx="1.2" fill="#22c55e" stroke="#14532d" stroke-width="1.1"/><path d="M50.6 32.6 h22 M53.6 27 h16 M56 21.4 h11.6" ${sw('#fff', 1)}/>` + dots() + `<path d="M51.6 44.6 l6.6 1.4 M71.6 44.6 l-6.6 1.4" ${sw(INK, 2.6)}/><path d="M57.4 56.6 h8.4" ${sw(INK, 2.8)}/>` + close },
   ];
-  ARR.TOOTH = TOOTH;
+  ARR.TOOTH = TOOTH; // the share image still draws this plain tooth
   return ARR;
 })();
-if (typeof module === 'object' && module.exports) module.exports = AVATARS;
+if (typeof module === 'object') module.exports = AVATARS;
+
+/* v30: the peeking mascot. This file is pure data and decisions (no DOM, no storage),
+   so it can be tested in node. app.js owns drawing and timing.
+   Tone: encouraging, light, never guilt-tripping. Lines avoid he/she forms where they can. */
+const Mascot = (function () {
+  const POOLS = {
+    ar: {
+      opened: [
+        'أهلا بينا! نبدأ بحاجة صغيرة؟',
+        'نورنا! خلينا نخلّص تاسك واحد بس الأول',
+        'يلا نفتح الجدول ونشوف النهارده فيه إيه',
+        'أنا جاهز لو انت جاهز... ولو لسه، برضه جاهز 😄',
+        'كل دكتور كبير بدأ بصفحة واحدة',
+        'ابتسامة الأول، وبعدين المحاضرة 😁',
+        'خطوة صغيرة النهارده بتفرق في الامتحان',
+        'أنا هنا على الحافة أشجّعنا 😄',
+        'تاسك واحد ويبقى يومنا ابتدا',
+        'مذاكرة بالراحة وبنظام، ده كل اللي محتاجينه',
+        'أهلا! خلينا نمشي خطوة خطوة',
+      ],
+      done: [
+        'برافو! تاسك اتقفل ✅',
+        'عاش! خطوة جديدة اتعملت 💪',
+        'كده تمام! نشرب مية ونكمّل 💧',
+        'واحدة وراها واحدة، ايه الجمال ده',
+        'التاسك خلص. نستاهل استراحة صغيرة ☕',
+        'حلو أوي! الأسنان بتبرّق من الفرحة ✨',
+        'كل تاسك بيقرّبنا من الامتحان بخطوة',
+        'ركّزنا وخلّصنا، ممتاز',
+        'التعب مش رايح على الفاضي 💪',
+        'مبروك على اللي خلص، وبالتوفيق في اللي جاي',
+        'ده شغل دكاترة بجد 🦷',
+      ],
+      streak: [
+        'الستريك لسه عايش 🔥 ربع ساعة بس تحميه',
+        'محاضرة واحدة النهارده وتكمّل السلسلة 🔥',
+        'الستريك مستنينا. حاجة صغيرة وتبقى تمام',
+        'لسه فيه وقت نحافظ على الستريك، من غير ضغط',
+        'حتى 15 دقيقة بتفرق وبتحمي السلسلة 🔥',
+        'مش لازم يوم مثالي، يوم بسيط كفاية للستريك',
+        'لو النهارده زحمة، تاسك صغير يكفي',
+        'الستريك شغال، نحافظ عليه بحاجة خفيفة',
+      ],
+      exam: [
+        'فاضل {d} يوم على {s}. نقسّمه حتت صغيرة ونمشي',
+        '{s} قرّب ({d} يوم). مراجعة سريعة النهارده؟',
+        'مفيش داعي للقلق، فاضل {d} يوم وفيه وقت نرتّب',
+        'قبل {s} بـ{d} يوم: نراجع الأهم الأول',
+        '{d} يوم كفاية لو مشينا بنظام. الجدول معانا',
+        'امتحان {s} قرب، وإحنا بنجهّز نفسنا بالراحة',
+        'نبدأ بالـ high-yield، والباقي بعدين',
+      ],
+      examTomorrow: [
+        'بكرة {s}! مراجعة خفيفة ونوم بدري أحسن من سهر',
+        'بكرة {s}. اللي اتذاكر اتذاكر، نهدّى ونرتاح شوية',
+      ],
+      examToday: [
+        'النهارده {s}، بالتوفيق! إحنا عارفين أكتر مما فاكرين',
+        'امتحان {s} النهارده. نفس عميق وبسم الله 🍀',
+      ],
+      idle: [
+        'لسه ماذاكرناش النهارده؟ ولا يهمك، 5 دقايق بداية حلوة',
+        'فيه تاسك صغير مستنينا... نخلّصه في ربع ساعة؟',
+        'البداية أصعب حاجة. نفتح محاضرة واحدة بس',
+        'لو الدنيا زحمة، نذاكر حاجة خفيفة وخلاص',
+        'مفيش مشكلة لو اتأخرنا، النهارده لسه ممكن',
+        'قهوة وتاسك واحد؟ ☕',
+        'المخ محتاج تسخين: صفحة واحدة بس',
+        'مش لازم نعمل كل حاجة. نعمل حاجة 😄',
+        'لو مرهقين، حتى مراجعة خمس دقايق تمام',
+      ],
+      midday: [
+        'الضهر! استراحة غدا وبعدين نكمّل 🍽',
+        'نص النهار عدّى. تاسك واحد قبل العصر؟',
+        'نشرب مية؟ الأسنان والمخ بيحبوها 💧',
+        'وقت مناسب لمحاضرة بسيطة قبل ما الطاقة تنزل',
+        'اتغدينا؟ المخ محتاج وقود 😄',
+        'استراحة قصيرة بتفرق مع المذاكرة الطويلة',
+        'ضهر هادي ينفع لمراجعة صغيرة',
+      ],
+      evening: [
+        'مساء الخير! نختم اليوم بتاسك خفيف؟',
+        'قبل ما اليوم يخلص، نراجع اللي ذاكرناه',
+        'الليل هادي والتركيز أسهل 🌙',
+        'نظّمنا بكرة؟ دقيقتين في الجدول ويرتاح بالنا',
+        'لو خلصنا النهارده، نستاهل راحة بدري',
+        'ساعة تركيز وبعدين نفصل 🌙',
+        'تعبنا بس ماشيين، وده المهم',
+      ],
+      morning: [
+        'صباح الخير! أحسن وقت لأصعب محاضرة ☀️',
+        'الصبح المخ لسه فايق. نستغله',
+        'يوم جديد وصفحة جديدة، يلا بينا',
+        'فطار خفيف وتاسك واحد، بداية مظبوطة',
+        'صباح النور! حاجة صغيرة الأول تفتح النفس',
+      ],
+      general: [
+        'الدكتور اللي فينا بيكبر مع كل تاسك 🦷',
+        'نكمّل، مش لازم نبقى سريعين، المهم نكمّل',
+        'ابتسامة؟ 😁 الأسنان أحلى حاجة فينا',
+        'كل محاضرة خطوة ناحية الكوت الأبيض 🥼',
+        'نفس عميق. كله هيبقى تمام',
+        'المذاكرة مش سباق، إحنا ماشيين بنظام',
+        'مفيش حاجة اسمها فاتنا الوقت، فيه دايمًا الخطوة الجاية',
+        'لو احتجنا استراحة، ناخدها من غير ذنب',
+        'التكرار هو سر أي مهارة، حتى الحشو 🦷',
+        'نشرب مية ونعدّل قعدتنا 😄',
+        'سألوا السن: خايف من الدكتور؟ قال: لا، أنا اللي بخوّفه 😅',
+        'لو المذاكرة حشوة، يبقى التخدير الموضعي هو الجدول 😅',
+        'أنا سن صغير، بس مؤمن بينا',
+        'ركّز يا مخ، إحنا بنحبك 😄',
+      ],
+      subject: [
+        '{s} مستنينا. نبدأ بأول جزء بس',
+        'ربع ساعة في {s} وتبقى فرقت',
+        'نفتح {s} ونشوف وصلنا فين',
+        '{s} مش صعب، هو بس كبير. نقسّمه 🧩',
+        'مراجعة سريعة في {s}؟',
+      ],
+      subjectKey: [
+        { re: /pharm/i, lines: ['Pharmacology: الأدوية بتتفهم بالـmechanism قبل الحفظ 💊', 'في الـPharmacology نربط كل دوا بمجموعته، والحفظ بيسهل', 'Pharmacology بالقصص أسرع من الجداول 💊'] },
+        { re: /general med|^medicine|internal/i, lines: ['General Medicine: الحالة الإكلينيكية أسهل من الحفظ، نتخيّل المريض', 'في الـGeneral Medicine الربط بين الأعراض أهم من القوائم'] },
+        { re: /anat/i, lines: ['Anatomy: نرسم ونسمّي، الرسم بيثبّت المعلومة ✏️', 'في الـAnatomy الصور والنماذج أحسن صديق'] },
+        { re: /patho/i, lines: ['Pathology: نفهم ليه المرض بيحصل قبل شكله'] },
+        { re: /physio/i, lines: ['Physiology: نفهم الدورة الأول، والأرقام بتيجي بعدين'] },
+        { re: /bio ?chem/i, lines: ['Biochemistry: الـpathways كأنها خرايط. نتعوّد عليها خطوة خطوة 🗺'] },
+        { re: /micro/i, lines: ['Microbiology: نربط كل ميكروب بمرضه، ونلعبها كأنها بطاقات 🔬'] },
+        { re: /histo/i, lines: ['Histology: الشرايح بتتحفظ بالنظر، نكرر الصور 🔬'] },
+        { re: /dental|oral|tooth|operative|endo|perio/i, lines: ['{s}: كل سن له قصة، نحفظها بالشكل 🦷', 'في {s} الصور والنماذج بتوفّر نص الوقت'] },
+      ],
+    },
+    en: {
+      opened: [
+        'Hi! Start with something small?',
+        'Welcome back! Just one task first?',
+        'Let us open the plan and see what is on for today',
+        'I am ready if you are... and even if you are not 😄',
+        'Every great doctor started with one page',
+        'Smile first, lecture second 😁',
+        'One small step today helps on exam day',
+        'I will cheer from the edge 😄',
+        'One task and the day has started',
+        'Slow and steady is all we need',
+      ],
+      done: [
+        'Nice! One task closed ✅',
+        'Well done, that is a real step 💪',
+        'Good one! A sip of water, then onwards 💧',
+        'One after another, look at you go',
+        'Task done. A short break is earned ☕',
+        'Lovely! Teeth are sparkling with joy ✨',
+        'Every task brings the exam one step closer',
+        'Focused and finished. Excellent',
+        'The effort is adding up 💪',
+        'That is real doctor work 🦷',
+      ],
+      streak: [
+        'The streak is still alive 🔥 fifteen minutes keeps it safe',
+        'One lecture today and the chain goes on 🔥',
+        'The streak is waiting. A small thing is enough',
+        'There is still time to keep the streak, no pressure',
+        'Even 15 minutes counts and protects the chain 🔥',
+        'No perfect day needed, a simple one keeps the streak',
+        'If today is busy, one small task is enough',
+      ],
+      exam: [
+        '{d} days to {s}. Small pieces and we are there',
+        '{s} is getting close ({d} days). Quick review today?',
+        'No need to worry, {d} days is time to plan',
+        '{d} days before {s}: the important parts first',
+        '{d} days is enough if we keep a routine. The plan has us',
+        'Start with the high-yield, the rest comes after',
+      ],
+      examTomorrow: [
+        '{s} is tomorrow! Light review and an early night beats cramming',
+        '{s} tomorrow. What is learned is learned, relax a little',
+      ],
+      examToday: [
+        '{s} is today, good luck! We know more than we think',
+        '{s} today. Deep breath and bismillah 🍀',
+      ],
+      idle: [
+        'Nothing studied yet today? No worries, 5 minutes is a great start',
+        'A small task is waiting... 15 minutes?',
+        'Starting is the hardest part. Just open one lecture',
+        'If today is packed, something light is fine',
+        'No problem if we are late, today is still possible',
+        'Coffee and one task? ☕',
+        'The brain needs a warm-up: one page only',
+        'We do not need to do everything. Just something 😄',
+        'If tired, even a 5 minute review counts',
+      ],
+      midday: [
+        'Midday! Lunch break, then we continue 🍽',
+        'Half the day is gone. One task before the afternoon?',
+        'Water time? Teeth and brain love it 💧',
+        'Good time for an easy lecture before energy drops',
+        'Did we eat? The brain needs fuel 😄',
+        'A short break helps long studying',
+        'A quiet afternoon is good for a small review',
+      ],
+      evening: [
+        'Good evening! Close the day with a light task?',
+        'Before the day ends, a quick review of what we learned',
+        'The evening is calm and focus is easier 🌙',
+        'Plan tomorrow? Two minutes in the schedule and our mind rests',
+        'If we finish today, an early rest is earned',
+        'One focused hour, then switch off 🌙',
+        'Tired but moving, and that is what matters',
+      ],
+      morning: [
+        'Good morning! Best time for the hardest lecture ☀️',
+        'The morning brain is fresh. Let us use it',
+        'New day, new page. Let us go',
+        'Light breakfast and one task, a good start',
+        'A small thing first opens the mind',
+      ],
+      general: [
+        'The doctor in us grows with every task 🦷',
+        'We do not need to be fast, just keep going',
+        'A smile? 😁 Teeth are our best feature',
+        'Every lecture is a step toward the white coat 🥼',
+        'Deep breath. It will all be fine',
+        'Studying is not a race, we move with a plan',
+        'There is no such thing as too late, there is always the next step',
+        'If we need a rest, we take it without guilt',
+        'Repetition is the secret of any skill, even fillings 🦷',
+        'Sip of water and sit up straight 😄',
+        'A tooth was asked: afraid of the dentist? It said: no, he is afraid of me 😅',
+        'If studying were a filling, the schedule is the local anaesthetic 😅',
+        'I am just a small tooth, but I believe in us',
+      ],
+      subject: [
+        '{s} is waiting. Just the first part',
+        'Fifteen minutes of {s} makes a difference',
+        'Open {s} and see where we got to',
+        '{s} is not hard, just big. Split it 🧩',
+        'Quick review of {s}?',
+      ],
+      subjectKey: [
+        { re: /pharm/i, lines: ['Pharmacology: understand the mechanism before memorising 💊', 'In Pharmacology link each drug to its class and memorising gets easier', 'Pharmacology is faster with stories than tables 💊'] },
+        { re: /general med|^medicine|internal/i, lines: ['General Medicine: the clinical case is easier than lists, picture the patient', 'In General Medicine linking the symptoms matters more than lists'] },
+        { re: /anat/i, lines: ['Anatomy: draw and label, drawing fixes it in memory ✏️', 'In Anatomy images and models are the best friends'] },
+        { re: /patho/i, lines: ['Pathology: understand why the disease happens before how it looks'] },
+        { re: /physio/i, lines: ['Physiology: understand the cycle first, the numbers come later'] },
+        { re: /bio ?chem/i, lines: ['Biochemistry: pathways are like maps. One step at a time 🗺'] },
+        { re: /micro/i, lines: ['Microbiology: link each microbe to its disease, play it like cards 🔬'] },
+        { re: /histo/i, lines: ['Histology: slides are learned by looking, repeat the images 🔬'] },
+        { re: /dental|oral|tooth|operative|endo|perio/i, lines: ['{s}: every tooth has a story, learn it by shape 🦷', 'In {s} images and models save half the time'] },
+      ],
+    },
+  };
+
+  const FREQS = [5, 10, 20, 0]; // minutes; 0 = off
+
+  // Night is 00:00 to 06:00 local time: the mascot stays away.
+  const isNight = (hour) => hour >= 0 && hour < 6;
+
+  // Should a mascot appear now? Pure: the caller passes what it knows.
+  // Returns '' when yes, else the reason it must wait (used by tests too).
+  function blockedBy(c) {
+    if (!c.freq) return 'off';
+    if (c.hour != null && isNight(c.hour)) return 'night';
+    if (c.timerRunning) return 'timer';
+    if (c.modalOpen) return 'modal';
+    if (c.typing) return 'typing';
+    if (c.hidden) return 'hidden';
+    if (c.showing) return 'showing';
+    return '';
+  }
+  // Time gate: first show 6 seconds after opening, then every freq minutes after the last one.
+  function due(c) {
+    if (!c.lastShownAt) return c.now - c.openedAt >= 6000;
+    return c.now - c.lastShownAt >= c.freq * 60000;
+  }
+
+  const fill = (t, c) => t.replace(/\{s\}/g, c.subject || '').replace(/\{d\}/g, String(c.daysToExam == null ? '' : c.daysToExam));
+  const rnd = (rng, n) => Math.min(n - 1, Math.floor((rng ? rng() : Math.random()) * n));
+
+  // Which pool fits this moment? Returns { pool, text }. `recent` holds the last few shown texts
+  // so the same line does not repeat close together.
+  function pick(lang, c, rng, recent) {
+    const L = POOLS[lang === 'en' ? 'en' : 'ar'];
+    const r = () => (rng ? rng() : Math.random());
+    const hour = c.hour == null ? 12 : c.hour;
+    const tries = [];
+    if (c.first) tries.push('opened');
+    if (c.justDone) tries.push('done');
+    if (c.daysToExam === 0) tries.push('examToday');
+    else if (c.daysToExam === 1) tries.push('examTomorrow');
+    if (c.streak >= 2 && !c.studiedToday && hour >= 17) tries.push('streak');
+    if (c.daysToExam != null && c.daysToExam >= 2 && c.daysToExam <= 7 && r() < 0.6) tries.push('exam');
+    if (!c.studiedToday && hour >= 14 && r() < 0.6) tries.push('idle');
+    if (c.subject && r() < 0.35) tries.push('subject');
+    if (hour >= 6 && hour < 11) tries.push('morning');
+    else if (hour >= 11 && hour < 17) tries.push('midday');
+    else if (hour >= 17) tries.push('evening');
+    tries.push('general');
+    for (let i = 0; i < tries.length; i++) {
+      const pool = tries[i];
+      let list = L[pool] || [];
+      if (pool === 'subject') {
+        const key = L.subjectKey.find((k) => k.re.test(c.subject || ''));
+        if (key) list = key.lines.concat(list.slice(0, 2));
+      }
+      const texts = list.map((t) => fill(t, c));
+      const fresh = texts.filter((t) => !(recent || []).includes(t));
+      const use = fresh.length ? fresh : (pool === 'general' ? texts : []);
+      if (!use.length) continue;
+      return { pool, text: use[rnd(rng, use.length)] };
+    }
+    return { pool: 'general', text: L.general[0] };
+  }
+
+  return { POOLS, FREQS, isNight, blockedBy, due, pick };
+})();
+if (typeof module === 'object' && module.exports) module.exports = Mascot;
 
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -2980,6 +3336,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       noteBtn: 'نوتس',
       notePh: 'اكتب اللي عايز تفتكره في المحاضرة دي...',
       remTitle: 'تذكير المذاكرة',
+      mascotTitle: 'الأفتار الصغير', mascotSub: 'بيطلّ من حافة الشاشة بجملة قصيرة ويمشي. مش بيظهر والتايمر شغال، ولا بالليل، ولا والتطبيق مقفول. دوس عليه يختفي. الإعداد ده على الجهاز ده بس.', mascotEvery: (m) => 'كل ' + m + ' دقايق', mascotOff: 'مقفول', mascotTry: 'جرّبه دلوقتي',
       remSub: 'يفكرك لو لسه مخلصتش هدف النهارده. بيشتغل والتطبيق مفتوح بس (مفيش سيرفر يبعت وهو مقفول).',
       remOn: 'شغال',
       remOff: 'شغّله',
@@ -3384,6 +3741,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       noteBtn: 'Notes',
       notePh: 'Write anything to remember about this lecture...',
       remTitle: 'Study reminder',
+      mascotTitle: 'Little mascot', mascotSub: 'Your avatar peeks from the edge of the screen with a short line, then leaves. It never shows while the study timer runs, at night, or when the app is closed. Tap it to dismiss. This setting is for this device only.', mascotEvery: (m) => 'Every ' + m + ' min', mascotOff: 'Off', mascotTry: 'Try it now',
       remSub: 'Reminds you if today\'s goal is not done. Works while the app is open (no server to send it when closed).',
       remOn: 'On',
       remOff: 'Turn on',
@@ -4796,6 +5154,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
         'Start Studying بيعرض اللي في خطة يومك بس.',
         'كل مادة بتفتح شاشتها لوحدها، وأسماء المواد بالإنجليزي.',
         'إعدادات اليوم (النوم والمواعيد والورك أوت) بتتزامن صح بين الجهازين.',
+        'جديد: 25 أفتار (الـ15 القدام اتغيّروا شكلهم والـ10 جداد)، وأفتار صغير بيطلّ من حافة الشاشة بجملة تشجيع كل شوية. تقدر تظبط الوقت أو تقفله من البروفايل.',
         'التذكير ونسبة "المخطط vs المنجز" الأسبوعية بقوا بيتحسبوا على الخطة اللي انت حطيتها في الجدول.',
         'جديد: حدد ساعات المذاكرة لكل يوم، وضيف جدول الكلية لكذا يوم مرة واحدة. الاقتراح بيملى الأوقات الفاضية بس ويحذرك لو اليوم زحمة.',
       ],
@@ -4803,6 +5162,10 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       why: 'بتفيدك ازاي',
       fix: 'لو حاجة مش مظبوطة',
       topics: [
+        { i: '🦷', t: 'الأفتار الصغير والأفتارات',
+          steps: ['من البروفايل اختار الأفتار اللي يمثلك من 25 شكل.', 'الأفتار بتاعك بيطلّ أحيانا من حافة الشاشة (يمين أو شمال أو من فوق) بجملة قصيرة وبيمشي بعد حوالي 10 ثواني.', 'دوس عليه عشان يختفي، أو سيبه.', 'من البروفايل > "الأفتار الصغير" اختار كل 5 أو 10 أو 20 دقيقة، أو اقفله. وفيه زرار "جرّبه دلوقتي".'],
+          why: 'تشجيع خفيف بيفكّرك تبدأ أو ترتاح، من غير ضغط. الجمل بتتغيّر حسب وقت اليوم ومذاكرتك وامتحاناتك.',
+          fix: 'مش بيظهر والتايمر شغال أو بالليل (12 لـ6 الصبح) أو والتطبيق مقفول، ده مقصود. ولو مش عايزه اقفله من نفس المكان. الإعداد ده على كل جهاز لوحده.' },
         { i: '🕘', t: 'يومك: النوم والكلية وساعات المذاكرة',
           steps: ['من تاب الوقت افتح اليوم اللي عايزه. حدد وقت نومك (اختياري).', 'من "جدول الكلية" اختار الأيام ومن أول محاضرة لآخر واحدة ودوس "ضيف للأيام المختارة".', 'ضيف أي مواعيد ثابتة تانية (صلاة، مواصلات، شغل، كورس) كبلوك في اليوم.', 'اختار "ساعات المذاكرة في اليوم ده" لو عايز حد أقصى (مثلا ٣ ساعات).', 'في الجدول دوس "اقترح جدول تلقائي".'],
           why: 'الاقتراح بيحط المذاكرة في الأوقات الفاضية بس، ومش هيزوّد عن ساعاتك، ولو اليوم زحمة بيقولك.',
@@ -4865,6 +5228,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       newsBtn: 'Open the updates channel',
       latest: 'Latest changes',
       latestList: [
+        'New: 25 avatars (the first 15 were redrawn, 10 are new) and a little mascot: your avatar peeks from the screen edge with a short encouraging line now and then. Set how often, or turn it off, in Profile.',
         'The reminder and the weekly planned vs done percentage now follow the plan you put on the timeline.',
         'New: set study hours per day and add your college timetable to several days at once. Suggest fills real free gaps only and warns when a day is too crowded.',
         'The schedule is now a timeline: put your own study in the free gaps.',
@@ -4878,6 +5242,10 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       why: 'Why it helps',
       fix: 'If something looks wrong',
       topics: [
+        { i: '🦷', t: 'The little mascot and avatars',
+          steps: ['In Profile pick the avatar that is you, from 25.', 'Your avatar sometimes peeks in from the screen edge (right, left or top) with a short line and leaves after about 10 seconds.', 'Tap it to dismiss, or just ignore it.', 'In Profile > Little mascot choose every 5, 10 or 20 minutes, or turn it off. There is also a Try it now button.'],
+          why: 'A light nudge to start or to rest, without pressure. The lines change with the time of day, your studying and your exams.',
+          fix: 'It does not show while the study timer runs, at night (12 to 6 AM) or while the app is closed, on purpose. If you do not want it, turn it off in the same place. The setting is per device.' },
         { i: '🕘', t: 'Your day: sleep, college and study hours',
           steps: ['In the Time tab open the day you want and set your sleep time (optional).', 'In College timetable pick the days and the first to last lecture time, then tap Add to selected days.', 'Add any other fixed times (prayer, transport, work, course) as blocks on that day.', 'Pick Study hours on this day if you want a maximum (for example 3 hours).', 'In the schedule tap Suggest a schedule.'],
           why: 'The suggestion only fills real free gaps, never goes over your hours, and warns you when a day is too crowded.',
@@ -5562,6 +5930,9 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     h += `<div class="card"><b>🔔 ${esc(L().remTitle)}</b><div class="muted" style="margin-top:4px">${esc(L().remSub)}</div>
       <div class="row" style="margin-top:8px"><input type="time" data-act="remTime" value="${esc(state.remind.time || '20:00')}" style="width:110px">
       <button class="btn ${state.remind.on ? '' : 'ghost'} grow" data-act="remToggle">${state.remind.on ? esc(L().remOn) : esc(L().remOff)}</button></div></div>`;
+    h += `<div class="card"><b>\uD83E\uDDB7 ${esc(L().mascotTitle)}</b><div class="muted" style="margin-top:4px">${esc(L().mascotSub)}</div>
+      <div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap">${Mascot.FREQS.map((m) => `<button class="btn ${mascotFreq() === m ? '' : 'ghost'} sm grow" data-act="mascotFreq" data-m="${m}">${esc(m ? L().mascotEvery(m) : L().mascotOff)}</button>`).join('')}</div>
+      <div class="row" style="margin-top:8px"><button class="btn ghost sm grow" data-act="mascotTry">${esc(L().mascotTry)}</button></div></div>`;
     h += `<div style="margin:0 0 12px"><button class="btn ghost" data-act="guideOpen" style="width:100%">❓ ${esc(L().tourBtn)}</button></div>`;
     h += `<div style="margin:0 0 12px"><button class="btn ghost" data-act="shareProg" style="width:100%">📤 ${esc(L().shareBtn)}</button></div>`;
     h += subjStatsHtml(); // v20: real minutes per subject
@@ -5850,6 +6221,68 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     try { new Notification(L().remNotifTitle, { body: ps.left ? L().remNotifLeft(ps.left) : L().remNotifBody, icon: 'icon-192.png' }); } catch (e) { /* ignored */ }
   }
 
+  /* ---- v30: the peeking mascot. Decisions live in mascot.js; this part draws it and keeps time.
+     Its only setting (how often) is stored on this device under its own key, so nothing in
+     the saved planner data or the sync changes. ---- */
+  const MASCOT_KEY = 'senny-mascot';
+  let mascotDoneAt = 0, mascotLast = 0, mascotRecent = [], mascotHide = null, mascotEl = null, mascotSide = '';
+  const mascotOpenedAt = Date.now();
+  const mascotFreq = () => { try { const v = JSON.parse(localStorage.getItem(MASCOT_KEY) || '{}'); return v && Mascot.FREQS.includes(v.freq) ? v.freq : 5; } catch (e) { return 5; } };
+  function setMascotFreq(m) { try { localStorage.setItem(MASCOT_KEY, JSON.stringify({ freq: m })); } catch (e) { /* ignored */ } mascotLast = Date.now(); if (!m) mascotLeave(); }
+  function mascotContext(first) {
+    const today = todayStr(), now = new Date();
+    const studiedToday = (state.focusLog || []).some((f) => f && f.date === today && (f.minutes || 0) > 0)
+      || state.subjects.some((s) => (s.tasks || []).some((t) => t.done && t.doneAt === today));
+    let cur = 0; try { cur = streakCalc(today).cur; } catch (e) { cur = 0; }
+    const nx = Scheduler.nextExam(state, today);
+    const open = [];
+    state.subjects.forEach((s) => { if ((s.tasks || []).some((t) => !t.done) && s.name) open.push(s); });
+    const pickS = nx && open.find((s) => s.id === nx.subjectId) ? open.find((s) => s.id === nx.subjectId) : open[Math.floor(Math.random() * open.length)];
+    return { hour: now.getHours(), first, justDone: Date.now() - mascotDoneAt < 10 * 60000, streak: cur, studiedToday,
+      daysToExam: nx ? Scheduler.diffDays(today, nx.date) : null, subject: (nx && nx.name) || (pickS && pickS.name) || '' };
+  }
+  function mascotBlock() {
+    return Mascot.blockedBy({ freq: mascotFreq(), hour: new Date().getHours(), timerRunning: !!focusRun || focusOpen,
+      modalOpen: !!document.querySelector('.overlay'), typing: /^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || ''),
+      hidden: document.hidden, showing: !!mascotEl });
+  }
+  function mascotTick() {
+    if (!state.profile || !state.profile.onboarded) return;
+    if (Mascot.due({ now: Date.now(), openedAt: mascotOpenedAt, lastShownAt: mascotLast, freq: mascotFreq() || 5 }) && !mascotBlock()) mascotShow(false);
+  }
+  function mascotLeave() {
+    clearTimeout(mascotHide); mascotHide = null;
+    const el = mascotEl; if (!el) return;
+    mascotEl = null; el.classList.remove('in');
+    setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 450);
+  }
+  // force = the "try it" button: ignores the timer/night rules because he asked for it
+  function mascotShow(force, side) {
+    if (mascotEl) mascotLeave();
+    if (!force && mascotBlock()) return;
+    const first = !mascotLast && !force;
+    const ctx = mascotContext(first);
+    const pk = Mascot.pick(state.lang, ctx, null, mascotRecent);
+    mascotRecent.push(pk.text); if (mascotRecent.length > 10) mascotRecent.shift();
+    mascotLast = Date.now();
+    const sides = ['r', 'l', 't'];
+    const sd = side || sides[Math.floor(Math.random() * 3)];
+    mascotSide = sd;
+    const el = document.createElement('div');
+    el.id = 'mascot'; el.className = 'mascot m-' + sd; el.setAttribute('role', 'status');
+    // vertical spot for the side peeks: somewhere in the middle band, away from the header and the bottom bar
+    const topPx = Math.round(window.innerHeight * (0.34 + Math.random() * 0.22));
+    if (sd !== 't') el.style.top = topPx + 'px';
+    else { const hd = document.querySelector('header'); el.style.top = (hd ? Math.round(hd.getBoundingClientRect().bottom) - 4 : 56) + 'px'; el.style.left = Math.round(window.innerWidth * (0.3 + Math.random() * 0.25)) + 'px'; }
+    el.innerHTML = `<div class="mbody"><span class="mav">${avatarSvg(state.profile.avatar)}</span><span class="mbub" dir="auto">${esc(pk.text)}</span></div>`;
+    el.addEventListener('click', () => { mascotLeave(); });
+    document.body.appendChild(el);
+    mascotEl = el;
+    el.dataset.pool = pk.pool;
+    requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('in')));
+    mascotHide = setTimeout(mascotLeave, 10000);
+  }
+
   function tick() {
     const now = Date.now();
     // v23: a change arrived from the other device while a field was focused
@@ -5857,6 +6290,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       const el = document.activeElement;
       if (!el || !/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) { pendingRender = false; render(); return; }
     }
+    try { mascotTick(); } catch (e) { /* ignored */ }
     if (!tick.lastRem || now - tick.lastRem > 30000) { tick.lastRem = now; try { checkReminder(); } catch (e) { /* ignored */ } }
     // keep the header clock fresh and roll the app over to the new day at midnight
     const clk = $('clockLbl');
@@ -6413,7 +6847,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     if (mSl) { commitSleep(+mSl[1]); return; }
     if (a === 'attFile') { const fl = Array.from(t.files || []); t.value = ''; if (fl.length) attAdd(t.dataset.l, t.dataset.s, fl).catch(() => toast(L().attFull)); return; }
     if (!a) return;
-    if (a === 'check') { const x = taskOf(t.dataset.s, t.dataset.l); x.done = t.checked; if (t.checked) x.doneAt = todayStr(); else { x.confidence = 0; delete x.doneAt; } }
+    if (a === 'check') { const x = taskOf(t.dataset.s, t.dataset.l); x.done = t.checked; if (t.checked) { x.doneAt = todayStr(); mascotDoneAt = Date.now(); } else { x.confidence = 0; delete x.doneAt; } }
     else if (a === 'conf') taskOf(t.dataset.s, t.dataset.l).confidence = +t.value;
     else if (a === 'tdiff') { /* difficulty select re-renders chip */ const el = $('est-' + t.dataset.s); if (el) el.textContent = estChipText(t.dataset.s); return; }
     else if (a === 'note') { const tk = taskOf(t.dataset.s, t.dataset.l); if (tk) tk.note = t.value; }
@@ -6467,6 +6901,8 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     }
     if (a === 'addCur') { addFromCur(t.dataset.code); return; }
     if (a === 'loadCur') { loadCur(); return; }
+    if (a === 'mascotFreq') { setMascotFreq(+t.dataset.m); return render(); }
+    if (a === 'mascotTry') { mascotShow(true); return; }
     if (a === 'toggleDay') { timeDay = timeDay === +t.dataset.i ? null : +t.dataset.i; return render(); }
     if (a === 'addBlock') {
       const i = +t.dataset.i;
@@ -6770,7 +7206,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       save(); return render();
     }
     if (a === 'delTask') { attDeleteMany((m) => m.taskId === l); const sj = subj(s); sj.tasks = sj.tasks.filter((x) => x.id !== l); save(); return render(); }
-    if (a === 'done') { const x = taskOf(s, l); if (x) { x.done = true; x.doneAt = todayStr(); } save(); return render(); }
+    if (a === 'done') { const x = taskOf(s, l); if (x) { x.done = true; x.doneAt = todayStr(); mascotDoneAt = Date.now(); } save(); return render(); }
     if (a === 'undone') { const x = taskOf(s, l); if (x) { x.done = false; delete x.doneAt; delete x.confidence; } save(); return render(); }
   });
 
@@ -6779,7 +7215,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     if (!document.hidden && canSyncLectures() && Date.now() - (state.batchSync.lastSync || 0) > 30 * 60000) syncLecturesFile(false);
   });
 
-  window.__planner = { endTour: () => { tourClose(); render(); }, get state() { return state; }, loadCur, render, tick, loadCloud, pushCloud, save, get focusRun() { return focusRun; }, get session() { return session; }, batchIdle: () => batchPromise || Promise.resolve(), lbDemo: (rows) => { lbRows = rows; lbError = ''; const el = $('lbList'); if (el) el.innerHTML = lbListHtml(); } };
+  window.__planner = { mascotShow, mascotLeave, mascotTick, mascotFreq, setMascotFreq, mascotBlock, get mascotEl() { return mascotEl; }, set mascotLast(v) { mascotLast = v; }, get mascotLast() { return mascotLast; }, endTour: () => { tourClose(); render(); }, get state() { return state; }, loadCur, render, tick, loadCloud, pushCloud, save, get focusRun() { return focusRun; }, get session() { return session; }, batchIdle: () => batchPromise || Promise.resolve(), lbDemo: (rows) => { lbRows = rows; lbError = ''; const el = $('lbList'); if (el) el.innerHTML = lbListHtml(); } };
   render();
   attLoadMeta();
   initCloud();
