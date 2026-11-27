@@ -194,7 +194,9 @@ nav button.on {
   font-weight: 700;
   box-shadow: 0 4px 12px -4px rgba(13, 148, 136, 0.55);
 }
-main { max-width: 780px; margin: 0 auto; padding: 16px 14px 40px; }
+/* v21: the floating tab bar sits ~76px tall at the bottom, so the page has to
+   end above it or the footer (note + feedback button) hides behind it. */
+main { max-width: 780px; margin: 0 auto; padding: 16px 14px 132px; }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .card {
   background: var(--card);
@@ -313,7 +315,7 @@ button.danger:hover { background: #fbdcdc; filter: none; }
 }
 .pcard { border-inline-start: 4px solid var(--primary); }
 @media (min-width: 640px) {
-  main { padding: 22px 20px 48px; }
+  main { padding: 22px 20px 132px; }
   nav { justify-content: center; }
   nav button { flex: 0 1 150px; }
   h1 { font-size: 21px; }
@@ -615,6 +617,35 @@ a.btn { display: inline-block; text-decoration: none; }
 .chcode { font-size: 22px; letter-spacing: 3px; color: var(--teal-ink); }
 .lbname { font-size: 12px; margin-inline-start: 4px; }
 .lbrow .err, .errline { color: var(--danger-ink); }
+/* v21: the footer always clears the floating bar and the + button */
+.foot { padding-bottom: 6px; }
+.shared { border-color: var(--primary); }
+
+/* v21: lecture attachments */
+.attbox { margin: 4px 0 10px; padding: 10px; border: 1px dashed var(--line-soft); border-radius: 12px; }
+.attrow { display: flex; gap: 6px; align-items: center; padding: 6px 0; border-top: 1px solid var(--line-soft); }
+.attrow .grow { overflow-wrap: anywhere; }
+.attpick { display: inline-block; cursor: pointer; margin: 6px 0; }
+.warnline { color: #f59e0b; font-weight: 700; margin-top: 4px; font-size: 13px; }
+
+/* v21: Ask AI */
+.aibox { margin: 4px 0 10px; padding: 12px; border-radius: 14px; background: linear-gradient(135deg, rgba(13,148,136,.16), rgba(99,102,241,.14)); border: 1px solid rgba(13,148,136,.35); }
+.aihead { font-weight: 800; margin-bottom: 8px; }
+.aibox .aigpt { background: #10a37f; color: #fff; }
+.aibox .aigem { background: #4f6df5; color: #fff; }
+
+/* v21: with the files and Ask AI buttons added, a lecture row wraps its buttons instead of squeezing the title */
+.lec { flex-wrap: wrap; }
+.lec .t.grow { min-width: 55%; }
+
+/* v21: first-run tour */
+.tourcard { text-align: center; }
+.tourico { font-size: 44px; line-height: 1.2; }
+.tourtitle { display: block; font-size: 19px; margin: 6px 0; }
+.tourtext { margin: 6px 0 10px; line-height: 1.8; }
+.tourdots { display: flex; justify-content: center; gap: 6px; }
+.tourdots i { width: 8px; height: 8px; border-radius: 50%; background: var(--line-soft); }
+.tourdots i.on { background: var(--primary); width: 22px; border-radius: 6px; }
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
@@ -2795,6 +2826,55 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       remNotifTitle: 'لسه مخلصتش مذاكرة النهارده 💪',
       remNotifBody: 'افتح التطبيق وكمّل خطتك',
       shareBtn: 'شارك تقدمك',
+      tourNext: 'التالي',
+      tourBack: 'رجوع',
+      tourSkip: 'تخطي',
+      tourDone: 'يلا نبدأ',
+      tourBtn: 'إزاي أستخدم التطبيق',
+      tour: [
+        ['يومي', 'هنا خطة النهارده: المذاكرة المطلوبة، وتبدأ تركيز بدوس ▶، وتدوس "خلصت" لما تخلص. زرار + بيضيف محاضرة أو مهمة بسرعة.'],
+        ['الجدول', 'ضيف مواعيد محاضراتك وسكاشنك ونومك والجيم، والتطبيق يوزع المذاكرة على الفراغات اللي بينهم لوحده.'],
+        ['المواد', 'مواد سنتك جاهزة. افتح أي مادة وضيف المحاضرات، وجنب كل محاضرة نوتس وملفات ومساعد AI.'],
+        ['الامتحانات', 'مواعيد الامتحانات والعد التنازلي. كل ما الامتحان يقرب الخطة بتركز على المحاضرات اللي لسه مخلصتهاش.'],
+        ['البروفايل', 'اسمك وشكلك وتقدمك والتحدي الأسبوعي مع صحابك. ومن هنا تفتح الشرح ده تاني في أي وقت.'],
+      ],
+      aiBtn: 'اسأل AI',
+      aiTitle: 'اسأل AI عن المحاضرة دي',
+      aiPh: 'اكتب عايز إيه، مثلا: لخصلي المحاضرة في نقط، أو اشرح لي الجزء الصعب',
+      aiChatgpt: 'افتح ChatGPT',
+      aiGemini: 'افتح Gemini',
+      aiCopyOnly: 'انسخ بس',
+      aiNote: 'التطبيق بيجهز لك الرسالة بس (سنتك والمادة والمحاضرة وملاحظاتك) وبينسخها، وانت بتلزقها هناك. إجابات الـ AI للمراجعة بس، مش مرجع، راجعها من المحاضرة والكتاب.',
+      aiEmpty: 'اكتب الأول عايز إيه',
+      aiCopied: 'اتنسخت. الزق (Paste) في الشات',
+      aiCopyFail: 'مقدرتش أنسخ. انسخ الكلام بإيدك',
+      attBtn: 'مرفقات',
+      attAdd: '+ ارفع ملف',
+      attHint: (mb) => 'PDF أو صورة أو صوت (mp3) أو أي ملف، لحد ' + mb + ' ميجا للملف الواحد.',
+      attNone: 'مفيش ملفات للمحاضرة دي لسه.',
+      attOpenBtn: 'افتح',
+      attPlayBtn: 'شغّل',
+      attDelBtn: 'مسح',
+      attLocalNote: 'الملفات محفوظة على المتصفح ده بس، مش بتتنقل لجهاز تاني ولا بتترفع أونلاين. لو مسحت بيانات المتصفح ممكن تضيع.',
+      attUsage: (x) => 'المرفقات: ' + x,
+      attQuota: (x) => 'المتاح تقريبا ' + x,
+      attNearFull: 'مساحة المتصفح قربت تخلص. امسح ملفات مش محتاجها.',
+      attTooBig: (mb) => 'الملف أكبر من ' + mb + ' ميجا ومترفعش',
+      attFull: 'المساحة خلصت أو المتصفح رفض الحفظ. امسح ملفات وجرب تاني.',
+      attMissing: 'مقدرتش أفتح الملف ده.',
+      attDelConfirm: 'تمسح الملف ده من الجهاز؟',
+      shareSchedTitle: 'جدول اليوم',
+      shareSchedSub: 'ابعت جدول النهارده لصاحبك كصورة جاهزة، أو كلينك بيفتح للقراءة بس.',
+      shareSchedImg: 'صورة الجدول',
+      shareSchedLink: 'لينك للقراءة',
+      shareSchedCopied: 'اللينك اتنسخ، ابعته لأي حد',
+      shareSchedCopy: 'انسخ اللينك وابعته',
+      shareSchedEmpty: 'مفيش حاجة في الجدول النهارده.',
+      sharedTitle: 'جدول مشارك',
+      sharedFrom: (n) => 'جدول من ' + n,
+      sharedNote: 'ده لينك للقراءة بس. مش هيتحفظ عندك ولا هيغير حاجة في تطبيقك.',
+      sharedOpen: 'افتح التطبيق بتاعي',
+      shareImgSaved: 'الصورة اتنزلت عندك',
       shareSaved: 'المشاركة مش متاحة هنا، الصورة اتنزلت عندك',
       shareTitle: 'تقدمي الأسبوع ده',
       streakDays: 'يوم ورا بعض',
@@ -3127,6 +3207,55 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       remNotifTitle: 'Today\'s studying is not done yet',
       remNotifBody: 'Open the app and finish your plan',
       shareBtn: 'Share your progress',
+      tourNext: 'Next',
+      tourBack: 'Back',
+      tourSkip: 'Skip',
+      tourDone: 'Let\'s start',
+      tourBtn: 'How to use the app',
+      tour: [
+        ['My Day', 'Today\'s plan: what to study, press ▶ to start focus, press "Done" when you finish. The + button adds a lecture or task fast.'],
+        ['Schedule', 'Add your lectures, sections, sleep and gym. The app fits your study into the gaps between them.'],
+        ['Subjects', 'Your year\'s subjects are ready. Open one and add lectures. Each lecture has notes, files and an AI helper.'],
+        ['Exams', 'Exam dates and countdowns. As an exam gets closer the plan focuses on the lectures you have not finished.'],
+        ['Profile', 'Your name, look, progress and the weekly challenge with friends. You can reopen this tour from here any time.'],
+      ],
+      aiBtn: 'Ask AI',
+      aiTitle: 'Ask AI about this lecture',
+      aiPh: 'Type what you want, e.g. summarize this lecture in points, or explain the hard part',
+      aiChatgpt: 'Open ChatGPT',
+      aiGemini: 'Open Gemini',
+      aiCopyOnly: 'Copy only',
+      aiNote: 'The app only prepares the message (your year, subject, lecture and notes) and copies it; you paste it there. AI answers are for review, not a reference. Check them against the lecture and the book.',
+      aiEmpty: 'Type what you want first',
+      aiCopied: 'Copied. Paste it in the chat',
+      aiCopyFail: 'Could not copy. Copy the text by hand',
+      attBtn: 'Files',
+      attAdd: '+ Add file',
+      attHint: (mb) => 'PDF, image, audio (mp3) or any file, up to ' + mb + ' MB each.',
+      attNone: 'No files for this lecture yet.',
+      attOpenBtn: 'Open',
+      attPlayBtn: 'Play',
+      attDelBtn: 'Delete',
+      attLocalNote: 'Files stay in this browser only. They do not move to another device or go online, and clearing browser data can erase them.',
+      attUsage: (x) => 'Files: ' + x,
+      attQuota: (x) => 'about ' + x + ' left',
+      attNearFull: 'Browser storage is almost full. Delete files you do not need.',
+      attTooBig: (mb) => 'That file is over ' + mb + ' MB and was not added',
+      attFull: 'Storage is full or the browser refused to save. Delete some files and try again.',
+      attMissing: 'Could not open that file.',
+      attDelConfirm: 'Delete this file from the device?',
+      shareSchedTitle: "Today's schedule",
+      shareSchedSub: 'Send today to a friend as a ready image, or as a link that opens read-only.',
+      shareSchedImg: 'Schedule image',
+      shareSchedLink: 'Read-only link',
+      shareSchedCopied: 'Link copied, send it to anyone',
+      shareSchedCopy: 'Copy the link and send it',
+      shareSchedEmpty: 'Nothing in the schedule today.',
+      sharedTitle: 'Shared schedule',
+      sharedFrom: (n) => 'A schedule from ' + n,
+      sharedNote: 'This link is read-only. Nothing is saved on your device and nothing in your app changes.',
+      sharedOpen: 'Open my app',
+      shareImgSaved: 'The image was saved',
       shareSaved: 'Sharing is not available here, the image was downloaded',
       shareTitle: 'My progress this week',
       streakDays: 'days in a row',
@@ -3376,6 +3505,21 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
   const FKEY = KEY + '.focus';
   let focusOpen = false, focusSel = null, focusPreset = 0, focusRun = null, beepCtx = null;
   let dayViewDate = null, fabOpen = false, fabKind = 'lecture', noteOpen = null; // v19
+  // v21: a shared-schedule link (#s=...) opens a read-only view; home-screen shortcuts open #today / #focus / #add
+  let sharedData = null;
+  (function readHash() {
+    try {
+      const h = location.hash || '';
+      if (h.indexOf('#s=') === 0) {
+        const d = JSON.parse(b64d(h.slice(3)));
+        if (d && Array.isArray(d.i)) {
+          sharedData = { d: String(d.d || '').slice(0, 10), n: String(d.n || '').slice(0, 24), i: d.i.slice(0, 20).map((r) => [String(r[0] || '').slice(0, 24), String(r[1] || '').slice(0, 60), String(r[2] || '').slice(0, 80)]) };
+        }
+      } else if (h === '#focus') focusOpen = true;
+      else if (h === '#add') fabOpen = true;
+      else if (h === '#today') tab = 'day';
+    } catch (e) { sharedData = null; }
+  })();
   try {
     const fr = localStorage.getItem(FKEY);
     if (fr) {
@@ -4054,6 +4198,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     if (!items.length) h += `<div class="muted" style="padding:6px 2px">${esc(viewDate ? L().emptyDay : L().emptyToday)}</div>`;
     items.forEach((it) => { h += it.html; });
     h += '</div>';
+    if (!viewDate) h += `<div class="row" style="margin:-4px 0 12px"><button class="btn ghost sm grow" data-act="shareSchedImg">📤 ${esc(L().shareSchedImg)}</button><button class="btn ghost sm grow" data-act="shareSchedLink">🔗 ${esc(L().shareSchedLink)}</button></div>`;
 
     // v14: tasks finished today stay visible with a check and can be un-done
     const doneToday = [];
@@ -4265,7 +4410,11 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
             <span class="t grow">${t.kind === 'clinic' ? '🦷 ' : '📖 '}${esc(t.title)}<br><span class="muted">${esc(estTxt)}</span></span>
             ${t.done && t.kind === 'lecture' ? `<select data-act="conf" data-s="${s.id}" data-l="${t.id}"><option value="0">${esc(L().confPh)}</option>${[1, 2, 3, 4, 5].map((n) => `<option value="${n}" ${t.confidence === n ? 'selected' : ''}>${n}/5</option>`).join('')}</select>` : ''}
             <button class="btn ghost sm" data-act="noteT" data-s="${s.id}" data-l="${t.id}" title="${esc(L().noteBtn)}">🗒</button>
+            <button class="btn ghost sm" data-act="aiT" data-l="${t.id}" title="${esc(L().aiBtn)}">✨</button>
+            <button class="btn ghost sm" data-act="attT" data-l="${t.id}" title="${esc(L().attBtn)}">📎${(attMeta[t.id] || []).length ? ' ' + (attMeta[t.id] || []).length : ''}</button>
             <button class="btn ghost" data-act="delTask" data-s="${s.id}" data-l="${t.id}">x</button></div>` +
+            (aiOpen === t.id ? aiPanel(s, t) : '') +
+            (attOpen === t.id ? attPanel(s, t) : '') +
             (noteOpen === t.id
               ? `<textarea class="notebox" data-act="note" data-s="${s.id}" data-l="${t.id}" placeholder="${esc(L().notePh)}">${esc(t.note || '')}</textarea>`
               : (t.note ? `<div class="noteview muted">${esc(t.note)}</div>` : ''));
@@ -4418,6 +4567,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     h += `<div class="card"><b>🔔 ${esc(L().remTitle)}</b><div class="muted" style="margin-top:4px">${esc(L().remSub)}</div>
       <div class="row" style="margin-top:8px"><input type="time" data-act="remTime" value="${esc(state.remind.time || '20:00')}" style="width:110px">
       <button class="btn ${state.remind.on ? '' : 'ghost'} grow" data-act="remToggle">${state.remind.on ? esc(L().remOn) : esc(L().remOff)}</button></div></div>`;
+    h += `<div style="margin:0 0 12px"><button class="btn ghost" data-act="tourOpen" style="width:100%">❓ ${esc(L().tourBtn)}</button></div>`;
     h += `<div style="margin:0 0 12px"><button class="btn ghost" data-act="shareProg" style="width:100%">📤 ${esc(L().shareBtn)}</button></div>`;
     h += subjStatsHtml(); // v20: real minutes per subject
     h += dashHTML(); // v14: progress dashboard at the very bottom of the profile
@@ -4735,6 +4885,299 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     }
   }
 
+  /* ---------------- v21: lecture attachments (files stay on this device, in IndexedDB) ---------------- */
+  const ATT_MAX = 50 * 1024 * 1024; // per file
+  let attOpen = null, attPlay = null, attMeta = {}, attDB = null, attBusy = false, attUsage = null;
+  function attOpenDB() {
+    return new Promise((resolve, reject) => {
+      if (attDB) return resolve(attDB);
+      if (!window.indexedDB) return reject(new Error('no-idb'));
+      const rq = indexedDB.open('dental-planner-files', 1);
+      rq.onupgradeneeded = () => {
+        const db = rq.result;
+        const m = db.createObjectStore('meta', { keyPath: 'id' }); m.createIndex('task', 'taskId');
+        db.createObjectStore('blobs');
+      };
+      rq.onsuccess = () => { attDB = rq.result; resolve(attDB); };
+      rq.onerror = () => reject(rq.error);
+    });
+  }
+  const idbReq = (r) => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+  async function attLoadMeta() {
+    try {
+      const db = await attOpenDB();
+      const all = await idbReq(db.transaction('meta').objectStore('meta').getAll());
+      attMeta = {};
+      all.forEach((m) => (attMeta[m.taskId] = attMeta[m.taskId] || []).push(m));
+      render();
+    } catch (e) { /* storage unavailable: the button just shows an error when used */ }
+  }
+  async function attAdd(taskId, subjectId, files) {
+    attBusy = true;
+    const db = await attOpenDB();
+    let tooBig = 0, failed = 0, added = 0;
+    for (const f of files) {
+      if (f.size > ATT_MAX) { tooBig++; continue; }
+      const id = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+      const meta = { id, taskId, subjectId, name: f.name || 'file', type: f.type || '', size: f.size, added: Date.now() };
+      try {
+        await new Promise((res, rej) => {
+          const tx = db.transaction(['meta', 'blobs'], 'readwrite');
+          tx.objectStore('meta').put(meta); tx.objectStore('blobs').put(f, id);
+          tx.oncomplete = res; tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error || new Error('abort'));
+        });
+        (attMeta[taskId] = attMeta[taskId] || []).push(meta); added++;
+      } catch (e) { failed++; }
+    }
+    attBusy = false;
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { /* ignore */ }
+    if (tooBig) toast(L().attTooBig(Math.round(ATT_MAX / 1048576)));
+    else if (failed) toast(L().attFull);
+    attRefreshUsage(); render();
+  }
+  async function attDelete(id, taskId) {
+    try {
+      const db = await attOpenDB();
+      await new Promise((res, rej) => { const tx = db.transaction(['meta', 'blobs'], 'readwrite'); tx.objectStore('meta').delete(id); tx.objectStore('blobs').delete(id); tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+    } catch (e) { /* ignore */ }
+    attMeta[taskId] = (attMeta[taskId] || []).filter((m) => m.id !== id);
+    if (attPlay && attPlay.id === id) { try { URL.revokeObjectURL(attPlay.url); } catch (e) { /* ignore */ } attPlay = null; }
+    attRefreshUsage(); render();
+  }
+  async function attDeleteMany(pred) { // when a lecture or a subject is removed
+    const ids = [];
+    Object.keys(attMeta).forEach((k) => (attMeta[k] || []).forEach((m) => { if (pred(m)) ids.push(m); }));
+    for (const m of ids) await attDelete(m.id, m.taskId);
+  }
+  async function attOpenFile(id, taskId) {
+    const m = (attMeta[taskId] || []).find((x) => x.id === id); if (!m) return;
+    let w = null;
+    const isMedia = /^(audio|video|image)\//.test(m.type);
+    if (!isMedia) { try { w = window.open('', '_blank'); } catch (e) { w = null; } } // opened first so the browser allows it
+    try {
+      const db = await attOpenDB();
+      const blob = await idbReq(db.transaction('blobs').objectStore('blobs').get(id));
+      if (!blob) { if (w) w.close(); return toast(L().attMissing); }
+      const url = URL.createObjectURL(blob.type ? blob : new Blob([blob], { type: m.type || 'application/octet-stream' }));
+      if (isMedia) {
+        if (attPlay) { try { URL.revokeObjectURL(attPlay.url); } catch (e) { /* ignore */ } }
+        attPlay = { id, url, kind: m.type.split('/')[0] }; return render();
+      }
+      if (m.type === 'application/pdf' && w) { w.location = url; return; }
+      if (w) w.close();
+      const a = document.createElement('a'); a.href = url; a.download = m.name; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (e) { if (w) w.close(); toast(L().attMissing); }
+  }
+  async function attRefreshUsage() {
+    try {
+      if (navigator.storage && navigator.storage.estimate) {
+        const e = await navigator.storage.estimate();
+        const own = Object.keys(attMeta).reduce((a, k) => a + (attMeta[k] || []).reduce((x, m) => x + m.size, 0), 0);
+        attUsage = { own, usage: e.usage || 0, quota: e.quota || 0 };
+      } else {
+        attUsage = { own: Object.keys(attMeta).reduce((a, k) => a + (attMeta[k] || []).reduce((x, m) => x + m.size, 0), 0), usage: 0, quota: 0 };
+      }
+      const el = document.getElementById('attUsage'); if (el) el.innerHTML = attUsageHtml();
+    } catch (e) { /* ignore */ }
+  }
+  const fmtBytes = (n) => '\u2066' + (n >= 1048576 ? (n / 1048576).toFixed(n >= 10485760 ? 0 : 1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB') + '\u2069'; // LTR isolate so the unit stays after the number in Arabic text
+  function attUsageHtml() {
+    if (!attUsage) return '';
+    const u = attUsage;
+    const ratio = u.quota ? u.usage / u.quota : 0;
+    let h = `<span class="muted sml">${esc(L().attUsage(fmtBytes(u.own)))}${u.quota ? ' · ' + esc(L().attQuota(fmtBytes(Math.max(0, u.quota - u.usage)))) : ''}</span>`;
+    if (ratio > 0.8) h += `<div class="warnline">${esc(L().attNearFull)}</div>`;
+    return h;
+  }
+  function attPanel(s, t) {
+    const list = attMeta[t.id] || [];
+    let h = `<div class="attbox"><div class="muted sml">${esc(L().attHint(Math.round(ATT_MAX / 1048576)))}</div>`;
+    h += `<label class="btn ghost sm attpick">${esc(L().attAdd)}<input type="file" multiple hidden data-act="attFile" data-s="${s.id}" data-l="${t.id}"></label>`;
+    if (!list.length) h += `<div class="muted sml" style="margin-top:6px">${esc(L().attNone)}</div>`;
+    list.forEach((m) => {
+      const icon = /^audio\//.test(m.type) ? '🎧' : /^image\//.test(m.type) ? '🖼' : m.type === 'application/pdf' ? '📄' : /^video\//.test(m.type) ? '🎬' : '📎';
+      h += `<div class="attrow"><span class="grow" dir="auto">${icon} ${esc(m.name)} <span class="muted sml" dir="ltr">${esc(fmtBytes(m.size))}</span></span>
+        <button class="btn ghost sm" data-act="attOpenF" data-l="${t.id}" data-f="${m.id}">${esc(/^(audio|video)\//.test(m.type) ? L().attPlayBtn : L().attOpenBtn)}</button>
+        <button class="btn ghost sm" data-act="attDel" data-l="${t.id}" data-f="${m.id}">${esc(L().attDelBtn)}</button></div>`;
+      if (attPlay && attPlay.id === m.id) {
+        h += attPlay.kind === 'audio' ? `<audio controls src="${attPlay.url}" style="width:100%;margin:4px 0"></audio>`
+          : attPlay.kind === 'video' ? `<video controls playsinline src="${attPlay.url}" style="width:100%;margin:4px 0;border-radius:10px"></video>`
+          : `<img src="${attPlay.url}" alt="" style="max-width:100%;margin:4px 0;border-radius:10px">`;
+      }
+    });
+    h += `<div id="attUsage">${attUsageHtml()}</div><div class="muted sml" style="margin-top:4px">${esc(L().attLocalNote)}</div></div>`;
+    return h;
+  }
+
+  /* ---------------- v21: Ask AI (builds a prompt, copies it, opens ChatGPT or Gemini; the app runs no AI itself) ---------------- */
+  let aiOpen = null;
+  function aiPrompt(sj, t, ask) {
+    const yr = state.profile.year;
+    const note = (t.note || '').trim();
+    if (state.lang === 'en') {
+      return `I am a dental student, year ${yr}.\nSubject: ${sj.name}\nLecture: ${t.title}\n` + (note ? `My notes: ${note}\n` : '') + `\nWhat I want: ${ask}`;
+    }
+    return `أنا طالب طب أسنان سنة ${yr}.\nالمادة: ${sj.name}\nالمحاضرة: ${t.title}\n` + (note ? `ملاحظاتي: ${note}\n` : '') + `\nعايز: ${ask}\n\nرد بالمصري وسيب المصطلحات العلمية بالإنجليزي.`;
+  }
+  function copyText(txt) {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(txt).catch(() => {}); return true; }
+    } catch (e) { /* fall through */ }
+    try {
+      const ta = document.createElement('textarea'); ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok;
+    } catch (e) { return false; }
+  }
+  function aiGo(sid, tid, where) {
+    const ta = document.getElementById('ai-' + tid);
+    const ask = ta ? ta.value.trim() : '';
+    if (!ask) { toast(L().aiEmpty); return; }
+    const sj = subj(sid), t = taskOf(sid, tid); if (!sj || !t) return;
+    const ok = copyText(aiPrompt(sj, t, ask));
+    toast(ok ? L().aiCopied : L().aiCopyFail);
+    if (where === 'chatgpt') window.open('https://chatgpt.com/', '_blank', 'noopener');
+    else if (where === 'gemini') window.open('https://gemini.google.com/app', '_blank', 'noopener');
+  }
+  function aiPanel(sj, t) {
+    return `<div class="aibox"><div class="aihead">✨ ${esc(L().aiTitle)}</div>
+      <textarea id="ai-${t.id}" class="notebox" rows="3" placeholder="${esc(L().aiPh)}"></textarea>
+      <div class="row" style="margin-top:8px"><button class="btn grow aigpt" data-act="aiGo" data-s="${sj.id}" data-l="${t.id}" data-w="chatgpt">${esc(L().aiChatgpt)}</button>
+      <button class="btn grow aigem" data-act="aiGo" data-s="${sj.id}" data-l="${t.id}" data-w="gemini">${esc(L().aiGemini)}</button></div>
+      <button class="linklike" style="margin-top:6px" data-act="aiGo" data-s="${sj.id}" data-l="${t.id}" data-w="copy">${esc(L().aiCopyOnly)}</button>
+      <div class="muted sml" style="margin-top:6px">${esc(L().aiNote)}</div></div>`;
+  }
+
+  /* ---------------- v21: first-run tour (5 short cards, reopen from the profile) ---------------- */
+  const TOUR_KEY = KEY + '.tour';
+  const TOUR_TABS = ['day', 'schedule', 'subjects', 'exams', 'profile'];
+  const TOUR_ICON = ['☀️', '🗓', '📚', '📝', '👤'];
+  let tourStep = null, tourDone = false;
+  try { tourDone = localStorage.getItem(TOUR_KEY) === '1'; } catch (e) { /* ignore */ }
+  function tourClose() {
+    tourStep = null; tourDone = true;
+    try { localStorage.setItem(TOUR_KEY, '1'); } catch (e) { /* ignore */ }
+    tab = 'day';
+  }
+  function tourHtml() {
+    const c = L().tour[tourStep]; if (!c) return '';
+    const last = tourStep === TOUR_TABS.length - 1;
+    return `<div class="overlay tour"><div class="sheet tourcard">
+      <div class="tourico">${TOUR_ICON[tourStep]}</div>
+      <b class="tourtitle">${esc(c[0])}</b>
+      <p class="tourtext">${esc(c[1])}</p>
+      <div class="tourdots">${TOUR_TABS.map((x, i) => `<i class="${i === tourStep ? 'on' : ''}"></i>`).join('')}</div>
+      <div class="row" style="margin-top:12px">
+        ${tourStep > 0 ? `<button class="btn ghost" data-act="tourPrev">${esc(L().tourBack)}</button>` : ''}
+        <button class="btn grow" data-act="${last ? 'tourEnd' : 'tourNext'}">${esc(last ? L().tourDone : L().tourNext)}</button>
+      </div>
+      ${last ? '' : `<div style="text-align:center;margin-top:8px"><button class="linklike" data-act="tourEnd">${esc(L().tourSkip)}</button></div>`}
+    </div></div>`;
+  }
+
+  // v21: hand a generated image to the share sheet, or download it when sharing is unavailable.
+  async function sendBlob(blob, filename, okMsg) {
+    if (!blob) return;
+    const file = new File([blob], filename, { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file] }); } catch (e) { /* the student cancelled */ }
+      return;
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    toast(okMsg);
+  }
+
+  // Everything on a day's timeline, in the order it happens.
+  function schedItems(date) {
+    const out = [];
+    blocksForDate(date).forEach((b) => out.push({ m: b.s, time: fmtClockRange(b.s, b.e), subject: b.label || L().kindWord[b.kind] || '', title: '' }));
+    let r = { sessions: [] };
+    try { r = Scheduler.generate(state, date, {}); } catch (e) { r = { sessions: [] }; }
+    r.sessions.filter((x) => x.date === date).forEach((x) => {
+      const sj = subj(x.subjectId);
+      if (!sj) return;
+      const title = x.type === 'review' ? L().generalReview : x.type === 'examreview' ? L().examReviewTitle : x.title;
+      out.push({ m: x.startMin == null ? 1e9 : x.startMin, time: x.startMin != null ? fmtClockRange(x.startMin, x.endMin) : '', subject: sj.name, title: title || '' });
+    });
+    out.sort((a, b) => a.m - b.m);
+    return out.slice(0, 12);
+  }
+
+  function b64e(str) { return btoa(unescape(encodeURIComponent(str))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+  function b64d(str) { return decodeURIComponent(escape(atob(String(str).replace(/-/g, '+').replace(/_/g, '/')))); }
+
+  // The link carries the schedule inside it, so no server is involved.
+  function shareScheduleLink() {
+    const date = todayStr();
+    const items = schedItems(date);
+    if (!items.length) return toast(L().shareSchedEmpty);
+    const payload = { d: date, n: (state.profile.name || '').trim().split(/\s+/)[0] || '', i: items.map((x) => [x.time, x.subject, x.title]) };
+    const url = location.origin + location.pathname + '#s=' + b64e(JSON.stringify(payload));
+    if (navigator.share) { navigator.share({ title: L().shareSchedTitle, url }).catch(() => {}); return; }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(url); return toast(L().shareSchedCopied); }
+    } catch (e) { /* fall through */ }
+    window.prompt(L().shareSchedCopy, url);
+  }
+
+  function shareScheduleImg() {
+    try {
+      const date = todayStr();
+      const items = schedItems(date);
+      if (!items.length) return toast(L().shareSchedEmpty);
+      const W = 1080, H = Math.max(1080, 400 + items.length * 118 + 150);
+      const cv = document.createElement('canvas');
+      cv.width = W; cv.height = H;
+      const c = cv.getContext('2d');
+      const g = c.createLinearGradient(0, 0, W, H);
+      g.addColorStop(0, '#0d9488'); g.addColorStop(1, '#0b2b28');
+      c.fillStyle = g; c.fillRect(0, 0, W, H);
+      c.direction = 'rtl'; c.textAlign = 'right';
+      c.fillStyle = '#ffffff';
+      c.font = '800 62px Cairo, sans-serif';
+      c.fillText(L().shareSchedTitle, 1010, 150);
+      c.font = '600 40px Cairo, sans-serif';
+      c.fillStyle = '#ccfbf1';
+      c.fillText(L().days[Scheduler.weekday(date)] + ' ' + (+date.slice(8)) + ' ' + L().months[+date.slice(5, 7) - 1], 1010, 215);
+      let y = 330;
+      items.forEach((it) => {
+        c.fillStyle = 'rgba(255,255,255,0.10)';
+        c.fillRect(70, y - 62, 940, 100);
+        c.fillStyle = '#ffffff';
+        c.font = '700 38px Cairo, sans-serif';
+        c.fillText(String(it.subject || '').slice(0, 34), 990, y - 14);
+        c.fillStyle = '#99f6e4';
+        c.font = '600 30px Cairo, sans-serif';
+        c.fillText((String(it.title || '').slice(0, 30) + (it.time ? '  ·  ' + it.time : '')).trim(), 990, y + 26);
+        y += 118;
+      });
+      c.textAlign = 'center';
+      c.fillStyle = '#99f6e4';
+      c.font = '700 36px Cairo, sans-serif';
+      c.fillText('Dental Student Planner', W / 2, H - 60);
+      cv.toBlob((blob) => sendBlob(blob, 'dental-schedule.png', L().shareImgSaved), 'image/png');
+    } catch (e) { /* canvas unsupported: stay silent */ }
+  }
+
+  // The read-only screen a friend sees when they open a shared link.
+  function sharedView() {
+    const d = sharedData || {};
+    let h = `<div class="card shared"><b>📅 ${esc(L().sharedTitle)}</b>
+      <div class="muted" style="margin-top:4px">${esc(d.n ? L().sharedFrom(d.n) : '')} ${esc(d.d || '')}</div>
+      <div class="muted sml" style="margin-top:6px">${esc(L().sharedNote)}</div></div><div class="card">`;
+    const rows = Array.isArray(d.i) ? d.i : [];
+    if (!rows.length) h += `<div class="muted">${esc(L().shareSchedEmpty)}</div>`;
+    rows.forEach((row) => {
+      h += `<div class="sess"><div class="grow"><b>${esc(row[1] || '')}</b>${row[2] ? ' - ' + esc(row[2]) : ''}</div>${row[0] ? `<span class="muted hrs" dir="ltr">${esc(row[0])}</span>` : ''}</div>`;
+    });
+    h += `</div><div style="margin:0 0 12px"><button class="btn" data-act="exitShare" style="width:100%">${esc(L().sharedOpen)}</button></div>`;
+    return h;
+  }
+
   // v19: share progress as a generated image (Web Share API, download fallback)
   function shareProgress() {
     try {
@@ -4767,20 +5210,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       c.font = '700 40px Cairo, sans-serif';
       c.fillStyle = '#99f6e4';
       c.fillText('Dental Student Planner', 540, 1000);
-      cv.toBlob(async (blob) => {
-        if (!blob) return;
-        const file = new File([blob], 'dental-progress.png', { type: 'image/png' });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          try { await navigator.share({ files: [file] }); } catch (e) { /* user cancelled */ }
-        } else {
-          const a = document.createElement('a');
-          a.href = URL.createObjectURL(blob);
-          a.download = 'dental-progress.png';
-          a.click();
-          setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-          toast(L().shareSaved);
-        }
-      }, 'image/png');
+      cv.toBlob((blob) => sendBlob(blob, 'dental-progress.png', L().shareSaved), 'image/png');
     } catch (e) { /* canvas unsupported: stay silent */ }
   }
 
@@ -4799,6 +5229,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
         <div style="text-align:center;margin-top:10px"><button class="linklike" data-act="authSkip">${esc(L().skipBtn)}</button></div></div></div>`;
       return h;
     }
+    if (tourStep != null) return tourHtml();
     if (fabOpen) {
       const opts = state.subjects.map((s2) => `<option value="${s2.id}">${esc(s2.name)}</option>`).join('');
       return `<div class="overlay"><div class="sheet"><b style="font-size:17px">${esc(L().addTaskTitle)}</b>
@@ -4905,6 +5336,8 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
   }
 
   function render() {
+    if (tourStep == null && state.profile.onboarded && !tourDone && !sharedData && !(cloudEnabled() && !session && !authSkipped)) tourStep = 0; // v21 first-run tour
+    if (tourStep != null) tab = TOUR_TABS[tourStep];
     if (focusRun && !taskOf(focusRun.subjectId, focusRun.taskId)) { focusRun = null; persistFocus(); }
     applyChrome();
     const nowD = new Date();
@@ -4913,10 +5346,10 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       : L().days[nowD.getDay()] + '\u060c ' + nowD.getDate() + ' ' + L().months[nowD.getMonth()];
     $('todayLbl').innerHTML = `<span>${esc(hd)}</span> \u00b7 <span id="clockLbl" dir="ltr">${esc(clockNow())}</span>`;
     document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
-    const fab = $('fab'); if (fab) fab.style.display = ((tab === 'day' || tab === 'subjects') && state.profile.onboarded && state.subjects.length) ? 'flex' : 'none';
+    const fab = $('fab'); if (fab) fab.style.display = sharedData ? 'none' : ((tab === 'day' || tab === 'subjects') && state.profile.onboarded && state.subjects.length) ? 'flex' : 'none';
     const pb = $('profileBtn'); if (pb) pb.innerHTML = avatarSvg(state.profile.avatar) || '👤'; // v17: the chosen avatar rides in the header
-    $('view').innerHTML = { day: viewDay, schedule: viewSchedule, exams: viewExams, subjects: viewSubjects, profile: viewProfile }[tab]() + footerHtml();
-    $('overlays').innerHTML = overlays();
+    $('view').innerHTML = sharedData ? sharedView() : { day: viewDay, schedule: viewSchedule, exams: viewExams, subjects: viewSubjects, profile: viewProfile }[tab]() + footerHtml();
+    $('overlays').innerHTML = sharedData ? '' : overlays();
     if (focusRun) updateFocusText();
     // v17/v20: refresh the board and the challenge whenever the profile shows and they are stale
     if (tab === 'profile' && fbDb) {
@@ -4953,6 +5386,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     const t = e.target, a = t.dataset && t.dataset.act;
     const mSl = /^sl(\d)(H|M)$/.exec(t.id || '');
     if (mSl) { commitSleep(+mSl[1]); return; }
+    if (a === 'attFile') { const fl = Array.from(t.files || []); t.value = ''; if (fl.length) attAdd(t.dataset.l, t.dataset.s, fl).catch(() => toast(L().attFull)); return; }
     if (!a) return;
     if (a === 'check') { const x = taskOf(t.dataset.s, t.dataset.l); x.done = t.checked; if (t.checked) x.doneAt = todayStr(); else { x.confidence = 0; delete x.doneAt; } }
     else if (a === 'conf') taskOf(t.dataset.s, t.dataset.l).confidence = +t.value;
@@ -5184,7 +5618,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
 
     if (a === 'toggle') { openSubject = openSubject === s ? null : s; return render(); }
     if (a === 'toggleExam') { openExam = openExam === s ? null : s; return render(); }
-    if (a === 'delSubject') { if (!confirm(L().delConfirm)) return; state.subjects = state.subjects.filter((x) => x.id !== s); save(); return render(); }
+    if (a === 'delSubject') { if (!confirm(L().delConfirm)) return; attDeleteMany((m) => m.subjectId === s); state.subjects = state.subjects.filter((x) => x.id !== s); save(); return render(); }
     if (a === 'saveExam') {
       const p = 'e-' + s + '-';
       const date = $(p + 'Date').value;
@@ -5210,6 +5644,15 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       sj.tasks.push(task);
       fabOpen = false; save(); return render();
     }
+    if (a === 'tourNext') { tourStep = Math.min(TOUR_TABS.length - 1, tourStep + 1); return render(); }
+    if (a === 'tourPrev') { tourStep = Math.max(0, tourStep - 1); return render(); }
+    if (a === 'tourEnd') { tourClose(); return render(); }
+    if (a === 'tourOpen') { tourStep = 0; return render(); }
+    if (a === 'aiT') { aiOpen = aiOpen === l ? null : l; return render(); }
+    if (a === 'aiGo') { aiGo(s, l, t.dataset.w); return; }
+    if (a === 'attT') { attOpen = attOpen === l ? null : l; attPlay = null; if (attOpen) attRefreshUsage(); return render(); }
+    if (a === 'attOpenF') { attOpenFile(t.dataset.f, l); return; }
+    if (a === 'attDel') { if (confirm(L().attDelConfirm)) attDelete(t.dataset.f, l); return; }
     if (a === 'noteT') { noteOpen = (noteOpen === l) ? null : l; return render(); }
     if (a === 'remToggle') {
       const rm = state.remind;
@@ -5232,6 +5675,9 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       return render();
     }
     if (a === 'shareProg') { shareProgress(); return; }
+    if (a === 'shareSchedImg') { shareScheduleImg(); return; }
+    if (a === 'shareSchedLink') { shareScheduleLink(); return; }
+    if (a === 'exitShare') { sharedData = null; try { history.replaceState(null, '', location.pathname); } catch (e) { /* ignore */ } return render(); }
     if (a === 'addTask') {
       const sj = subj(s), title = $('tt-' + s).value.trim();
       if (!title) return alert(L().needTask);
@@ -5242,7 +5688,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       sj.tasks.push(task);
       save(); return render();
     }
-    if (a === 'delTask') { const sj = subj(s); sj.tasks = sj.tasks.filter((x) => x.id !== l); save(); return render(); }
+    if (a === 'delTask') { attDeleteMany((m) => m.taskId === l); const sj = subj(s); sj.tasks = sj.tasks.filter((x) => x.id !== l); save(); return render(); }
     if (a === 'done') { const x = taskOf(s, l); if (x) { x.done = true; x.doneAt = todayStr(); } save(); return render(); }
     if (a === 'undone') { const x = taskOf(s, l); if (x) { x.done = false; delete x.doneAt; delete x.confidence; } save(); return render(); }
   });
@@ -5252,8 +5698,9 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     if (!document.hidden && canSyncLectures() && Date.now() - (state.batchSync.lastSync || 0) > 30 * 60000) syncLecturesFile(false);
   });
 
-  window.__planner = { get state() { return state; }, loadCur, render, tick, loadCloud, pushCloud, save, get focusRun() { return focusRun; }, get session() { return session; }, batchIdle: () => batchPromise || Promise.resolve(), lbDemo: (rows) => { lbRows = rows; lbError = ''; const el = $('lbList'); if (el) el.innerHTML = lbListHtml(); } };
+  window.__planner = { endTour: () => { tourClose(); render(); }, get state() { return state; }, loadCur, render, tick, loadCloud, pushCloud, save, get focusRun() { return focusRun; }, get session() { return session; }, batchIdle: () => batchPromise || Promise.resolve(), lbDemo: (rows) => { lbRows = rows; lbError = ''; const el = $('lbList'); if (el) el.innerHTML = lbListHtml(); } };
   render();
+  attLoadMeta();
   initCloud();
   if (canSyncLectures()) syncLecturesFile(false);
   setInterval(tick, 500);
