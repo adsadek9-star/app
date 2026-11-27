@@ -138,25 +138,55 @@ nav {
   background: var(--nav-bg);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--line);
-  position: sticky;
-  top: 0;
-  z-index: 5;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  position: fixed;
+  bottom: 10px;
+  left: 10px;
+  right: 10px;
+  max-width: 540px;
+  margin: 0 auto;
+  z-index: 30;
   padding: 6px;
+  box-shadow: 0 14px 30px -14px rgba(0, 0, 0, 0.55);
 }
 nav button {
   flex: 1;
-  padding: 9px 4px;
+  padding: 7px 4px;
   border: 0;
   background: none;
   font: inherit;
-  font-size: 14px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--muted);
   cursor: pointer;
-  border-radius: 12px;
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column;
+  gap: 3px;
   transition: background 0.15s, color 0.15s;
 }
+nav button svg { width: 20px; height: 20px; flex: none; }
+main { padding-bottom: 104px; }
+#fab {
+  position: fixed; bottom: 92px; inset-inline-end: 16px; z-index: 29;
+  width: 54px; height: 54px; border-radius: 50%; border: 0; cursor: pointer;
+  background: linear-gradient(120deg, var(--primary), var(--primary-2)); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 10px 22px -8px rgba(13, 148, 136, 0.65);
+}
+#fab svg { width: 26px; height: 26px; }
+.wkstrip { display: flex; gap: 6px; margin: 10px 0 2px; }
+.wkcell { flex: 1; background: var(--card); border: 1.5px solid var(--line); border-radius: 14px; padding: 7px 2px 6px; display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--muted); font: inherit; cursor: pointer; }
+.wkcell .wkname { font-size: 11px; }
+.wkcell .wknum { font-size: 15px; color: var(--text); }
+.wkcell.now .wknum { color: var(--primary); }
+.wkcell.sel { border-color: var(--primary); background: var(--ghost-bg); }
+.wkdot { width: 5px; height: 5px; border-radius: 50%; background: var(--primary); }
+.wkdot.off { background: transparent; }
+.notebox { width: 100%; min-height: 64px; margin: 4px 0 10px; resize: vertical; }
+.noteview { font-size: 13px; margin: -2px 0 10px; padding-inline-start: 34px; white-space: pre-wrap; }
+.streakcard .sknum { font-size: 22px; font-weight: 800; }
 nav button:hover { background: var(--ghost-bg); color: var(--ink); }
 nav button.on {
   background: linear-gradient(120deg, var(--primary), var(--primary-2));
@@ -373,7 +403,7 @@ button.sm { padding: 5px 12px; font-size: 13px; }
 .ypick.locked { opacity: 0.45; cursor: not-allowed; }
 
 #toast {
-  position: fixed; bottom: 18px; inset-inline: 0; margin: 0 auto; width: fit-content; max-width: 90%;
+  position: fixed; bottom: 170px; inset-inline: 0; margin: 0 auto; width: fit-content; max-width: 90%;
   background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 999px;
   font-size: 14px; font-weight: 700; opacity: 0; pointer-events: none; transition: opacity 0.25s, transform 0.25s;
   transform: translateY(8px); z-index: 60;
@@ -547,8 +577,6 @@ a.btn { display: inline-block; text-decoration: none; }
 .lbrank { width: 22px; text-align: center; color: var(--muted); font-weight: 800; flex: none; }
 .lbrow.me b { color: var(--primary); }
 .tilesrow { display: flex; flex-direction: row; justify-content: space-around; gap: 8px; }
-nav button { display: flex; align-items: center; justify-content: center; gap: 6px; }
-nav button svg { width: 16px; height: 16px; flex: none; }
 .lbtop { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
 .lbtopcard { background: var(--soft); border: 2px solid transparent; border-radius: 16px; padding: 10px 4px 8px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .lbtopcard.me { border-color: var(--primary); }
@@ -582,6 +610,7 @@ nav button svg { width: 16px; height: 16px; flex: none; }
   <button data-tab="subjects">المواد</button>
 </nav>
 <main id="view"></main>
+<button id="fab" type="button" data-act="fabAdd" title="+" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
 <div id="overlays"></div>
 <div id="toast"></div>
 <script>
@@ -1135,7 +1164,7 @@ const AVATARS = (function () {
   const blush = `<circle cx="50.5" cy="54" r="2.6" fill="#fda4af" opacity="0.85"/><circle cx="72.5" cy="54" r="2.6" fill="#fda4af" opacity="0.85"/>`;
   const star = (x, y, s, c) => `<path d="M${x} ${y - s} l${s * 0.3} ${s * 0.62} ${s * 0.7} ${s * 0.08} -${s * 0.5} ${s * 0.5} ${s * 0.15} ${s * 0.7} -${s * 0.62} -${s * 0.38} -${s * 0.62} ${s * 0.38} ${s * 0.15} -${s * 0.7} -${s * 0.5} -${s * 0.5} ${s * 0.7} -${s * 0.08} z" fill="${c}"/>`;
 
-  return [
+  const ARR = [
     // 1: the classic (matches the logo)
     { id: 'av01', g: 'n', svg: open('#14b8a6') + eyes() + smile + close },
     // 2: wink
@@ -1167,6 +1196,8 @@ const AVATARS = (function () {
     // 15: dentist head mirror
     { id: 'av15', g: 'n', svg: open('#6366f1') + `<path d="M37.5 31.5 q24 -14 48 0 l-1.4 4.6 q-22.6 -12.4 -45.2 0 z" fill="#4338ca"/><circle cx="61.5" cy="27.5" r="5.2" fill="#e0e7ff" stroke="#4338ca" stroke-width="1.6"/><circle cx="61.5" cy="27.5" r="1.6" fill="#4338ca"/>` + eyes() + smile + close },
   ];
+  ARR.TOOTH = TOOTH;
+  return ARR;
 })();
 if (typeof module === 'object' && module.exports) module.exports = AVATARS;
 
@@ -2376,6 +2407,26 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       clearExam: 'شيل الامتحان',
       noExamYet: 'مفيش امتحان مسجل',
       addTaskTitle: 'إضافة مهمة',
+      backToday: 'ارجع لليوم',
+      emptyDay: 'مفيش جلسات في اليوم ده',
+      pickSubject: 'المادة',
+      noteBtn: 'نوتس',
+      notePh: 'اكتب اللي عايز تفتكره في المحاضرة دي...',
+      remTitle: 'تذكير المذاكرة',
+      remSub: 'يفكرك لو لسه مخلصتش هدف النهارده. بيشتغل والتطبيق مفتوح بس (مفيش سيرفر يبعت وهو مقفول).',
+      remOn: 'شغال',
+      remOff: 'شغّله',
+      remNoPerm: 'الإشعارات مقفولة من المتصفح، فعّلها من إعدادات الموقع',
+      remNotifTitle: 'لسه مخلصتش مذاكرة النهارده 💪',
+      remNotifBody: 'افتح التطبيق وكمّل خطتك',
+      shareBtn: 'شارك تقدمك',
+      shareSaved: 'المشاركة مش متاحة هنا، الصورة اتنزلت عندك',
+      shareTitle: 'تقدمي الأسبوع ده',
+      streakDays: 'يوم ورا بعض',
+      streakBest: 'أعلى ستريك',
+      streakRestore: 'استرجع الستريك',
+      streakLeft: (n) => (n === 1 ? 'فاضلة محاولة واحدة الشهر ده' : `فاضلك ${n} محاولات الشهر ده`),
+      streakRestored: 'رجعنا الستريك 🔥',
       kindLecture: 'مذاكرة محاضرة',
       kindClinic: 'تسليم شغل عيادة',
       clinicLocked: 'شغل العيادة بيبدأ من سنة رابعة',
@@ -2627,6 +2678,26 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       clearExam: 'Remove exam',
       noExamYet: 'No exam set',
       addTaskTitle: 'Add a task',
+      backToday: 'Back to today',
+      emptyDay: 'No sessions on this day',
+      pickSubject: 'Subject',
+      noteBtn: 'Notes',
+      notePh: 'Write anything to remember about this lecture...',
+      remTitle: 'Study reminder',
+      remSub: 'Reminds you if today\'s goal is not done. Works while the app is open (no server to send it when closed).',
+      remOn: 'On',
+      remOff: 'Turn on',
+      remNoPerm: 'Notifications are blocked by the browser',
+      remNotifTitle: 'Today\'s studying is not done yet',
+      remNotifBody: 'Open the app and finish your plan',
+      shareBtn: 'Share your progress',
+      shareSaved: 'Sharing is not available here, the image was downloaded',
+      shareTitle: 'My progress this week',
+      streakDays: 'days in a row',
+      streakBest: 'Best streak',
+      streakRestore: 'Restore the streak',
+      streakLeft: (n) => (n === 1 ? '1 restore left this month' : `${n} restores left this month`),
+      streakRestored: 'Streak restored',
       kindLecture: 'Study a lecture',
       kindClinic: 'Clinic work delivery',
       clinicLocked: 'Clinic work unlocks from 4th year',
@@ -2753,6 +2824,8 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     pace: { study: 60, solve: 20 }, // v13: the student's own minutes per lecture study / per question set
     motivIdx: -1, motivDate: '', // v13: which encouragement line showed, and on which day
     leaderboard: { on: false }, // v17: opt-in anonymous weekly leaderboard
+    remind: { on: false, time: '20:00', last: '' }, // v19: in-app study reminder
+    streak: { best: 0, fills: [], month: '', used: 0 }, // v19: flame streak with 3 monthly restores
     batchSync: { lastSync: 0, total: 0, added: 0, updated: 0, removed: 0, unmatched: 0, error: '' }, // lectures-N.csv read status
   });
 
@@ -2820,6 +2893,9 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     if (!state.profile || typeof state.profile !== 'object') state.profile = { name: '', year: null, onboarded: false, avatar: '' };
     if (typeof state.profile.avatar !== 'string') state.profile.avatar = ''; // v17
     if (!state.leaderboard || typeof state.leaderboard !== 'object') state.leaderboard = { on: false }; // v17
+    if (!state.remind || typeof state.remind !== 'object') state.remind = { on: false, time: '20:00', last: '' }; // v19
+    if (!state.streak || typeof state.streak !== 'object') state.streak = { best: 0, fills: [], month: '', used: 0 }; // v19
+    if (!Array.isArray(state.streak.fills)) state.streak.fills = [];
     (state.subjects || []).forEach((s) => {
       delete s.quizzes; // v16: quizzes (student-added and sheet-sourced) were removed from the app
       if (s.exam && typeof s.exam.src === 'undefined') s.exam.src = ''; // '' = set by the student, 'batch' = from the sheet
@@ -2846,6 +2922,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
   // focus mode runtime (the running session is also persisted locally, not synced)
   const FKEY = KEY + '.focus';
   let focusOpen = false, focusSel = null, focusPreset = 0, focusRun = null, beepCtx = null;
+  let dayViewDate = null, fabOpen = false, fabKind = 'lecture', noteOpen = null; // v19
   try {
     const fr = localStorage.getItem(FKEY);
     if (fr) {
@@ -3377,6 +3454,20 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       if (curMissing().length) h += `<div class="card"><button class="btn" data-act="loadCur" style="width:100%">${esc(L().loadCurBtn)}</button></div>`;
       return h;
     }
+    // v19: week strip (Saturday-start week), tap a day to see its plan
+    const viewDate = (dayViewDate && dayViewDate !== today) ? dayViewDate : null;
+    const schedDate = viewDate || today;
+    const perDayD = {};
+    (state.focusLog || []).forEach((f) => { if (f && f.date) perDayD[f.date] = (perDayD[f.date] || 0) + (f.minutes || 0); });
+    state.subjects.forEach((s2) => s2.tasks.forEach((tk) => { if (tk.done && tk.doneAt) perDayD[tk.doneAt] = perDayD[tk.doneAt] || 1; }));
+    const wd0 = Scheduler.weekday(today); // 0 = Sunday
+    const weekStart = Scheduler.addDays(today, -((wd0 + 1) % 7)); // back to Saturday
+    h += '<div class="wkstrip">' + [0, 1, 2, 3, 4, 5, 6].map((i) => {
+      const d = Scheduler.addDays(weekStart, i);
+      const sel = schedDate === d;
+      return `<button class="wkcell${d === today ? ' now' : ''}${sel ? ' sel' : ''}" data-act="pickDay" data-d="${d}"><span class="wkname">${esc(L().daysShort[Scheduler.weekday(d)])}</span><b class="wknum">${+d.slice(8)}</b>${perDayD[d] ? '<i class="wkdot"></i>' : '<i class="wkdot off"></i>'}</button>`;
+    }).join('') + '</div>';
+
     h += warnCards(today);
 
     const r = Scheduler.generate(state, today, { nowMin: now.getHours() * 60 + now.getMinutes() });
@@ -3398,16 +3489,19 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     h += `<div class="card focuscard"><div class="row"><div class="grow"><div class="fc-title">\uD83C\uDFAF ${esc(L().focusCardTitle)}</div><div class="fc-sub">${esc(L().focusCardSub)}</div></div>
       <button class="btn fcbtn" data-act="focusOpen">${esc(L().startStudying)}</button></div></div>`;
 
-    // today's schedule: commitments and study sessions in one chronological timeline
+    // the selected day's schedule: commitments and study sessions in one chronological timeline
     const items = [];
-    blocksForDate(today).forEach((b) => items.push({ m: b.s, html: busyRow(b) }));
-    r.sessions.filter((x) => x.date === today).forEach((x) => {
+    blocksForDate(schedDate).forEach((b) => items.push({ m: b.s, html: busyRow(b) }));
+    r.sessions.filter((x) => x.date === schedDate).forEach((x) => {
       const sj = subj(x.subjectId);
       if (sj) items.push({ m: x.startMin == null ? 1e9 : x.startMin, html: sessionRow(x, sj) });
     });
     items.sort((a, b) => a.m - b.m);
-    h += `<div class="day today">${esc(L().todaySchedule)}</div><div class="card">`;
-    if (!items.length) h += `<div class="muted" style="padding:6px 2px">${esc(L().emptyToday)}</div>`;
+    const schedTitle = viewDate ? `${esc(L().daysShort[Scheduler.weekday(viewDate)])} ${+viewDate.slice(8)}/${+viewDate.slice(5, 7)}` : esc(L().todaySchedule);
+    h += `<div class="day today">${schedTitle}</div>`;
+    if (viewDate) h += `<div style="margin:0 0 8px"><button class="btn ghost sm" data-act="pickDay" data-d="${today}">${esc(L().backToday)}</button></div>`;
+    h += '<div class="card">';
+    if (!items.length) h += `<div class="muted" style="padding:6px 2px">${esc(viewDate ? L().emptyDay : L().emptyToday)}</div>`;
     items.forEach((it) => { h += it.html; });
     h += '</div>';
 
@@ -3559,7 +3653,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       const ex = examOf(s);
       const doneN = s.tasks.filter((t) => t.done).length;
       const pctS = s.tasks.length ? Math.round(doneN / s.tasks.length * 100) : 0;
-      h += `<div class="subjcard${openSubject === s.id ? ' on' : ''}" data-act="toggle" data-s="${s.id}">
+      h += `<div class="subjcard${openSubject === s.id ? ' on' : ''}" data-act="toggle" data-s="${s.id}" style="background:${colorOfS(s)}14;border-color:${colorOfS(s)}44">
         <span class="sicon big" style="background:${colorOfS(s)}22">${iconOf(s)}</span>
         <b class="subjname">${esc(s.name)}</b>
         <div class="muted sml">${ex ? esc(L().examLine(ex.kind, ex.date, fmtClock(ex.time), L().natureWord[ex.nature] || ex.nature)) : esc(L().noExamYet)}</div>
@@ -3620,7 +3714,11 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
           h += `<div class="lec ${t.done ? 'done' : ''}"><input type="checkbox" data-act="check" data-s="${s.id}" data-l="${t.id}" ${t.done ? 'checked' : ''}>
             <span class="t grow">${t.kind === 'clinic' ? '🦷 ' : '📖 '}${esc(t.title)}<br><span class="muted">${esc(estTxt)}</span></span>
             ${t.done && t.kind === 'lecture' ? `<select data-act="conf" data-s="${s.id}" data-l="${t.id}"><option value="0">${esc(L().confPh)}</option>${[1, 2, 3, 4, 5].map((n) => `<option value="${n}" ${t.confidence === n ? 'selected' : ''}>${n}/5</option>`).join('')}</select>` : ''}
-            <button class="btn ghost" data-act="delTask" data-s="${s.id}" data-l="${t.id}">x</button></div>`;
+            <button class="btn ghost sm" data-act="noteT" data-s="${s.id}" data-l="${t.id}" title="${esc(L().noteBtn)}">🗒</button>
+            <button class="btn ghost" data-act="delTask" data-s="${s.id}" data-l="${t.id}">x</button></div>` +
+            (noteOpen === t.id
+              ? `<textarea class="notebox" data-act="note" data-s="${s.id}" data-l="${t.id}" placeholder="${esc(L().notePh)}">${esc(t.note || '')}</textarea>`
+              : (t.note ? `<div class="noteview muted">${esc(t.note)}</div>` : ''));
         });
       }
       h += '</div>';
@@ -3753,12 +3851,44 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       h += `<div class="day" style="margin-top:10px">${esc(L().lbTop)}</div><div id="lbList">${lbListHtml()}</div>`;
     }
     h += '</div>';
+    // v19: study reminder (in-app notifications while the app is open)
+    h += `<div class="card"><b>🔔 ${esc(L().remTitle)}</b><div class="muted" style="margin-top:4px">${esc(L().remSub)}</div>
+      <div class="row" style="margin-top:8px"><input type="time" data-act="remTime" value="${esc(state.remind.time || '20:00')}" style="width:110px">
+      <button class="btn ${state.remind.on ? '' : 'ghost'} grow" data-act="remToggle">${state.remind.on ? esc(L().remOn) : esc(L().remOff)}</button></div></div>`;
+    h += `<div style="margin:0 0 12px"><button class="btn ghost" data-act="shareProg" style="width:100%">📤 ${esc(L().shareBtn)}</button></div>`;
     h += dashHTML(); // v14: progress dashboard at the very bottom of the profile
     return h;
   }
 
   // v14: progress dashboard - every number comes from data the app really has
   // (tasks done + focus log); nothing here is estimated or faked.
+  // v19: flame streak - a day counts with >=1 lecture done or >=60 study minutes
+  function streakCalc(today) {
+    const st = state.streak;
+    const perDayM = {}, lecDay = {};
+    (state.focusLog || []).forEach((f) => { if (f && f.date) perDayM[f.date] = (perDayM[f.date] || 0) + (f.minutes || 0); });
+    state.subjects.forEach((s2) => s2.tasks.forEach((tk) => {
+      if (tk.done && tk.doneAt) {
+        perDayM[tk.doneAt] = (perDayM[tk.doneAt] || 0) + Math.round(((tk.studyH || 0) + (tk.solveH || 0) + (tk.workH || 0)) * 60);
+        if (tk.kind === 'lecture') lecDay[tk.doneAt] = (lecDay[tk.doneAt] || 0) + 1;
+      }
+    }));
+    const counted = (d) => (lecDay[d] || 0) >= 1 || (perDayM[d] || 0) >= 60 || st.fills.indexOf(d) !== -1;
+    let cur = 0;
+    for (let d = today; ; d = Scheduler.addDays(d, -1)) {
+      if (counted(d)) cur++;
+      else if (d === today) continue;
+      else break;
+    }
+    if (cur > (st.best || 0)) st.best = cur;
+    const mk = today.slice(0, 7);
+    if (st.month !== mk) { st.month = mk; st.used = 0; }
+    const left = Math.max(0, 3 - (st.used || 0));
+    const y = Scheduler.addDays(today, -1), y2 = Scheduler.addDays(today, -2);
+    const canRestore = left > 0 && !counted(y) && counted(y2);
+    return { cur, best: st.best || 0, canRestore, left };
+  }
+
   function dashHTML() {
     if (!state.subjects.length) return '';
     const today = todayStr();
@@ -3826,9 +3956,14 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
         <svg class="ring" viewBox="0 0 64 64"><circle cx="32" cy="32" r="${RR}" class="ringbg"/><circle cx="32" cy="32" r="${RR}" class="ringfg" style="stroke-dasharray:${CC.toFixed(1)};stroke-dashoffset:${ringOff}"/><text x="32" y="37" text-anchor="middle" class="ringtxt">${readyPct}%</text></svg>
         <div class="muted sml" style="text-align:center">${doneT}/${totT} ${esc(L().dashTasksDone)}${nx ? ' · ' + esc(L().daysLeft(Scheduler.diffDays(today, nx.date))) : ' · ' + esc(L().dashNoExam)}</div></div>
     </div>`;
+    const sk = streakCalc(today);
+    h += `<div class="card streakcard"><div class="row"><div class="grow"><span class="sknum">🔥 ${sk.cur}</span> <span class="muted sml">${esc(L().streakDays)} · ${esc(L().streakBest)}: ${sk.best}</span></div>
+      ${sk.canRestore
+        ? `<div style="text-align:center"><button class="btn sm" data-act="streakRestore">${esc(L().streakRestore)}</button><div class="muted sml" style="margin-top:4px">${esc(L().streakLeft(sk.left))}</div></div>`
+        : (sk.left < 3 ? `<span class="muted sml">${esc(L().streakLeft(sk.left))}</span>` : '')}</div></div>`;
     h += `<div class="card tilesrow"><div class="tile"><div class="tnum">${lecDone}</div><div class="muted sml">${esc(L().dashDoneLec)}</div></div>
       <div class="tile"><div class="tnum">${focusMin}</div><div class="muted sml">${esc(L().dashFocusMin)}</div></div>
-      <div class="tile"><div class="tnum">${streak}</div><div class="muted sml">${esc(L().dashStreak)}</div></div></div>`;
+      <div class="tile"><div class="tnum">${sk.cur}</div><div class="muted sml">${esc(L().dashStreak)}</div></div></div>`;
     h += `<div class="card"><div class="muted">${esc(L().dashLast7)}</div>
       <svg class="barch" viewBox="0 0 ${W} ${H}">${bars}</svg>
       <div class="row" style="justify-content:space-between">${last7.map((x) => `<span class="muted sml">${esc(L().daysShort[Scheduler.weekday(x.d)])}</span>`).join('')}</div></div>`;
@@ -3873,8 +4008,31 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     }
   }
 
+  // v19: fires a local notification once a day, at the chosen time, if the
+  // day's goal is not done yet. Works only while the app is open (no server).
+  function checkReminder() {
+    const rm = state.remind;
+    if (!rm || !rm.on) return;
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    const key = todayStr();
+    if (rm.last === key) return;
+    const parts = (rm.time || '20:00').split(':');
+    const tMin = (+parts[0]) * 60 + (+parts[1] || 0);
+    const nw = new Date();
+    if (nw.getHours() * 60 + nw.getMinutes() < tMin) return;
+    const r = Scheduler.generate(state, key, {});
+    const planned = Math.round(r.sessions.filter((x) => x.date === key).reduce((a, x) => a + x.hours, 0) * 60);
+    const stats = Scheduler.focusStats(state.focusLog, key);
+    const doneT = Math.round(state.subjects.reduce((a, s2) => a + s2.tasks.reduce((a2, tk) =>
+      a2 + (tk.done && tk.doneAt === key ? (tk.kind === 'clinic' ? (tk.workH || 0) : (tk.studyH || 0) + (tk.solveH || 0)) : 0), 0), 0) * 60);
+    if (planned > 0 && stats.todayMin + doneT >= planned) { rm.last = key; save(); return; }
+    rm.last = key; save();
+    try { new Notification(L().remNotifTitle, { body: L().remNotifBody, icon: 'icon-192.png' }); } catch (e) { /* ignored */ }
+  }
+
   function tick() {
     const now = Date.now();
+    if (!tick.lastRem || now - tick.lastRem > 30000) { tick.lastRem = now; try { checkReminder(); } catch (e) { /* ignored */ } }
     // keep the header clock fresh and roll the app over to the new day at midnight
     const clk = $('clockLbl');
     if (clk) { const c = clockNow(); if (clk.textContent !== c) clk.textContent = c; }
@@ -3900,6 +4058,55 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     }
   }
 
+  // v19: share progress as a generated image (Web Share API, download fallback)
+  function shareProgress() {
+    try {
+      const today = todayStr();
+      const ws = Scheduler.weekScore(state, today);
+      const sk = streakCalc(today);
+      const name = (state.profile.name || '').trim().split(/\s+/)[0];
+      const cv = document.createElement('canvas');
+      cv.width = 1080; cv.height = 1080;
+      const c = cv.getContext('2d');
+      const g = c.createLinearGradient(0, 0, 1080, 1080);
+      g.addColorStop(0, '#0d9488'); g.addColorStop(1, '#0f3d3a');
+      c.fillStyle = g; c.fillRect(0, 0, 1080, 1080);
+      c.direction = 'rtl'; c.textAlign = 'center';
+      if (window.AVATARS && AVATARS.TOOTH) {
+        c.save(); c.translate(540, 290); c.scale(0.42, 0.42); c.translate(-256, -260);
+        c.fillStyle = '#ffffff'; c.fill(new Path2D(AVATARS.TOOTH)); c.restore();
+      }
+      c.fillStyle = '#ffffff';
+      c.font = '800 72px Cairo, sans-serif';
+      c.fillText(name ? L().shareTitle + ' - ' + name : L().shareTitle, 540, 520);
+      c.font = '800 190px Cairo, sans-serif';
+      c.fillText(String(ws.score), 540, 730);
+      c.font = '700 54px Cairo, sans-serif';
+      c.fillStyle = '#ccfbf1';
+      c.fillText(esc(L().lbPts) + ' · ' + ws.week, 540, 800);
+      c.font = '700 46px Cairo, sans-serif';
+      c.fillStyle = '#ffffff';
+      c.fillText(`${ws.lectures} ${esc(L().dashDoneLec)} · ${ws.minutes} ${esc(L().dashFocusMin)} · 🔥 ${sk.cur}`, 540, 900);
+      c.font = '700 40px Cairo, sans-serif';
+      c.fillStyle = '#99f6e4';
+      c.fillText('Dental Student Planner', 540, 1000);
+      cv.toBlob(async (blob) => {
+        if (!blob) return;
+        const file = new File([blob], 'dental-progress.png', { type: 'image/png' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try { await navigator.share({ files: [file] }); } catch (e) { /* user cancelled */ }
+        } else {
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = 'dental-progress.png';
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+          toast(L().shareSaved);
+        }
+      }, 'image/png');
+    } catch (e) { /* canvas unsupported: stay silent */ }
+  }
+
   /* ---------------- overlays ---------------- */
 
   function overlays() {
@@ -3914,6 +4121,26 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
         <button class="btn ghost grow" data-act="authSignup">${esc(L().signupBtn)}</button></div>
         <div style="text-align:center;margin-top:10px"><button class="linklike" data-act="authSkip">${esc(L().skipBtn)}</button></div></div></div>`;
       return h;
+    }
+    if (fabOpen) {
+      const opts = state.subjects.map((s2) => `<option value="${s2.id}">${esc(s2.name)}</option>`).join('');
+      return `<div class="overlay"><div class="sheet"><b style="font-size:17px">${esc(L().addTaskTitle)}</b>
+        <div class="muted" style="margin:10px 0 4px">${esc(L().pickSubject)}</div>
+        <select id="fabS">${opts}</select>
+        <div class="pick" style="margin:8px 0">
+          <button class="${fabKind === 'lecture' ? 'on' : ''}" data-act="fabKind" data-k="lecture">📖 ${esc(L().kindLecture)}</button>
+          ${clinicAllowed()
+            ? `<button class="${fabKind === 'clinic' ? 'on' : ''}" data-act="fabKind" data-k="clinic">🦷 ${esc(L().kindClinic)}</button>`
+            : `<button disabled title="${esc(L().clinicLocked)}">🔒 ${esc(L().kindClinic)}</button>`}
+        </div>
+        <input id="fabT" placeholder="${esc(L().taskTitlePh)}">
+        <div class="row" style="margin-top:8px">
+          <select id="fabD"><option value="0">${esc(L().estAuto)}</option>
+            <option value="1">${esc(L().diff[0])}</option><option value="2">${esc(L().diff[1])}</option><option value="3">${esc(L().diff[2])}</option></select>
+          ${fabKind === 'clinic' ? `<input id="fabDue" type="date" title="${esc(L().duePh)}">` : ''}
+        </div>
+        <div class="row" style="margin-top:12px"><button class="btn grow" data-act="fabAddDo">${esc(L().addTaskBtn)}</button>
+        <button class="btn ghost" data-act="fabClose">${esc(L().closeBtn)}</button></div></div></div>`;
     }
     if (!state.profile.onboarded) {
       if (onboardStep === 3) {
@@ -4009,6 +4236,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       : L().days[nowD.getDay()] + '\u060c ' + nowD.getDate() + ' ' + L().months[nowD.getMonth()];
     $('todayLbl').innerHTML = `<span>${esc(hd)}</span> \u00b7 <span id="clockLbl" dir="ltr">${esc(clockNow())}</span>`;
     document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
+    const fab = $('fab'); if (fab) fab.style.display = ((tab === 'day' || tab === 'subjects') && state.profile.onboarded && state.subjects.length) ? 'flex' : 'none';
     const pb = $('profileBtn'); if (pb) pb.innerHTML = avatarSvg(state.profile.avatar) || '👤'; // v17: the chosen avatar rides in the header
     $('view').innerHTML = { day: viewDay, schedule: viewSchedule, exams: viewExams, subjects: viewSubjects, profile: viewProfile }[tab]() + footerHtml();
     $('overlays').innerHTML = overlays();
@@ -4052,6 +4280,8 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     if (a === 'check') { const x = taskOf(t.dataset.s, t.dataset.l); x.done = t.checked; if (t.checked) x.doneAt = todayStr(); else { x.confidence = 0; delete x.doneAt; } }
     else if (a === 'conf') taskOf(t.dataset.s, t.dataset.l).confidence = +t.value;
     else if (a === 'tdiff') { /* difficulty select re-renders chip */ const el = $('est-' + t.dataset.s); if (el) el.textContent = estChipText(t.dataset.s); return; }
+    else if (a === 'note') { const tk = taskOf(t.dataset.s, t.dataset.l); if (tk) tk.note = t.value; }
+    else if (a === 'remTime') { state.remind.time = t.value || '20:00'; state.remind.last = ''; }
     else return;
     save(); render();
   });
@@ -4214,6 +4444,42 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     }
     if (a === 'clearExam') { subj(s).exam = null; save(); return render(); }
     if (a === 'pickKind') { taskKind[s] = t.dataset.k; return render(); }
+    if (a === 'pickDay') { dayViewDate = (t.dataset.d === todayStr()) ? null : t.dataset.d; return render(); }
+    if (a === 'fabAdd') { fabOpen = true; fabKind = 'lecture'; return render(); }
+    if (a === 'fabKind') { fabKind = t.dataset.k; return render(); }
+    if (a === 'fabClose') { fabOpen = false; return render(); }
+    if (a === 'fabAddDo') {
+      const sj = subj(($('fabS') || {}).value), title = ($('fabT') || {}).value.trim();
+      if (!sj) { fabOpen = false; return render(); }
+      if (!title) return alert(L().needTask);
+      const df = +($('fabD') || {}).value || 0;
+      const task = mkTask(title, fabKind, df || null);
+      if (fabKind === 'clinic') task.due = ($('fabDue') || {}).value || null;
+      sj.tasks.push(task);
+      fabOpen = false; save(); return render();
+    }
+    if (a === 'noteT') { noteOpen = (noteOpen === l) ? null : l; return render(); }
+    if (a === 'remToggle') {
+      const rm = state.remind;
+      if (!rm.on && 'Notification' in window && Notification.permission === 'default') {
+        try { Notification.requestPermission(); } catch (e) { /* ignored */ }
+      }
+      if (!rm.on && 'Notification' in window && Notification.permission === 'denied') toast(L().remNoPerm);
+      rm.on = !rm.on; rm.last = '';
+      save(); return render();
+    }
+    if (a === 'streakRestore') {
+      const st = state.streak;
+      const mk = todayStr().slice(0, 7);
+      if (st.month !== mk) { st.month = mk; st.used = 0; }
+      if ((st.used || 0) < 3) {
+        st.fills.push(Scheduler.addDays(todayStr(), -1));
+        st.used = (st.used || 0) + 1;
+        save(); toast(L().streakRestored);
+      }
+      return render();
+    }
+    if (a === 'shareProg') { shareProgress(); return; }
     if (a === 'addTask') {
       const sj = subj(s), title = $('tt-' + s).value.trim();
       if (!title) return alert(L().needTask);
