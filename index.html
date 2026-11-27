@@ -671,6 +671,19 @@ a.btn { display: inline-block; text-decoration: none; }
 .dayctl .btn.ghost { min-width: 44px; }
 .card.overdue { border-color: var(--warn, #f59e0b); background: color-mix(in srgb, #f59e0b 12%, var(--card)); margin: 8px 0; }
 .sess.planline .btn.sm + .btn.sm { margin-inline-start: 2px; }
+
+/* v27: guide + what's new */
+.newsbar { margin: 8px 0 12px; border-color: var(--primary); }
+.newscard { margin-bottom: 10px; }
+.sheet.guidesheet { max-height: 92vh; overflow-y: auto; }
+.gtopic { padding: 0; margin: 8px 0; }
+.gtop { display: flex; align-items: center; gap: 10px; width: 100%; background: transparent; border: 0; color: var(--text); font: inherit; padding: 12px; text-align: start; cursor: pointer; }
+.gic { font-size: 20px; }
+.gbody { padding: 0 14px 12px; }
+.gh { font-weight: 700; color: var(--primary); margin: 10px 0 4px; font-size: 13px; }
+.guideol, .guideul { margin: 0; padding-inline-start: 20px; line-height: 1.75; }
+.guidep { margin: 0; line-height: 1.75; }
+.gtopic.on { border-color: var(--primary); }
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
@@ -2976,11 +2989,11 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       tourDone: 'يلا نبدأ',
       tourBtn: 'إزاي أستخدم التطبيق',
       tour: [
-        ['يومي', 'هنا خطة النهارده: المذاكرة المطلوبة، وتبدأ تركيز بدوس ▶، وتدوس "خلصت" لما تخلص. زرار + بيضيف محاضرة أو مهمة بسرعة.'],
-        ['الجدول', 'ضيف مواعيد محاضراتك وسكاشنك ونومك والجيم، والتطبيق يوزع المذاكرة على الفراغات اللي بينهم لوحده.'],
-        ['المواد', 'مواد سنتك جاهزة. افتح أي مادة وضيف المحاضرات، وجنب كل محاضرة نوتس وملفات ومساعد AI.'],
+        ['يومي', 'هنا يومك: جدول النهارده، وزرار "ابدأ المذاكرة" بيفتحلك اللي في خطتك، وتدوس "خلصت" لما تخلص. وتحت "ايه الجديد؟" لقناة التحديثات.'],
+        ['الجدول', 'ابني جدولك: دوس على أي وقت فاضي واختار مادة وتاسك، أو دوس "اقترح جدول تلقائي". فوق الأيام، وتقدر تعدل أي بلوك بالقلم.'],
+        ['المواد', 'مواد سنتك جاهزة. دوس على مادة تفتحلك شاشتها، وضيف امتحانها ومحاضراتها، وجنب كل محاضرة نوتس وملفات ومساعد AI.'],
         ['الامتحانات', 'مواعيد الامتحانات والعد التنازلي. كل ما الامتحان يقرب الخطة بتركز على المحاضرات اللي لسه مخلصتهاش.'],
-        ['البروفايل', 'اسمك وشكلك وتقدمك والتحدي الأسبوعي مع صحابك. ومن هنا تفتح الشرح ده تاني في أي وقت.'],
+        ['البروفايل', 'اسمك ونومك ومواعيدك وحسابك والتحدي مع صحابك. ومن هنا تفتح الشرح الكامل في أي وقت.'],
       ],
       aiBtn: 'اسأل AI',
       aiTitle: 'اسأل AI عن المحاضرة دي',
@@ -3378,11 +3391,11 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
       tourDone: 'Let\'s start',
       tourBtn: 'How to use the app',
       tour: [
-        ['My Day', 'Today\'s plan: what to study, press ▶ to start focus, press "Done" when you finish. The + button adds a lecture or task fast.'],
-        ['Schedule', 'Add your lectures, sections, sleep and gym. The app fits your study into the gaps between them.'],
-        ['Subjects', 'Your year\'s subjects are ready. Open one and add lectures. Each lecture has notes, files and an AI helper.'],
+        ['My Day', 'Your day: today\'s schedule, and "Start studying" opens what is on your plan. Tap Done when you finish. "What\'s new?" links to the updates channel.'],
+        ['Schedule', 'Build your schedule: tap a free time, pick a subject and a task, or tap "Suggest a schedule". The days are at the top, and you can edit any block with the pencil.'],
+        ['Subjects', 'Your year\'s subjects are ready. Tap one to open its own screen, add its exam and lectures. Each lecture has notes, files and an AI helper.'],
         ['Exams', 'Exam dates and countdowns. As an exam gets closer the plan focuses on the lectures you have not finished.'],
-        ['Profile', 'Your name, look, progress and the weekly challenge with friends. You can reopen this tour from here any time.'],
+        ['Profile', 'Your name, sleep, fixed times, account and the weekly challenge with friends. Open the full guide from here any time.'],
       ],
       aiBtn: 'Ask AI',
       aiTitle: 'Ask AI about this lecture',
@@ -4733,6 +4746,184 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     return h + '</div>';
   }
 
+  /* ---- v27: "what's new" entry and the full guide ---- */
+  const NEWS_URL = 'https://whatsapp.com/channel/0029VbDge6FISTkOnIbbR11g';
+  let guideOpen = false, guideTopic = null;
+
+  const GUIDE = {
+    ar: {
+      title: 'الشرح والمساعدة',
+      intro: 'دوس على أي موضوع يفتحلك الخطوات، ليه بتفيدك، وتعمل إيه لو حاجة شكلها مش مظبوط.',
+      newsTitle: 'ايه الجديد؟',
+      newsSub: 'كل تحديث جديد، وايه اتضاف وايه اتشال، بيتنزل على قناة الواتساب. ادخل تابعها وقول رأيك.',
+      newsBtn: 'افتح قناة التحديثات',
+      latest: 'آخر اللي اتغير',
+      latestList: [
+        'الجدول بقى تايم لاين: بتحط مذاكرتك بنفسك في الأوقات الفاضية.',
+        'زرار "اقترح جدول تلقائي" بيعملك يوم كامل على قد وقتك.',
+        'لو مخلصتش تاسك كنت حاططه، بيتأجل لأول يوم فيه مكان ويظهرلك تحذير.',
+        'Start Studying بيعرض اللي في خطة يومك بس.',
+        'كل مادة بتفتح شاشتها لوحدها، وأسماء المواد بالإنجليزي.',
+        'إعدادات اليوم (النوم والمواعيد والورك أوت) بتتزامن صح بين الجهازين.',
+      ],
+      steps: 'الخطوات',
+      why: 'بتفيدك ازاي',
+      fix: 'لو حاجة مش مظبوطة',
+      topics: [
+        { i: '🚀', t: 'ابدأ من هنا (٣ دقايق)',
+          steps: ['من البروفايل اكتب اسمك واختار سنتك، ومواد سنتك بتتحمل لوحدها.', 'حدد نومك ومواعيدك الثابتة (سكاشن، محاضرات، مشاوير) وأيام الورك أوت.', 'افتح كل مادة من تاب "المواد" وضيف امتحانها ومحاضراتها.', 'افتح تاب "الجدول" وابني يومك، أو دوس "اقترح جدول تلقائي".', 'دوس "ابدأ المذاكرة" في تاب "يومي" وخلص المهمة، وبعدين دوس "خلصت".'],
+          why: 'كل حاجة بعد كده بتتحسب على الأوقات الفاضية اللي عندك وعلى مواعيد امتحاناتك، فلازم تبدأ بالنوم والمواعيد والامتحانات.',
+          fix: 'لو مواد سنتك مش ظاهرة: من تاب "المواد" دوس "حمّل مواد فرقتك". ولو اخترت سنة غلط غيرها من البروفايل.' },
+        { i: '🗓', t: 'ابني جدولك بإيدك',
+          steps: ['افتح تاب "الجدول". فوق هتلاقي ٧ أيام: امبارح، النهارده، والخمس أيام الجاية. دوس على أي يوم يفتحلك جدوله.', 'تحت اليوم هتلاقي التايم لاين: النوم والمواعيد الثابتة ومكانها، وبينهم أماكن فاضية مكتوب فيها "وقت فاضي - دوس تحط مذاكرة".', 'دوس على المكان الفاضي، اختار المادة، وبعدين اختار التاسك (اللي لسه مخلصتوش بس بيظهر).', 'البلوك بيتحفظ فورا. دوس ✎ عليه عشان تغير مدته (٣٠ لـ ١٢٠ دقيقة) أو تقدمه أو تأخره أو تبدله بتاسك تاني من أي يوم، أو دوس ✕ يشيله.', 'تحت الأيام فيه "نظرة على الأسبوع": كام ساعة في كل يوم وكام تاسك فاضل والامتحانات.'],
+          why: 'انت الأدرى بوقتك. الجدول بتاعك انت مش اللي التطبيق فرضه، وكل تعديل بيتحفظ وبيتزامن.',
+          fix: 'لو مفيش أماكن فاضية: يبقى يومك مليان بمواعيد، أو الوقت الفاضي أقل من ٤٥ دقيقة. راجع مواعيدك في البروفايل. أيام فاتت بتتفتح للقراءة بس.' },
+        { i: '✨', t: 'الاقتراح التلقائي',
+          steps: ['افتح اليوم اللي عايزه (النهارده أو يوم جاي) من تاب "الجدول" أو "يومي".', 'دوس "اقترح جدول تلقائي". التطبيق بيضيف مذاكرة في الأماكن الفاضية على حسب الامتحانات والصعوبة.', 'عدّل عليه زي ما تحب: ✕ على أي بلوك يشيله بس من الجدول، و✕ اللي جنب الزرار بيمسح اليوم كله عشان تبدأ من الأول.'],
+          why: 'كل تاسك بياخد وقته المعتاد حسب سرعتك اللي حددتها (مش ربع ساعة ونص ساعة عشوائي). والتاسك اللي حاططه في يوم تاني مش بيتكرر.',
+          fix: 'لو الاقتراح فاضي: يا إما مفيش مكان يكفي وقت التاسك في اليوم ده، يا إما كل التاسكات متحطة في أيام تانية، يا إما مخلصتهم. جرب يوم تاني أو ضيف بإيدك.' },
+        { i: '⏭', t: 'لو مذاكرتش حاجة كنت حاططها',
+          steps: ['مش لازم تعمل حاجة. أول ما اليوم يعدي، أي تاسك كنت حاططه ومخلصتوش بيتنقل لأول يوم فيه مكان (النهارده الأول).', 'هيظهرلك كارت أصفر في "يومي" و"الجدول": "كنت حاطط دول امبارح ومخلصتهمش"، وبيقولك اتأجلوا لإمتى.', 'لو التاسك اتخلص خلاص، مش بيتنقل ومفيش تحذير.'],
+          why: 'مفيش حاجة بتضيع. التطبيق بيفكرك وبيرجعها قدامك من غير ما تكتبها تاني.',
+          fix: 'لو مش عايز التاسك في اليوم ده: دوس ✕ على البلوك الجديد، أو ✎ وبدله. البلوك القديم بيفضل في يومه كسجل.' },
+        { i: '▶', t: 'ابدأ المذاكرة (تركيز)',
+          steps: ['من تاب "يومي" دوس "ابدأ المذاكرة".', 'هتلاقي التاسكات اللي في خطة النهارده بس. اختار واحدة.', 'اختار الإيقاع (٢٥ مذاكرة + ٥ راحة، أو ٥٠ + ١٠) ودوس "يلا نبدأ".', 'لما تخلص الوقت بيتسجل لوحده وبيتخصم من وقت التاسك. وبعد ما تخلص التاسك دوس "خلصت".'],
+          why: 'المؤقت بيخليك مركز، ووقتك الحقيقي بيتسجل في إحصائياتك وفي الستريك.',
+          fix: 'لو مفيش تاسكات: النهارده مفيهوش خطة. دوس "اقترح جدول تلقائي" أو "ضيف بنفسي" من نفس الشاشة. المؤقت بيشتغل والتطبيق مفتوح، فاسيبه مفتوح.' },
+        { i: '📚', t: 'المواد والتاسكات',
+          steps: ['من تاب "المواد" دوس على أي مادة، هتفتحلك شاشتها لوحدها. زرار "كل المواد" بيرجعك.', 'ضيف امتحان المادة (تاريخ، وقت، وكام محاضرة داخلة).', 'ضيف تاسك (محاضرة) بالاسم، أو دوس على الاقتراحات من المنهج المعتاد.', 'اختار الصعوبة لو عايز، أو سيبها تلقائي. التاسك بياخد وقت على حسب سرعتك.'],
+          why: 'التطبيق بيوزع على أساس صعوبة المحاضرات وقرب الامتحان، فكل ما بياناتك أدق الخطة أحسن.',
+          fix: 'أسماء المواد بالإنجليزي. أسماء المحاضرات اللي انت كتبتها بتفضل زي ما كتبتها. لو مسحت تاسك بالغلط مش بيرجع، فخد بالك.' },
+        { i: '📝', t: 'الامتحانات',
+          steps: ['حط تاريخ ووقت كل امتحان من شاشة المادة.', 'تاب "الامتحانات" بيعرض الجدول والعد التنازلي.'],
+          why: 'كل ما الامتحان يقرب، الاقتراح بيركز على اللي لسه مخلصتوش من المادة دي.',
+          fix: 'لو الامتحان اتأجل أو التاريخ غلط، صححه من شاشة المادة والخطة بتتظبط لوحدها.' },
+        { i: '🛌', t: 'يومك: النوم والمواعيد والورك أوت',
+          steps: ['من البروفايل افتح "يومك في الأسبوع". اختار اليوم وحدد وقت نومك (٦ ساعات ثابتة).', 'ضيف مواعيدك: محاضرة، سكشن، مشوار. اضغط "حفظ اليوم" عشان يتحفظ.', 'اختار أيام الورك أوت، والتطبيق بيحميها في جدولك.', 'تقدر تعمل يوم أجازة بيتقفل خالص ومفيهوش مذاكرة.'],
+          why: 'الأماكن الفاضية في الجدول بتتحسب من اللي حددته هنا.',
+          fix: 'لو مواعيدك مش بتظهر في الجهاز التاني: اتأكد انك داخل بنفس الإيميل في الاتنين (شوف "الحساب والمزامنة").' },
+        { i: '🔥', t: 'الستريك والتحدي',
+          steps: ['الستريك بيزيد لما تذاكر يوم ورا يوم. في البروفايل تلاقي عدد الأيام وأعلى ستريك.', 'لو فاتك يوم تقدر تدوس "استرجع الستريك" (محاولات محدودة في الشهر).', 'لوحة الشطار والتحدي الأسبوعي اختياريين: بتشارك فيهم بنقطك وأفتارك، والاسم مجهول إلا لو انت فعلته.'],
+          why: 'بيحفزك تفتح كل يوم، والنقط بتتحسب من شغلك الحقيقي.',
+          fix: 'لو نقطك مش بتظهر: اتأكد من النت ودوس "اختبر الاتصال".' },
+        { i: '☁️', t: 'الحساب والمزامنة (جهازين)',
+          steps: ['من البروفايل في "الحساب والمزامنة" سجل بإيميل وباسورد. نفس الإيميل في كل جهاز.', 'جنب إيميلك بيظهر رقم صغير زي \u2066#1a2b\u2069: ده رقم حسابك. لازم يبقى نفس الرقم في الجهازين.', 'التغييرات بتتبعت لوحدها وبتظهر في الجهاز التاني في ثواني، وهتشوف "متزامن".'],
+          why: 'بياناتك تفضل معاك لو غيرت الموبايل، وجدولك واحد على الموبايل واللابتوب.',
+          fix: 'لو الجهازين مش زي بعض: (١) اتأكد من نفس الإيميل ونفس الرقم. (٢) استنى ١٠ ثواني مع نت شغال. (٣) اقفل التطبيق وافتحه من جديد. (٤) لو لسه، سجل خروج وسجل دخول بنفس الإيميل. مهم: متسجلش خروج ولا تمسح بيانات المتصفح وانت من غير حساب بإيميل، لأن بياناتك على الجهاز ده بس. اربط حسابك بإيميل الأول.' },
+        { i: '📤', t: 'مشاركة وتذكير',
+          steps: ['في "يومي" تحت جدول النهارده: "صورة الجدول" أو "لينك للقراءة" تبعتهم لصاحبك. اللينك بيفتح للقراءة بس.', 'في البروفايل "شارك تقدمك" بتطلعلك صورة تقدمك.', 'فعّل "تذكير المذاكرة" وحدد الوقت. التذكير بيشتغل والتطبيق مفتوح بس.'],
+          why: 'تذاكروا مع بعض وتتحاسبوا.',
+          fix: 'لو التذكير مش بيطلع: اسمح بالإشعارات من إعدادات الموقع في المتصفح.' },
+        { i: '🛠', t: 'لو حاجة مش مظبوطة',
+          steps: ['حدّث الصفحة (اسحب لتحت أو اقفل التطبيق وافتحه). ممكن تكون شغال على نسخة قديمة.', 'اتأكد من النت، وشوف جنب إيميلك في البروفايل مكتوب "متزامن".', 'قارن رقم الحساب (اللي جنب الإيميل) في الجهازين. لو مختلف، انت داخل بحسابين.', 'سجل خروج وبعدين دخول بنفس الإيميل (بس لو حسابك مربوط بإيميل).', 'متمسحش بيانات المتصفح لو من غير حساب.', 'لو لسه: صوّر الشاشة وابعتها على قناة التحديثات أو زرار الاقتراحات تحت.'],
+          why: 'أغلب المشاكل بتتحل بالتحديث أو بالتأكد من الحساب.',
+          fix: 'مفيش حاجة في الخطوات دي بتمسح بياناتك، إلا مسح بيانات المتصفح أو تسجيل الخروج من غير إيميل.' },
+      ],
+    },
+    en: {
+      title: 'Guide & help',
+      intro: 'Tap a topic for the steps, why it helps, and what to do if something looks wrong.',
+      newsTitle: "What's new?",
+      newsSub: 'Every update, what was added and what was removed, is posted on the WhatsApp channel. Follow it and tell us what you think.',
+      newsBtn: 'Open the updates channel',
+      latest: 'Latest changes',
+      latestList: [
+        'The schedule is now a timeline: put your own study in the free gaps.',
+        '"Suggest a schedule" builds a full day for the time you have.',
+        'A task you planned and did not finish moves to the next day with room, with a warning.',
+        'Start Studying only lists what is on today\'s plan.',
+        'Each subject opens on its own screen, and subject names are in English.',
+        'Day settings (sleep, fixed times, workout) now sync correctly between two devices.',
+      ],
+      steps: 'Steps',
+      why: 'Why it helps',
+      fix: 'If something looks wrong',
+      topics: [
+        { i: '🚀', t: 'Start here (3 minutes)',
+          steps: ['In Profile enter your name and year. Your year\'s subjects load by themselves.', 'Set your sleep, fixed times (sections, lectures, errands) and workout days.', 'Open each subject in the Subjects tab and add its exam and lectures.', 'Open the Schedule tab and build your day, or tap "Suggest a schedule".', 'Tap "Start studying" on My Day, finish the task, then tap Done.'],
+          why: 'Everything after this is worked out from your free time and exam dates, so start with sleep, fixed times and exams.',
+          fix: 'If your subjects are missing, tap "Load my year subjects" in the Subjects tab. If you picked the wrong year, change it in Profile.' },
+        { i: '🗓', t: 'Build your own schedule',
+          steps: ['Open the Schedule tab. At the top are 7 days: yesterday, today and the next five. Tap a day to open it.', 'Under it is the timeline: sleep and fixed times, and between them free gaps labelled "Free time - tap to plan study".', 'Tap a free gap, pick the subject, then the task (only unfinished tasks show).', 'The block is saved at once. Tap ✎ on it to change its length (30 to 120 min), move it earlier or later, swap it for another task from any day, or tap ✕ to remove it.', 'Under the days, "Week overview" shows hours per day, tasks left and exams.'],
+          why: 'You know your time best. The schedule is yours, and every change is saved and synced.',
+          fix: 'No free gaps means the day is full of fixed times, or the gaps are under 45 minutes. Check your times in Profile. Past days are read-only.' },
+        { i: '✨', t: 'Auto suggestion',
+          steps: ['Open the day you want (today or a later day) in Schedule or My Day.', 'Tap "Suggest a schedule". The app adds study into the free gaps based on exams and difficulty.', 'Edit it freely: ✕ on a block removes only that block from the schedule, and the ✕ next to the button clears the whole day so you can start over.'],
+          why: 'Each task gets its usual time from your pace setting, not random 15 or 30 minute pieces. A task you already put on another day is not repeated.',
+          fix: 'An empty suggestion means no gap is long enough for the tasks, or they are already on other days, or they are done. Try another day or add by hand.' },
+        { i: '⏭', t: 'If you did not study something you planned',
+          steps: ['You do not need to do anything. When the day passes, an unfinished task you planned moves to the first day with room (today first).', 'A yellow card on My Day and Schedule says "You planned these yesterday and did not finish them" and where they moved.', 'A task that is already done is not moved and gives no warning.'],
+          why: 'Nothing gets lost. The app reminds you and puts it back in front of you without you re-entering it.',
+          fix: 'Do not want it on that day? Tap ✕ on the new block, or ✎ to swap it. The old block stays on its day as a record.' },
+        { i: '▶', t: 'Start studying (focus)',
+          steps: ['On My Day tap "Start studying".', 'You see only tasks on today\'s plan. Pick one.', 'Pick the rhythm (25 + 5 or 50 + 10) and tap Start.', 'When the time ends it is logged and taken off the task\'s time. When the task is finished, tap Done.'],
+          why: 'The timer keeps you focused, and your real time goes into your stats and streak.',
+          fix: 'No tasks listed means today has no plan. Tap "Suggest a schedule" or "Add it myself" from the same screen. The timer runs while the app is open, so leave it open.' },
+        { i: '📚', t: 'Subjects and tasks',
+          steps: ['In the Subjects tab tap a subject. It opens on its own screen, and "All subjects" takes you back.', 'Add the subject\'s exam (date, time, how many lectures it covers).', 'Add a task (lecture) by name, or tap one of the suggested topics.', 'Pick the difficulty or leave it automatic. The time comes from your pace.'],
+          why: 'The plan is spread by lecture difficulty and how close the exam is, so better data gives a better plan.',
+          fix: 'Subject names are in English. Lecture names you typed stay as you typed them. A deleted task does not come back.' },
+        { i: '📝', t: 'Exams',
+          steps: ['Set each exam\'s date and time on the subject screen.', 'The Exams tab shows the table and the countdown.'],
+          why: 'The closer the exam, the more the suggestion focuses on what you have not finished in that subject.',
+          fix: 'If an exam moved or the date is wrong, fix it on the subject screen and the plan adjusts by itself.' },
+        { i: '🛌', t: 'Your day: sleep, fixed times, workout',
+          steps: ['In Profile open "Your week". Pick a day and set your sleep time (a fixed 6 hours).', 'Add your fixed times: lecture, section, errand. Tap Save day to keep it.', 'Pick workout days. The app protects them in your schedule.', 'You can make a day off, which closes it completely.'],
+          why: 'The free gaps in the schedule are worked out from what you set here.',
+          fix: 'If these do not show on your other device, check you use the same email on both (see Account & sync).' },
+        { i: '🔥', t: 'Streak and challenge',
+          steps: ['The streak grows when you study day after day. Profile shows the days and your best.', 'If you miss a day you can tap "Restore streak" (limited tries each month).', 'The leaderboard and weekly challenge are optional: you share points and an avatar, and your name stays hidden unless you turn it on.'],
+          why: 'It gets you opening the app every day, and points come from your real work.',
+          fix: 'If your points do not show, check your internet and tap "Test connection".' },
+        { i: '☁️', t: 'Account & sync (two devices)',
+          steps: ['In Profile under "Account & sync" sign up or sign in with an email and password. Use the same email on every device.', 'Next to your email is a small code like #1a2b. That is your account id. It must be the same on both devices.', 'Changes send by themselves and appear on the other device in seconds. You will see "Synced".'],
+          why: 'Your data stays with you if you change phone, and your schedule is the same on phone and laptop.',
+          fix: 'If two devices differ: (1) check the same email and the same # id. (2) wait 10 seconds with internet on. (3) close and reopen the app. (4) still wrong? Log out and sign in with the same email. Important: do not log out or clear browser data if you have no email account, because your data lives only on that device. Link an email first.' },
+        { i: '📤', t: 'Sharing and reminders',
+          steps: ['On My Day under today\'s schedule: "Schedule image" or "Read-only link" to send a friend. The link opens read-only.', 'In Profile "Share your progress" makes a picture of your week.', 'Turn on "Study reminder" and pick a time. It only works while the app is open.'],
+          why: 'Study together and keep each other going.',
+          fix: 'If the reminder does not appear, allow notifications in the browser\'s site settings.' },
+        { i: '🛠', t: 'If something looks wrong',
+          steps: ['Refresh the page (pull down, or close and reopen the app). You may be on an old version.', 'Check your internet, and look under your email in Profile for "Synced".', 'Compare the # account id on both devices. If it differs, you are signed in to two accounts.', 'Log out and sign in with the same email (only if your account is linked to an email).', 'Do not clear browser data if you have no account.', 'Still wrong: screenshot it and send it on the updates channel or the suggestions button below.'],
+          why: 'Most problems are fixed by a refresh or by checking the account.',
+          fix: 'None of these steps delete your data, except clearing browser data or logging out without an email account.' },
+      ],
+    },
+  };
+
+  const GUIDE_I = () => GUIDE[state.lang === 'en' ? 'en' : 'ar'];
+
+  function guideHtml() {
+    const g = GUIDE_I();
+    let h = `<div class="overlay guide"><div class="sheet guidesheet">
+      <div class="row" style="margin-bottom:6px"><b class="grow" style="font-size:18px">${esc(g.title)}</b><button class="btn ghost sm" data-act="guideClose" aria-label="x">\u2715</button></div>
+      <div class="muted sml" style="margin-bottom:10px">${esc(g.intro)}</div>
+      <div style="margin-bottom:10px"><button class="btn ghost sm" data-act="tourOpen">\uD83D\uDE80 ${esc(state.lang === 'en' ? 'Quick tour' : 'جولة سريعة')}</button></div>
+      <div class="card newscard"><b>\uD83C\uDD95 ${esc(g.newsTitle)}</b>
+        <div class="muted sml" style="margin:4px 0 8px">${esc(g.newsSub)}</div>
+        <a class="btn" href="${NEWS_URL}" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none">${esc(g.newsBtn)}</a>
+        <div class="muted sml" style="margin-top:10px"><b>${esc(g.latest)}</b></div>
+        <ul class="guideul">${g.latestList.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>`;
+    g.topics.forEach((tp, i) => {
+      const on = guideTopic === i;
+      h += `<div class="card gtopic${on ? ' on' : ''}"><button class="gtop" data-act="guideTopic" data-i="${i}"><span class="gic">${tp.i}</span><b class="grow">${esc(tp.t)}</b><span class="muted">${on ? '\u2303' : '\u2304'}</span></button>`;
+      if (on) {
+        h += `<div class="gbody"><div class="gh">${esc(g.steps)}</div><ol class="guideol">${tp.steps.map((x) => `<li>${esc(x)}</li>`).join('')}</ol>
+          <div class="gh">${esc(g.why)}</div><p class="guidep">${esc(tp.why)}</p>
+          <div class="gh">${esc(g.fix)}</div><p class="guidep">${esc(tp.fix)}</p></div>`;
+      }
+      h += '</div>';
+    });
+    return h + '</div></div>';
+  }
+
+  function newsCardHtml() {
+    const g = GUIDE_I();
+    return `<div class="card newsbar"><div class="row"><span class="grow"><b>\uD83C\uDD95 ${esc(g.newsTitle)}</b><div class="muted sml">${esc(g.newsSub)}</div></span></div>
+      <div class="row" style="margin-top:8px;gap:8px"><a class="btn grow" href="${NEWS_URL}" target="_blank" rel="noopener" style="text-align:center;text-decoration:none">${esc(g.newsBtn)}</a>
+      <button class="btn ghost" data-act="guideOpen">\u2753 ${esc(state.lang === 'en' ? 'Guide' : 'الشرح')}</button></div></div>`;
+  }
+
   /* ---- the sheet: add or edit one block ---- */
 
   function planSheetHtml() {
@@ -4900,6 +5091,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     let h = `<div class="hero"><div class="grow"><b class="hero-title">${esc(greet)}</b>` +
       (motiv ? `<div><span class="motiv">${esc(motiv)}</span></div>` : '') +
       `<div class="muted" style="margin-top:6px">${esc(L().myDaySub)}</div></div></div>`;
+    h += newsCardHtml(); // v27
     if (!state.subjects.length) {
       h += `<div class="card empty"><div class="big">🦷</div><p>${esc(L().noPlan)}</p></div>`;
       if (curMissing().length) h += `<div class="card"><button class="btn" data-act="loadCur" style="width:100%">${esc(L().loadCurBtn)}</button></div>`;
@@ -5321,7 +5513,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     h += `<div class="card"><b>🔔 ${esc(L().remTitle)}</b><div class="muted" style="margin-top:4px">${esc(L().remSub)}</div>
       <div class="row" style="margin-top:8px"><input type="time" data-act="remTime" value="${esc(state.remind.time || '20:00')}" style="width:110px">
       <button class="btn ${state.remind.on ? '' : 'ghost'} grow" data-act="remToggle">${state.remind.on ? esc(L().remOn) : esc(L().remOff)}</button></div></div>`;
-    h += `<div style="margin:0 0 12px"><button class="btn ghost" data-act="tourOpen" style="width:100%">❓ ${esc(L().tourBtn)}</button></div>`;
+    h += `<div style="margin:0 0 12px"><button class="btn ghost" data-act="guideOpen" style="width:100%">❓ ${esc(L().tourBtn)}</button></div>`;
     h += `<div style="margin:0 0 12px"><button class="btn ghost" data-act="shareProg" style="width:100%">📤 ${esc(L().shareBtn)}</button></div>`;
     h += subjStatsHtml(); // v20: real minutes per subject
     h += dashHTML(); // v14: progress dashboard at the very bottom of the profile
@@ -5988,6 +6180,7 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
         <div style="text-align:center;margin-top:10px"><button class="linklike" data-act="authSkip">${esc(L().skipBtn)}</button></div></div></div>`;
       return h;
     }
+    if (guideOpen) return guideHtml();
     if (planSheet) return planSheetHtml();
     if (outAsk) {
       const anon = !(session && session.email);
@@ -6467,7 +6660,10 @@ if (typeof module === 'object' && module.exports) module.exports = AVATARS;
     if (a === 'tourNext') { tourStep = Math.min(TOUR_TABS.length - 1, tourStep + 1); return render(); }
     if (a === 'tourPrev') { tourStep = Math.max(0, tourStep - 1); return render(); }
     if (a === 'tourEnd') { tourClose(); return render(); }
-    if (a === 'tourOpen') { tourStep = 0; return render(); }
+    if (a === 'guideOpen') { guideOpen = true; guideTopic = null; return render(); }
+    if (a === 'guideClose') { guideOpen = false; return render(); }
+    if (a === 'guideTopic') { const gi = +t.dataset.i; guideTopic = guideTopic === gi ? null : gi; return render(); }
+    if (a === 'tourOpen') { guideOpen = false; tourStep = 0; return render(); }
     if (a === 'aiT') { aiOpen = aiOpen === l ? null : l; return render(); }
     if (a === 'aiGo') { aiGo(s, l, t.dataset.w); return; }
     if (a === 'attT') { attOpen = attOpen === l ? null : l; attPlay = null; if (attOpen) attRefreshUsage(); return render(); }
