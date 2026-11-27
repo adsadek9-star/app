@@ -191,7 +191,7 @@ input:focus, select:focus, textarea:focus {
 textarea { width: 100%; min-height: 74px; resize: vertical; margin: 10px 0; }
 input[type="checkbox"] { accent-color: var(--primary); width: 18px; height: 18px; cursor: pointer; }
 input[type="date"] { font-variant-numeric: tabular-nums; }
-button.btn {
+.btn {
   background: linear-gradient(120deg, var(--primary), var(--primary-2));
   color: #fff;
   border: 0;
@@ -203,16 +203,16 @@ button.btn {
   box-shadow: 0 4px 12px -5px rgba(13, 148, 136, 0.6);
   transition: transform 0.12s, box-shadow 0.12s, filter 0.12s;
 }
-button.btn:hover { transform: translateY(-1px); filter: brightness(1.06); }
-button.btn:active { transform: none; }
-button.ghost {
+.btn:hover { transform: translateY(-1px); filter: brightness(1.06); }
+.btn:active { transform: none; }
+.ghost {
   background: var(--ghost-bg);
   color: var(--ink);
   box-shadow: none;
   border: 1px solid var(--line);
   font-weight: 600;
 }
-button.ghost:hover { background: var(--ghost-hover); filter: none; }
+.ghost:hover { background: var(--ghost-hover); filter: none; }
 button.danger {
   background: var(--danger-bg);
   color: var(--danger-ink);
@@ -527,6 +527,10 @@ b.subj-head .sicon, .subj-head .sicon { width: 26px; height: 26px; font-size: 15
 .hcell.h3 { background: var(--primary); }
 .day.today { color: var(--primary); font-weight: 800; }
 @media (max-width: 420px) { .dashrow { grid-template-columns: 1fr; } }
+.foot { margin-top: 20px; padding: 14px 0 4px; text-align: center; border-top: 1px solid var(--line-soft); }
+.foot .muted { font-size: 12px; }
+.foot .btn { margin-top: 8px; }
+a.btn { display: inline-block; text-decoration: none; }
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
@@ -1181,7 +1185,7 @@ const MOTIV_AR = [
       S('Univ102', 'القضايا المجتمعية', 'Community Issues', 1, null, ['community', 'قضايا'], '🌍'),
     ],
     2: [
-      S('OBID-2', 'بيولوجيا الفم والأسنان', 'Oral Biology', 2, Y2_TOPICS.OBID2, ['oral biology', 'oral histology', 'oral bio', 'بيولوجيا', 'هيستولوجي الفم', 'هستولوجي الفم', 'اورال'], '🧬'),
+      S('OBID-2', 'هستولوجي الفم والأسنان', 'Oral Histology', 2, Y2_TOPICS.OBID2, ['oral biology', 'oral histology', 'oral bio', 'بيولوجيا', 'هيستولوجي الفم', 'هستولوجي الفم', 'اورال'], '🧬'),
       S('DMAD-2', 'المواد الحيوية لطب الأسنان', 'Dental Biomaterials', 2, Y2_TOPICS.DMAD2, ['biomaterials', 'materials', 'المواد الحيوية', 'بيوماتيريالز', 'ماتيريالز', 'خواص المواد', 'مواد'], '🧱'),
       S('GPAM-2', 'باثولوجيا عامة', 'General Pathology', 3, Y2_TOPICS.GPAM2, ['pathology', 'باثولوجيا', 'باثولوجي', 'باثو'], '🔬'),
       S('GMEM-2', 'أمراض باطنة وجلدية وتناسلية', 'General Medicine, Skin and Venereal Diseases', 3, Y2_TOPICS.GMEM2, ['medicine', 'باطنة', 'ميديسن', 'امراض باطنة', 'جلدية'], '🩺'),
@@ -1492,20 +1496,7 @@ const MOTIV_AR = [
     return out;
   }
 
-  // v14: optional "quizzes" tab: subject, week (quizzes are weekly per section, no single date)
-  function parseQuizRows(rows) {
-    const out = [];
-    (rows || []).forEach((r) => {
-      const subject = String(r[0] || '').trim();
-      if (!subject) return;
-      const week = parseInt(normDigits(String(r[1] || '')), 10);
-      if (!week || week < 1) return;
-      out.push({ subject, week });
-    });
-    return out;
-  }
-
-  return { parseCSV, parseSheetRows, planFullSync, matchSubject, keyOf, looksHeader, normDigits, parseDiff, normalizeSheetUrl, parseDateCell, parseExamsRows, parseQuizRows, MAX_ROWS };
+  return { parseCSV, parseSheetRows, planFullSync, matchSubject, keyOf, looksHeader, normDigits, parseDiff, normalizeSheetUrl, parseDateCell, parseExamsRows, MAX_ROWS };
 });
 
 (function (root, factory) {
@@ -1521,7 +1512,7 @@ const MOTIV_AR = [
   const weekday = (d) => new Date(parse(d)).getUTCDay(); // 0 = Sunday
   const diffDays = (a, b) => Math.round((parse(b) - parse(a)) / 864e5);
 
-  const BREAK_M = 30;  // rest between scheduled tasks, in minutes
+  const BREAK_M = 30;  // rest after every 3 hours of scheduled work, in minutes
   const DAY_MIN = 0;   // a planning day is the calendar day (12 AM -> 12 AM, local time); a block after midnight belongs to the day before
 
   /* ---------------- busy blocks / free time ---------------- */
@@ -1730,14 +1721,14 @@ const MOTIV_AR = [
 
   function capacityOn(state, d) {
     if ((state.blocked || []).includes(d)) return 0;
-    // free time is the day (12 AM -> 12 AM) minus busy blocks; a 30-minute break is
-    // kept between tasks, and tasks never start after 11:30 PM so a break always fits
+    // free time is the day (12 AM -> 12 AM) minus busy blocks; the last session
+    // of the day ends 30 minutes before the day's edge
     const mins = freeWindowsOn(state, d).reduce((a, [s, e]) => a + Math.max(0, Math.min(e, 1440 + DAY_MIN - BREAK_M) - s), 0);
     return Math.max(0, Math.floor(mins / 60 * 2) / 2);
   }
 
-  // Bookable gaps: [startMin, lengthHours] inside the free windows, trimmed so a
-  // session plus its trailing 30-minute break always fits inside the window.
+  // Bookable gaps: [startMin, lengthHours] inside the free windows, trimmed so the
+  // last session of the day still ends 30 minutes before the day's edge.
   function gapsOn(state, d) {
     const out = [];
     freeWindowsOn(state, d).forEach(([s, e]) => {
@@ -1753,7 +1744,7 @@ const MOTIV_AR = [
    *          busyOnce:{date: [block]}, overrides:{date:hours}, blocked:[dates] }
    * Blocks use 'HH:MM'; a block whose end <= start crosses midnight (sleep) and
    * spills into the next day. Study sessions go into the free gaps between blocks
-   * with a 30-minute break after each one.
+   * with a 30-minute break after every 3 hours of work in a day.
    * Sessions: {date,subjectId,lectureId,title,type,hours,startMin,endMin}
    *   type: study | solve | clinic | revise | examreview | review
    *   startMin/endMin: minutes since 00:00 (endMin may exceed 1440 past midnight)
@@ -1787,9 +1778,11 @@ const MOTIV_AR = [
     const idx = {}; days.forEach((d, i) => (idx[d] = i));
 
     const sessions = [];
+    const dayAcc = days.map(() => 0); // v16: minutes of work placed on each day since its last break
     // Allocate up to h hours inside ONE gap of day i (a session never spans a busy
     // block): the earliest gap that fits the whole block, else the biggest gap.
-    // A 30-minute break is reserved right after the placed block.
+    // A 30-minute break is reserved after every 3 hours of work in the day; a
+    // piece starting within one slot of the 3-hour mark takes its break first.
     const alloc = (i, h) => {
       let best = -1;
       gaps[i].forEach((g, gi) => {
@@ -1800,10 +1793,21 @@ const MOTIV_AR = [
       });
       if (best < 0) return { hours: 0, at: null };
       const g = gaps[i][best];
-      const take = Math.min(h, g[1]);
+      // break first when the 3-hour mark is reached or less than one slot away
+      const acc = dayAcc[i] % 180;
+      if (dayAcc[i] > 0 && (acc < 1e-6 || 180 - acc < SLOT * 60) && g[1] >= h + BREAK_M / 60) {
+        g[0] += BREAK_M; g[1] -= BREAK_M / 60; dayAcc[i] = 0;
+      }
+      const left = dayAcc[i] % 180 < 1e-6 && dayAcc[i] > 0 ? 180 : 180 - (dayAcc[i] % 180);
+      const take = Math.min(h, g[1], left / 60);
+      if (take <= 1e-9) return { hours: 0, at: null };
       const at = g[0];
-      g[0] += take * 60 + BREAK_M;
-      g[1] -= take + BREAK_M / 60;
+      dayAcc[i] += take * 60;
+      // reserve the 30-minute break right after a full 3-hour stretch, when the
+      // gap continues (at a gap's end the busy block or the night is the break)
+      const rest = dayAcc[i] % 180 < 1e-6 && g[1] - take >= BREAK_M / 60 ? BREAK_M : 0;
+      g[0] += take * 60 + rest;
+      g[1] -= take + rest / 60;
       if (g[1] < SLOT - 1e-9) gaps[i].splice(best, 1);
       return { hours: take, at };
     };
@@ -2092,6 +2096,9 @@ const MOTIV_AR = [
   // is moved back to onboarding (their data stays) until their year opens.
   // Unlock everything by changing this one line to [1, 2, 3, 4, 5, 6].
   const OPEN_YEARS = [2];
+  // v16: link for the suggestions/problems button in the footer. Fill it once and
+  // the button appears; while empty the button stays hidden.
+  const FEEDBACK_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSe-vw4bKoJhjmiKdfTwF7dNVwyBw75vbFuaz5v48YLd9exg0w/viewform?usp=publish-editor';
 
   /* ---- Backend config (public web client values, safe to ship in the page) ---- */
   const FIREBASE_CONFIG = { apiKey: 'AIzaSyCoAn_ZO-wNV0qWzkQDHJ2ZmxXzkD0tSss', authDomain: 'dental-student-planner.firebaseapp.com', projectId: 'dental-student-planner', appId: '1:152191158765:web:9fb371c66fb6d403a23fe4' };
@@ -2190,13 +2197,8 @@ const MOTIV_AR = [
       doneBtn: 'خلصت',
       doneTodayTitle: 'خلصتها النهارده 💪',
       undoBtn: 'رجّعها',
-      quizzesTitle: 'كويزات السكاشن',
-      quizzesSub: 'كل سكشن ليه يوم، فانت اللي تحدد أسابيع كويزاتك',
-      noQuizzesYet: 'لسه مضفتش كويزات. ضيف أول واحد تحت.',
-      quizAddBtn: 'ضيف',
-      quizWeekPh: 'الأسبوع',
-      quizAdded: 'اتضاف الكويز',
-      quizExists: 'الأسبوع ده متسجل قبل كده',
+      footNote: 'ده مش موقع رسمي، اتعمل بس للمساعدة والتسهيل على الطلاب',
+      footSuggest: 'عندك اقتراح أو مشكلة؟ قولنا',
       dashTitle: 'لوحة تقدمك',
       dashWeek: 'مذاكرة آخر ٧ أيام',
       dashPlan: 'المخطط',
@@ -2430,13 +2432,8 @@ const MOTIV_AR = [
       doneBtn: 'Done',
       doneTodayTitle: 'Done today 💪',
       undoBtn: 'Undo',
-      quizzesTitle: 'Section quizzes',
-      quizzesSub: 'Each section has its own day, so you set your own quiz weeks',
-      noQuizzesYet: 'No quizzes yet. Add your first one below.',
-      quizAddBtn: 'Add',
-      quizWeekPh: 'Week',
-      quizAdded: 'Quiz added',
-      quizExists: 'That week is already there',
+      footNote: 'This is not an official site. It is only here to help students and make things easier.',
+      footSuggest: 'Got a suggestion or a problem? Tell us',
       dashTitle: 'Your progress',
       dashWeek: 'Last 7 days of studying',
       dashPlan: 'planned',
@@ -2657,8 +2654,13 @@ const MOTIV_AR = [
     if (!state.batchSync || typeof state.batchSync !== 'object') state.batchSync = { lastSync: 0, total: 0, added: 0, updated: 0, removed: 0, unmatched: 0, error: '' };
     if (!state.pace || typeof state.pace !== 'object') state.pace = { study: 60, solve: 20 };
     (state.subjects || []).forEach((s) => {
-      if (!Array.isArray(s.quizzes)) s.quizzes = [];
+      delete s.quizzes; // v16: quizzes (student-added and sheet-sourced) were removed from the app
       if (s.exam && typeof s.exam.src === 'undefined') s.exam.src = ''; // '' = set by the student, 'batch' = from the sheet
+      // v16: Oral Biology was renamed Oral Histology; refresh the stored display name
+      if (s.code === 'OBID-2' && typeof Curriculum !== 'undefined') {
+        const c = Curriculum.find(s.name, s.code);
+        if (c) s.name = state.lang === 'en' ? c.en : c.ar;
+      }
     });
     // v13: a student on a locked year goes back to onboarding; his subjects,
     // tasks, busy days and progress stay untouched for when his year opens.
@@ -2692,7 +2694,7 @@ const MOTIV_AR = [
   const yearNum = () => Number(state.profile.year) || 0;
   const clinicAllowed = () => yearNum() >= 4;
   const examOf = (s) => (s.exam && s.exam.date ? s.exam : null);
-  const fmtHTxt = (h) => L().fmtH(Math.round(h * 2) / 2);
+  const fmtHTxt = (h) => { const r = Math.round(h * 2) / 2; return r > 0 && r < 1 ? L().fmtM(Math.round(h * 60)) : L().fmtH(r); }; // v16: under an hour reads in minutes (30 د not 0.5 س)
   const fmtDur = (min) => { const m = Math.round(min); return m < 60 ? L().fmtM(m) : L().fmtH(Math.round(m / 60 * 2) / 2); };
   const fmtMin = Scheduler.fmtMin;
   // Display helper: minutes-since-midnight (may exceed 1440) or an 'HH:MM' string
@@ -2962,20 +2964,6 @@ const MOTIV_AR = [
     });
   }
 
-  // v14: sheet-sourced weekly quizzes (per section, so week numbers, no dates)
-  function applyQuizRows(rows) {
-    const byId = {};
-    (rows || []).forEach((r) => {
-      const hit = BatchSync.matchSubject(state.subjects, r.subject);
-      if (hit) (byId[hit.id] = byId[hit.id] || []).push(r.week);
-    });
-    state.subjects.forEach((sj) => {
-      const keep = (sj.quizzes || []).filter((q) => q.src !== 'batch');
-      const weeks = [...new Set(byId[sj.id] || [])].sort((a, b) => a - b);
-      sj.quizzes = keep.concat(weeks.map((w) => ({ id: uid(), week: w, src: 'batch' })));
-    });
-  }
-
   async function fetchText(url, ms) {
     const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
     const killer = ctrl ? setTimeout(() => { try { ctrl.abort(); } catch (e) {} }, ms || 12000) : null;
@@ -3019,16 +3007,12 @@ const MOTIV_AR = [
         }
         const entries = BatchSync.parseSheetRows(BatchSync.parseCSV(text));
         const plan = applyLectures(entries);
-        // step 3 (v14, optional tabs in the same sheet): exam dates + weekly quizzes.
-        // A missing tab just 404s; that is normal and leaves exams/quizzes alone.
+        // step 3 (v14, optional tab in the same sheet): exam dates.
+        // A missing tab just 404s; that is normal and leaves exams alone.
         try {
           const exText = await fetchText(url + '&sheet=exams', 8000);
           if (!/^\s*<(!doctype|html)/i.test(exText.slice(0, 300))) applyExamRows(BatchSync.parseExamsRows(BatchSync.parseCSV(exText)));
         } catch (e) { /* no exams tab yet */ }
-        try {
-          const qzText = await fetchText(url + '&sheet=quizzes', 8000);
-          if (!/^\s*<(!doctype|html)/i.test(qzText.slice(0, 300))) applyQuizRows(BatchSync.parseQuizRows(BatchSync.parseCSV(qzText)));
-        } catch (e) { /* no quizzes tab yet */ }
         bs.error = '';
         bs.noSheet = false;
         bs.lastSync = Date.now();
@@ -3319,41 +3303,6 @@ const MOTIV_AR = [
         <span class="tag">${esc(L().daysLeft(dleft))}</span></div></div>`;
       });
     }
-    // v15: quizzes are set by the student himself (each section has its own day);
-    // sheet-tab quizzes (src 'batch') can still show alongside if a rep adds them
-    const qz = [];
-    state.subjects.forEach((s) => (s.quizzes || []).forEach((q) => qz.push({ s, q })));
-    h += `<div class="day">${esc(L().quizzesTitle)}</div><div class="card">
-      <div class="muted" style="margin-bottom:6px">${esc(L().quizzesSub)}</div>`;
-    if (!qz.length) h += `<div class="muted" style="padding:6px 2px">${esc(L().noQuizzesYet)}</div>`;
-    qz.sort((a, b) => a.q.week - b.q.week).forEach(({ s, q }) => {
-      const icon = `<span class="sicon" style="background:${colorOfS(s)}22">${iconOf(s)}</span>`;
-      if (q.src === 'batch') {
-        h += `<div class="sess subjline" style="border-inline-start-color:${colorOfS(s)}">${icon}<div class="grow"><b>${esc(s.name)}</b></div><span class="tag review">${esc(L().weekShort(q.week))}</span><span class="tag">${esc(L().batchFromTag)}</span></div>`;
-      } else {
-        h += `<div class="sess subjline" style="border-inline-start-color:${colorOfS(s)}">${icon}<div class="grow"><b>${esc(s.name)}</b></div>
-          <select data-act="quizWeek" data-s="${s.id}" data-l="${q.id}">${Array.from({ length: 20 }, (_, i) => `<option value="${i + 1}" ${q.week === i + 1 ? 'selected' : ''}>${esc(L().weekShort(i + 1))}</option>`).join('')}</select>
-          <button class="btn ghost sm" data-act="quizDel" data-s="${s.id}" data-l="${q.id}" title="${esc(L().delBtn)}">✕</button></div>`;
-      }
-    });
-    h += `<div class="row" style="margin-top:10px">
-      <select id="qzSubj" class="grow">${state.subjects.map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select>
-      <input id="qzWeek" type="number" min="1" max="20" placeholder="${esc(L().quizWeekPh)}" style="width:90px">
-      <button class="btn sm" data-act="quizAdd">${esc(L().quizAddBtn)}</button></div></div>`;
-    h += `<div class="day">${esc(L().revTitle)}</div>`;
-    Scheduler.revisionPlan(state, today).forEach((p) => {
-      const sj = subj(p.subjectId);
-      const col = sj ? colorOfS(sj) : 'var(--primary)';
-      h += `<div class="card pcard" style="border-inline-start-color:${col}">
-        <div class="row"><span class="sicon" style="background:${col}22">${sj ? iconOf(sj) : '📝'}</span><b class="grow">${esc(p.name)}</b>
-        <span class="tag ${p.feasible ? '' : 'revise'}">${esc(p.feasible ? L().revOk : L().revTight)}</span></div>
-        <div class="muted" style="margin-top:4px">${esc(L().revPerDay(fmtHTxt(p.perDay)))} · ${esc(L().daysLeft(p.daysLeft))}</div>`;
-      if (p.items.length) {
-        h += `<div class="muted" style="margin-top:8px">${esc(L().revTop)}</div>` +
-          p.items.slice(0, 3).map((it) => `<div class="lec"><span class="t grow">${esc(it.title)}</span><span class="muted hrs">${fmtHTxt(it.hours)}</span></div>`).join('');
-      } else h += `<div class="muted" style="margin-top:8px">${esc(L().revNone)}</div>`;
-      h += '</div>';
-    });
     return h;
   }
 
@@ -3812,9 +3761,16 @@ const MOTIV_AR = [
       : L().days[nowD.getDay()] + '\u060c ' + nowD.getDate() + ' ' + L().months[nowD.getMonth()];
     $('todayLbl').innerHTML = `<span>${esc(hd)}</span> \u00b7 <span id="clockLbl" dir="ltr">${esc(clockNow())}</span>`;
     document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
-    $('view').innerHTML = { day: viewDay, schedule: viewSchedule, exams: viewExams, subjects: viewSubjects, profile: viewProfile }[tab]();
+    $('view').innerHTML = { day: viewDay, schedule: viewSchedule, exams: viewExams, subjects: viewSubjects, profile: viewProfile }[tab]() + footerHtml();
     $('overlays').innerHTML = overlays();
     if (focusRun) updateFocusText();
+  }
+
+  // v16: every tab ends with the unofficial-site note; the suggestions button
+  // shows only once FEEDBACK_URL is filled in.
+  function footerHtml() {
+    const link = FEEDBACK_URL ? ` <a class="btn ghost sm" href="${esc(FEEDBACK_URL)}" target="_blank" rel="noopener">${esc(L().footSuggest)}</a>` : '';
+    return `<div class="foot"><div class="muted">${esc(L().footNote)}</div>${link}</div>`;
   }
 
   function estChipText(sid) {
@@ -3841,7 +3797,6 @@ const MOTIV_AR = [
     if (!a) return;
     if (a === 'check') { const x = taskOf(t.dataset.s, t.dataset.l); x.done = t.checked; if (t.checked) x.doneAt = todayStr(); else { x.confidence = 0; delete x.doneAt; } }
     else if (a === 'conf') taskOf(t.dataset.s, t.dataset.l).confidence = +t.value;
-    else if (a === 'quizWeek') { const q = ((subj(t.dataset.s) || {}).quizzes || []).find((x) => x.id === t.dataset.l); if (q) q.week = +t.value; }
     else if (a === 'tdiff') { /* difficulty select re-renders chip */ const el = $('est-' + t.dataset.s); if (el) el.textContent = estChipText(t.dataset.s); return; }
     else return;
     save(); render();
@@ -3990,23 +3945,6 @@ const MOTIV_AR = [
       save(); return render();
     }
     if (a === 'clearExam') { subj(s).exam = null; save(); return render(); }
-    // v15: the student's own quizzes (add / delete here, edit week below)
-    if (a === 'quizAdd') {
-      const sid = ($('qzSubj') || {}).value;
-      const w = +(($('qzWeek') || {}).value || 0);
-      const sj = subj(sid);
-      if (!sj || !w || w < 1 || w > 20) return render();
-      sj.quizzes = sj.quizzes || [];
-      if (sj.quizzes.some((q) => q.week === w)) { toast(L().quizExists); return render(); }
-      sj.quizzes.push({ id: uid(), week: w, src: '' });
-      sj.quizzes.sort((a2, b2) => a2.week - b2.week);
-      save(); toast(L().quizAdded); return render();
-    }
-    if (a === 'quizDel') {
-      const sj = subj(s);
-      if (sj) sj.quizzes = (sj.quizzes || []).filter((q) => q.id !== l);
-      save(); return render();
-    }
     if (a === 'pickKind') { taskKind[s] = t.dataset.k; return render(); }
     if (a === 'addTask') {
       const sj = subj(s), title = $('tt-' + s).value.trim();
