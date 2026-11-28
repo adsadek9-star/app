@@ -4264,6 +4264,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
     if (!state.busy || typeof state.busy !== 'object') state.busy = {};
     if (!state.busyOnce || typeof state.busyOnce !== 'object') state.busyOnce = {};
     if (!Array.isArray(state.focusLog)) state.focusLog = [];
+    try { const lc = localStorage.getItem(KEY + '.chleft'); if (lc && state.challenge && String(state.challenge.code || '').toUpperCase() === lc) state.challenge = { code: '' }; } catch (e) { /* ignore */ } // v36
     if (!Array.isArray(state.blocked)) state.blocked = [];
     if (!state.sleep || typeof state.sleep !== 'object') state.sleep = {};
     if (!state.studyCap || typeof state.studyCap !== 'object' || Array.isArray(state.studyCap)) state.studyCap = {};
@@ -4687,7 +4688,8 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
         target: setup.target, members: [session.uid], memberCap: CH_CAP, status: 'open', winner: '', winnerAt: 0,
         week: Scheduler.boardWeekKey(), createdAt: Date.now() };
       await fbDb.collection('challenges').doc(code).set(doc);
-      state.challenge = { code }; roomSetAck(code); save();
+      state.challenge = { code }; roomSetAck(code); try { localStorage.removeItem(CH_LEFT); } catch (e) { /* ignore */ }
+      save();
       chDoc = doc; chRows = null; chSetup = null;
       await pushChScore(true);
       // invite the friends the creator picked
@@ -4724,7 +4726,8 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
           tx.update(ref, { members: list });
         });
       }
-      state.challenge = { code }; roomSetAck(code); save();
+      state.challenge = { code }; roomSetAck(code); try { localStorage.removeItem(CH_LEFT); } catch (e) { /* ignore */ }
+      save();
       chDoc = d; chRows = null;
       try { await fbDb.collection('challenge_invites').doc(session.uid).delete(); } catch (e) { /* ignore */ }
       chInvite = null; chInviteSeen = '';
@@ -4776,6 +4779,33 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
     fetchCh();
   }
 
+  // v36: the remote half of leaving, usable on its own for broken docs
+  async function chLeaveRemote(code) {
+    if (!session || !fbDb || !code) return;
+    try { await fbDb.collection('challenges').doc(code).collection('entries').doc(session.uid).delete(); } catch (e) { /* ignore */ }
+    try {
+      const ref = fbDb.collection('challenges').doc(code);
+      await fbDb.runTransaction(async (tx) => {
+        const s2 = await tx.get(ref);
+        if (!s2.exists) return;
+        const d2 = s2.data() || {};
+        const mem = (Array.isArray(d2.members) ? d2.members : []).filter((u) => u !== session.uid);
+        if (!mem.length) { tx.delete(ref); return; }
+        tx.update(ref, { members: mem });
+      });
+    } catch (e) { /* ignore */ }
+  }
+
+  // v36: one place that drops the challenge locally for good. `left` remembers the code so a
+  // stale cloud copy cannot bring it back (see normalizeState).
+  function chDrop(left) {
+    const code = chCode();
+    if (left && code) { try { localStorage.setItem(CH_LEFT, code); } catch (e) { /* ignore */ } }
+    state.challenge = { code: '' }; chDoc = null; chRows = null; chFetchedAt = 0; chErr = '';
+    try { localStorage.removeItem(ROOM_ACK); } catch (e) { /* ignore */ }
+    save();
+  }
+
   async function fetchCh() {
     if (!fbDb || !chCode()) return;
     if (Date.now() - chFetchedAt < 3000) return;
@@ -4783,32 +4813,28 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
     try {
       const d = await chRef().get();
       chDoc = d.exists ? (d.data() || {}) : null;
+      if (!chDoc || !(Number(chDoc.target) > 0)) { // v36: never render a ghost card
+        const gone = chCode(), broken = !!chDoc;
+        chDrop(false);
+        if (broken) await chLeaveRemote(gone);
+        render();
+        return;
+      }
       if (chDoc) {
         const snap = await chRef().collection('entries').orderBy('score', 'desc').limit(10).get();
         chRows = snap.docs.map((x) => { const v = x.data() || {}; return { id: x.id, avatar: v.avatar, score: Number(v.score) || 0, study: Number(v.study) || 0, task: Number(v.task) || 0, name: String(v.name || '') }; });
       } else chRows = [];
       chErr = '';
     } catch (e) { chErr = String((e && (e.code || e.message)) || e); }
-    const el = $('chList'); if (el) el.innerHTML = chListHtml();
+    const el = $('chList');
+    if (el) el.innerHTML = chListHtml(); else render(); // v36
   }
 
   async function chLeave() {
     const code = chCode();
     if (!code) return;
-    state.challenge = { code: '' }; chDoc = null; chRows = null; chFetchedAt = 0; save(); render();
-    if (!session || !fbDb) return;
-    try { await fbDb.collection('challenges').doc(code).collection('entries').doc(session.uid).delete(); } catch (e) { /* ignore */ }
-    try {
-      const ref = fbDb.collection('challenges').doc(code);
-      await fbDb.runTransaction(async (tx) => {
-        const s = await tx.get(ref);
-        if (!s.exists) return;
-        const d = s.data() || {};
-        const mem = (Array.isArray(d.members) ? d.members : []).filter((u) => u !== session.uid);
-        if (!mem.length) { tx.delete(ref); return; }
-        tx.update(ref, { members: mem });
-      });
-    } catch (e) { /* ignore */ }
+    chDrop(true); render(); // v36: local state, stored id and ack cleared first, for good
+    await chLeaveRemote(code); // then the membership and, if nobody is left, the doc
   }
 
   /* ---- v31: friends (in-app only). Everything lives in Firestore, never in the saved state. ----
@@ -4816,7 +4842,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
      friend_codes/{CODE}  code -> uid, so a request can be sent by code
      friendships/{pair}   pending or accepted, one per pair of people
      cheers/{to_from}     a clap or a fire, shown once as an in-app notice */
-  const FR_MAX = 30, FR_FLAG = KEY + '.fr', ROOM_ACK = KEY + '.roomack';
+  const FR_MAX = 30, FR_FLAG = KEY + '.fr', ROOM_ACK = KEY + '.roomack', CH_LEFT = KEY + '.chleft';
   const fr = { loaded: false, loading: false, on: false, code: '', share: 'all', list: [], stats: {}, statsAt: 0, statsKey: '',
     cheers: [], unsubF: null, unsubC: null, pushKey: '', pushAt: 0, pushTimer: null, lastActive: 0, cheerAt: {}, seen: {},
     ask: null, msg: '', busy: false, err: '',
@@ -5318,6 +5344,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
           await loadCloud();
           attachCloud();
           pushLbScore(); fetchLbTop(); // v32: always
+          fetchCh(); // v36: a stored challenge is checked at start; a stale one is dropped
           try { if (localStorage.getItem(FR_FLAG) === '1' && !fr.loaded) frLoad(); } catch (e) { /* ignore */ }
         } else { detachCloud(); fetchLbTop(); } // v32: read the board even before signing in
         // v21.2: tell them once that an anonymous account does not travel between devices
@@ -5990,6 +6017,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       newsBtn: 'افتح قناة التحديثات',
       latest: 'آخر اللي اتغير',
       latestList: [
+        "جديد: يوزرنيم (@اسم) صحابك يضيفوك بيه، لوحة شطار أسبوعية لأعلى 10 بتتصفّر السبت بالليل بتوقيت القاهرة، نقط مهام (10 نقط للمهمة بتتخلص أول مرة) جنب نقط المذاكرة، وتحديات \"يلا نتحدى\" من غير ميعاد انتهاء.",
         'الجدول بقى تايم لاين: بتحط مذاكرتك بنفسك في الأوقات الفاضية.',
         'زرار "اقترح جدول تلقائي" بيعملك يوم كامل على قد وقتك.',
         'لو مخلصتش تاسك كنت حاططه، بيتأجل لأول يوم فيه مكان ويظهرلك تحذير.',
@@ -6006,9 +6034,42 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       fix: 'لو حاجة مش مظبوطة',
       topics: [
         { i: '👫', t: 'الأصدقاء والنقط',
-          steps: ['افتح تاب "الأصدقاء" (آخر تاب) وفعّل الأصدقاء، هيطلعلك كود قصير. ابعته لصاحبك.', 'اكتب كود صاحبك واضغط "ابعت طلب". لما يقبل بتظهروا لبعض. قبل القبول محدش بيشوف أي حاجة عن التاني.', 'القايمة بتعرض دقايق النهارده والأسبوع والستريك والنقط، ومترتبة بدقايق الأسبوع. تقدر تشجع صاحبك بـ 👏 أو 🔥.', 'من "مين يشوف إيه" اختار كل الأرقام أو الدقايق بس أو وقّف المشاركة. تقدر تشيل أي صاحب في أي وقت.', 'النقط: كل دقيقة تركيز نقطة، وكل مهمة نقطة (لحد 10 في اليوم). الوقت بيتحسب والتطبيق مفتوح قدامك بس.'],
+          steps: ['افتح تاب "الأصدقاء" (آخر تاب) وفعّل الأصدقاء، هيطلعلك كود قصير. ابعته لصاحبك.', 'اكتب كود صاحبك واضغط "ابعت طلب". لما يقبل بتظهروا لبعض. قبل القبول محدش بيشوف أي حاجة عن التاني.', 'القايمة بتعرض دقايق النهارده والأسبوع والستريك والنقط، ومترتبة بدقايق الأسبوع. تقدر تشجع صاحبك بـ 👏 أو 🔥.', 'من "مين يشوف إيه" اختار كل الأرقام أو الدقايق بس أو وقّف المشاركة. تقدر تشيل أي صاحب في أي وقت.', "النقط نوعين: كل دقيقة تركيز نقطة (لحد 480 في اليوم)، وكل مهمة بتتخلص أول مرة بـ 10 نقط ومش بتتحسب تاني. الوقت بيتحسب والتطبيق مفتوح قدامك بس."],
           why: 'منافسة خفيفة بين الصحاب بالأرقام بس. المواد وتفاصيل المهام عمرها ما بتتشارك.',
           fix: 'لو الأصدقاء مش بيفتحوا: اتأكد من النت. النقط بتتحسب على جهازك فمش مضمونة ضد التلاعب، فأي جايزة هنراجعها بإيدينا.' },
+        { i: "🆔", t: "اليوزرنيم (@اسمك)",
+          steps: [
+                  "من تاب \"الأصدقاء\" هتلاقي كارت \"@اسم المستخدم\": اكتب اسم بالإنجليزي (حروف وأرقام و_) ودوس \"احفظه\".",
+                  "الاسم بيتحفظ مرة واحدة، وتقدر تغيره مرة واحدة بس بعدها، فاختاره على مهلك.",
+                  "صحابك يقدروا يضيفوك باليوزرنيم بدل الكود القصير، وكودك القديم شغال برضه لو حد معاه.",
+                  "اسمك ده بيظهر لصحابك ولأعضاء أي تحدي تدخله، وعلى لوحة الشطار لو فعّلت \"اظهر باسمي\"."],
+          why: "يوزرنيم واحد سهل تقوله لأي حد، بدل ما تبعت كود كل مرة.",
+          fix: "لو قالك الاسم محجوز جرّب اسم تاني. ولو نسيت اسمك هتلاقيه مكتوب في نفس الكارت في تاب الأصدقاء." },
+        { i: "🏆", t: "لوحة الشطار (أعلى 10)",
+          steps: [
+                  "اللوحة في تاب \"الأصدقاء\" وبترتب الطلبة على نقط الأسبوع من الأكبر للأصغر، وأول 3 ليهم منصة.",
+                  "اسمك فيها «طالب مجهول» إلا لو دوست \"اظهر باسمي\"، وتقدر ترجع مجهول في أي وقت.",
+                  "الأسبوع بيبدأ السبت 12 بالليل بتوقيت القاهرة، والنقط بتتصفّر وبتبدأوا من جديد.",
+                  "جنب كل اسم هتلاقي التفاصيل: دقايق المذاكرة والمهام اللي جابت النقط."],
+          why: "منافسة أسبوعية نضيفة: كل أسبوع فرصة جديدة حتى لو كنت متأخر.",
+          fix: "لو مركزك مش بيتحدث: اتأكد من النت وحدّث الصفحة، الترتيب بياخد لحظات بعد ما تذاكر." },
+        { i: "⚡", t: "نقطك: مذاكرة ومهام",
+          steps: [
+                  "كل دقيقة تركيز = نقطة، بحد أقصى 480 نقطة في اليوم (8 ساعات).",
+                  "كل مهمة بتخلصها أول مرة = 10 نقط، من غير حد أقصى في اليوم. المهمة بتتحسب مرة واحدة بس.",
+                  "مجموعك = نقط المذاكرة + نقط المهام، وهو اللي بيظهر في كارت \"نقاطك\" وعلى اللوحة وفي التحديات.",
+                  "جلسة المذاكرة لازم تكون 10 دقايق على الأقل عشان تتحسب، والتطبيق مفتوح قدامك."],
+          why: "عشان تعرف نقطك جاية منين: المذاكرة بتجمع بثبات، والمهام بتديك دفعة كبيرة لما تخلص شغلك.",
+          fix: "لو نقط المهام مش بتزيد، غالبا المهمة دي اتحسبت قبل كده. النقط بتتحسب على جهازك، فأي جايزة بنراجعها بإيدينا." },
+        { i: "⚑", t: "يلا نتحدى (تحديات النقط)",
+          steps: [
+                  "من تاب \"الأصدقاء\" دوس \"ابدأ التحدي\": اختار نوع النقط (وقت مذاكرة أو مهام)، والهدف (50 أو 100 أو 200 أو 500)، وصحابك اللي معاك.",
+                  "مختارتش حد؟ عادي: التحدي بيتعمل ويديك كود تبعته لأي حد ينضم بيه. واللي معاه كود يكتبه في خانة \"كود التحدي\" ويدوس \"ادخل\".",
+                  "النقط بتتحسب من لحظة بداية التحدي، ومفيش ميعاد انتهاء: التحدي شغال لحد ما حد يوصل للهدف، حتى لو أسبوع اللوحة اتصفّر.",
+                  "اللي يوصل للهدف الأول يكسب ويظهر اسمه فايز في الكارت. وتقدر تنسحب في أي وقت.",
+                  "قبل ما تعمل أو تدخل تحدي بنقولك إن اسمك ونقطك هتظهر لأعضاء التحدي، وبتدوس موافق."],
+          why: "هدف واضح وصحابك بيذاكروا معاك: واحد لواحد، أو جروب كامل بالكود.",
+          fix: "لو الزرار مردش عليك أو ظهرت رسالة صلاحية، يبقى قواعد فايربيز الجديدة مش متنشرة: ابعتلنا على قناة التحديثات. ولو النت ضعيف التحدي مش بيتعمل." },
         { i: '🦷', t: 'الأفتار الصغير والأفتارات',
           steps: ['من البروفايل اختار الأفتار اللي يمثلك من 25 شكل.', 'الأفتار بتاعك بيطلّ أحيانا من حافة الشاشة (يمين أو شمال أو من فوق) بجملة قصيرة وبيمشي بعد حوالي 10 ثواني.', 'دوس عليه عشان يختفي، أو سيبه.', 'من البروفايل > "الأفتار الصغير" اختار كل 5 أو 10 أو 20 دقيقة، أو اقفله. وفيه زرار "جرّبه دلوقتي".'],
           why: 'تشجيع خفيف بيفكّرك تبدأ أو ترتاح، من غير ضغط. الجمل بتتغيّر حسب وقت اليوم ومذاكرتك وامتحاناتك.',
@@ -6075,6 +6136,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       newsBtn: 'Open the updates channel',
       latest: 'Latest changes',
       latestList: [
+        "New: a @username friends can add you with, a weekly top-10 leaderboard that resets Saturday midnight Cairo time, task points (10 per task, first completion only) next to study points, and Let's Challenge duels with no expiry.",
         'New: the Friends tab. Add friends with a short code, see study minutes, streak and points, and cheer each other with 👏 and 🔥. Points are now time based: 1 focus minute = 1 point. In challenge rooms your name shows to the members (we ask before you join).',
         'New: 25 avatars (the first 15 were redrawn, 10 are new) and a little mascot: your avatar peeks from the screen edge with a short encouraging line now and then. Set how often, or turn it off, in Profile.',
         'The reminder and the weekly planned vs done percentage now follow the plan you put on the timeline.',
@@ -6091,9 +6153,42 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       fix: 'If something looks wrong',
       topics: [
         { i: '👫', t: 'Friends and points',
-          steps: ['Open the Friends tab (the last one) and turn Friends on. You get a short code. Send it to your friend.', 'Type your friend\'s code and tap Send request. Once they accept you see each other. Before that nobody sees anything about the other.', 'The list shows today and week minutes, streak and points, sorted by this week\'s minutes. Cheer a friend with 👏 or 🔥.', 'Under Who sees what choose all numbers, minutes only, or pause sharing. You can remove any friend any time.', 'Points: 1 per focus minute and 1 per task (up to 10 a day). Time counts only while the app is open in front of you.'],
+          steps: ['Open the Friends tab (the last one) and turn Friends on. You get a short code. Send it to your friend.', 'Type your friend\'s code and tap Send request. Once they accept you see each other. Before that nobody sees anything about the other.', 'The list shows today and week minutes, streak and points, sorted by this week\'s minutes. Cheer a friend with 👏 or 🔥.', 'Under Who sees what choose all numbers, minutes only, or pause sharing. You can remove any friend any time.', "Points come in two kinds: 1 per focus minute (up to 480 a day), and 10 per task the first time you finish it, never twice. Time counts only while the app is open in front of you."],
           why: 'Light friendly competition with numbers only. Subjects and task details are never shared.',
           fix: 'If Friends does not load, check your internet. Points are calculated on your device so they can be faked, so any prize will be checked by hand.' },
+        { i: "🆔", t: "Your @username",
+          steps: [
+                  "In the Friends tab find the \"@username\" card: type a name with English letters, numbers and _ and tap Save.",
+                  "The name is saved once, and you can change it only once after that, so pick carefully.",
+                  "Friends can add you with the username instead of the short code. Your old code keeps working for anyone who has it.",
+                  "This name shows to your friends, to members of any challenge you join, and on the leaderboard if you turn \"Show my name\" on."],
+          why: "One easy handle to tell people, instead of sending a code every time.",
+          fix: "If it says the name is taken, try another. If you forget yours, it is written on the same card in the Friends tab." },
+        { i: "🏆", t: "The leaderboard (top 10)",
+          steps: [
+                  "The board lives in the Friends tab and ranks students by this week's points, biggest first, with a podium for the top 3.",
+                  "Your name shows as Anonymous unless you tap \"Show my name\". You can go back to anonymous any time.",
+                  "The week starts Saturday at midnight Cairo time; the points reset and everyone starts fresh.",
+                  "Next to each name you see the details: the study minutes and tasks behind the points."],
+          why: "A clean weekly race: every week is a new chance even if you were behind.",
+          fix: "If your rank looks stale, check your internet and refresh. It takes a moment after you study." },
+        { i: "⚡", t: "Your points: study and tasks",
+          steps: [
+                  "Every focus minute = 1 point, up to 480 points a day (8 hours).",
+                  "Every task you finish the first time = 10 points, with no daily cap. A task pays once only.",
+                  "Your total = study points + task points. That is what shows in your points card, on the board and in challenges.",
+                  "A study session counts only if it is at least 10 minutes, and only while the app is open in front of you."],
+          why: "So you know where your points come from: steady studying, plus a boost for finishing tasks.",
+          fix: "If task points do not go up, that task was probably counted before. Points are calculated on your device, so any prize is checked by hand." },
+        { i: "⚑", t: "Let's Challenge",
+          steps: [
+                  "In the Friends tab tap Start a challenge: pick the point type (study time or tasks), the target (50, 100, 200 or 500) and your friends.",
+                  "Picked nobody? That is fine: the challenge is created and gives you a code to share. Anyone with the code types it in the code box and taps Join.",
+                  "Points count from the moment the challenge starts, and there is no expiry: it runs until someone reaches the target, even across the weekly reset.",
+                  "The first to reach the target wins and the winner shows on the card. You can leave any time.",
+                  "Before you create or join, we tell you your name and points will be visible to the members, and you tap agree."],
+          why: "A clear goal with friends studying alongside you: one on one, or a whole group by code.",
+          fix: "If the button does nothing or you see a permission message, the new server rules are not published yet: tell us on the updates channel. A weak connection also stops a challenge from being created." },
         { i: '🦷', t: 'The little mascot and avatars',
           steps: ['In Profile pick the avatar that is you, from 25.', 'Your avatar sometimes peeks in from the screen edge (right, left or top) with a short line and leaves after about 10 seconds.', 'Tap it to dismiss, or just ignore it.', 'In Profile > Little mascot choose every 5, 10 or 20 minutes, or turn it off. There is also a Try it now button.'],
           why: 'A light nudge to start or to rest, without pressure. The lines change with the time of day, your studying and your exams.',
@@ -6933,7 +7028,8 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
         <div class="row" style="margin-top:8px;gap:6px"><button class="btn sm grow" data-act="chAccept">${esc(L().chAccept)}</button><button class="btn ghost sm grow" data-act="chDecline">${esc(L().chDecline)}</button></div></div>`;
     }
 
-    if (!chCode()) {
+    if (!chCode() || !chDoc || !(Number(chDoc.target) > 0)) { // v36: a stale or broken challenge never renders as a card
+      if (chCode()) h += `<div class="muted sml" style="margin-top:6px">${chErr ? esc(chFailText(chErr)) : esc(L().chWait)}</div>`;
       const t = chTypeOf();
       const picks = (chSetup && chSetup.picks) || [];
       const acc = fr.list.filter((f) => f.status === 'accepted');
