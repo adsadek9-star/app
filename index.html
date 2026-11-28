@@ -718,6 +718,82 @@ nav button.dot::after { content: ''; position: absolute; top: 5px; inset-inline-
 .frreq { padding: 8px 0; border-top: 1px solid var(--line); gap: 6px; }
 .fract { display: inline-block; font-size: 11px; font-weight: 700; color: #10b981; margin-inline-start: 4px; }
 .roomwarn { margin-top: 10px; padding: 10px 12px; border-radius: 14px; border: 1.5px solid #f59e0b; background: rgba(245, 158, 11, .12); font-size: 13.5px; line-height: 1.6; }
+
+/* v32: leaderboard podium (design A) */
+.lbcard .lbhead { display: flex; align-items: center; gap: 8px; }
+.lbhead .lbtrophy { width: 24px; height: 24px; flex: none; display: inline-flex; }
+.lbhead .lbtrophy svg { width: 100%; height: 100%; display: block; }
+.lbnamebar { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.lbnoacc { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 8px 10px; border: 1px dashed var(--line); border-radius: 12px; }
+.lbpodium { display: flex; align-items: flex-end; justify-content: center; gap: 7px; margin: 12px 0 4px; }
+.lbp { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.lbp .lbcrown { width: 28px; height: 19px; display: block; margin-bottom: 1px; }
+.lbp .lbcrown svg { width: 100%; height: 100%; display: block; }
+.lbp .lbpav { width: 50px; height: 50px; display: block; border-radius: 50%; }
+.lbp .lbpav svg { width: 100%; height: 100%; display: block; }
+.lbp.p1 .lbpav { width: 62px; height: 62px; }
+.lbp.me .lbpav { box-shadow: 0 0 0 2px var(--primary); }
+.lbp .lbpnm { font-size: 11.5px; font-weight: 800; margin-top: 5px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lbp .lbpsc { font-size: 17px; font-weight: 800; color: var(--teal-ink); font-variant-numeric: tabular-nums; line-height: 1.25; }
+.lbp.p1 .lbpsc { font-size: 20px; }
+.lbp .lbstair { width: 100%; margin-top: 6px; border-radius: 12px 12px 4px 4px; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.lbp.p1 .lbstair { height: 74px; background: linear-gradient(160deg, #6d5711, #38300a); border: 1.5px solid #c9a227; color: #f3cf5c; }
+.lbp.p2 .lbstair { height: 58px; background: linear-gradient(160deg, #3b4650, #232c33); border: 1.5px solid #93a6b3; color: #dbe6ec; }
+.lbp.p3 .lbstair { height: 46px; background: linear-gradient(160deg, #4a3123, #2b1d15); border: 1.5px solid #b0764a; color: #e6ad80; }
+[data-theme="light"] .lbp.p1 .lbstair { background: linear-gradient(160deg, #fde68a, #f2c94c); border-color: #d4a017; color: #6b4f00; }
+[data-theme="light"] .lbp.p2 .lbstair { background: linear-gradient(160deg, #eaf0f4, #ccd8e0); border-color: #9fb2bf; color: #465863; }
+[data-theme="light"] .lbp.p3 .lbstair { background: linear-gradient(160deg, #f6ddc6, #e2b795); border-color: #b0764a; color: #6b4423; }
+.lblist { margin-top: 8px; }
+.lblrow { display: flex; align-items: center; gap: 9px; padding: 9px 0; border-top: 1px solid var(--line); }
+.lblrow .lbrk { width: 18px; text-align: center; color: var(--muted); font-weight: 800; font-size: 13px; flex: none; font-variant-numeric: tabular-nums; }
+.lblrow .lbnm { min-width: 0; font-weight: 700; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lblrow .lbsc { font-size: 15px; font-weight: 800; color: var(--teal-ink); font-variant-numeric: tabular-nums; }
+.lblrow.me .lbnm { color: var(--primary); }
+.lbyou { display: flex; align-items: center; gap: 9px; margin-top: 10px; padding: 10px 12px; border-radius: 14px; border: 1.5px solid var(--primary); background: color-mix(in srgb, var(--primary) 12%, transparent); }
+.lbyou .lbyrk { flex: none; min-width: 22px; text-align: center; font-weight: 800; font-size: 15px; color: var(--teal-ink); opacity: .8; font-variant-numeric: tabular-nums; }
+.lbyou .lbynm { font-weight: 800; font-size: 13.5px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lbyou .lbysub { font-size: 11.5px; color: var(--muted); margin-top: 2px; line-height: 1.5; }
+.lbyou .lbysc { font-size: 18px; font-weight: 800; color: var(--teal-ink); font-variant-numeric: tabular-nums; flex: none; }
+
+/* v32: friend tiles (design B rings + design A details) */
+.frgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+@media (max-width: 340px) { .frgrid { grid-template-columns: 1fr; } }
+.frtile { position: relative; background: var(--soft); border: 1.5px solid transparent; border-radius: 16px; padding: 7px 8px 10px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 3px; }
+.frtile.now { border-color: rgba(16, 185, 129, 0.55); }
+.frtile.asking { justify-content: center; gap: 8px; min-height: 158px; }
+.frttop { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+.frheart { width: 27px; height: 27px; border-radius: 9px; border: 1px solid var(--line); background: var(--card); color: #fb7185; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; -webkit-tap-highlight-color: transparent; }
+.frheart svg { width: 15px; height: 15px; display: block; }
+.frheart:active { transform: scale(0.93); }
+.frrm { width: 20px; height: 20px; border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 16px; line-height: 1; cursor: pointer; padding: 0; }
+.frring { position: relative; width: 72px; height: 72px; margin-top: -4px; }
+.frring .frrsvg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.frring .frrbg { fill: none; stroke: var(--bar-bg); stroke-width: 7; }
+.frring .frrfg { fill: none; stroke: var(--primary); stroke-width: 7; stroke-linecap: round; }
+.frring .frrav { position: absolute; inset: 12px; }
+.frring.plain .frrav { inset: 5px; }
+.frring .frrav svg { width: 100%; height: 100%; display: block; }
+.frtnm { font-size: 13px; font-weight: 800; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.frnow { display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; font-weight: 700; color: #10b981; }
+.frnow i { width: 6px; height: 6px; border-radius: 50%; background: #10b981; display: inline-block; flex: none; }
+.frnums { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 11.5px; font-weight: 700; flex-wrap: wrap; }
+.frnums span { display: inline-flex; align-items: center; gap: 3px; font-variant-numeric: tabular-nums; }
+.frnums svg { width: 12px; height: 12px; display: block; }
+.frnums .frc { color: var(--muted); }
+.frnums .frf { color: #f59e0b; }
+.frnums .frs { color: #eab308; }
+.frgoal { font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums; line-height: 1.4; }
+.frgoal b { color: var(--ink); font-weight: 800; }
+.frpaused { font-size: 11.5px; color: var(--muted); }
+.fraskq { font-size: 12px; font-weight: 700; line-height: 1.6; }
+.fraskb { display: flex; gap: 5px; }
+.fraskb .btn.sm { padding: 5px 8px; font-size: 11.5px; }
+
+/* v32: the username card in the Friends tab */
+.unbox { margin-top: 10px; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 14px; background: var(--soft); }
+.unbox.need { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 9%, transparent); }
+.unbox .unname { font-size: 16px; font-weight: 800; color: var(--teal-ink); letter-spacing: 0.2px; }
+.unbox input { text-transform: lowercase; }
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
@@ -3254,13 +3330,25 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       avSec: 'الأفتار بتاعك',
       avSub: 'اختار الشكل اللي يمثلك، هيظهر في البروفايل ولوحة الشطار',
       lbTitle: 'لوحة الشطار',
-      lbSub: 'ترتيب أسبوعي عام لكل الطلبة. تقدر تخفي اسمك (بيظهر طالب مجهول) وتفضل نقطك ظاهرة. النقط: كل دقيقة تركيز نقطة، وكل مهمة تخلصها نقطة (لحد 10 في اليوم).',
+      lbSub: 'ترتيب أسبوعي لكل الطلبة. اللوحة شغالة للكل، وكل واحد يختار يظهر باسمه أو «طالب مجهول». النقط: دقيقة تركيز = نقطة، ومهمة خلصتها = نقطة (لحد 10 في اليوم).',
       lbReset: 'النقط بتتصفّر مع أول كل أسبوع',
-      lbJoin: 'شاركني في اللوحة',
-      lbLeave: 'اطلع من اللوحة',
+      lbNameLbl: 'اسمك على اللوحة',
+      lbNameOnHint: 'أول اسم من بروفايلك ظاهر على اللوحة. تقدر تخفيه في أي وقت.',
+      lbYouAnon: 'انت · طالب مجهول',
+      lbNeedNext: (n, nm) => 'محتاج ' + n + ' نقطة عشان تعدّي ' + nm,
+      lbYouFirst: 'انت الأول الأسبوع ده',
+      lbNeedTen: (n) => 'محتاج ' + n + ' نقطة تدخل أول 10',
+      lbOutTen: 'انت بره أول 10 الأسبوع ده',
+      lbGoal: 'هدف الأسبوع',
+      lbGoalOf: (m, g) => m + ' / ' + g,
+      frUnit: 'د',
+      lbRetry: 'جرّب تاني',
+      lbNeedName: 'اكتب اسمك في البروفايل الأول عشان يظهر على اللوحة',
+      lbNoAcc: 'اللوحة شغالة للكل، بس نقطك محتاجة حساب عشان تظهر عليها.',
+      lbNoAccBtn: 'اعمل حساب',
       lbYourScore: (s, w) => 'نقطتك الأسبوع ده: ' + s + ' نقطة (' + w + ')',
       lbTop: 'أعلى 10',
-      lbEmpty: 'لسه مفيش حد على اللوحة. كون أول واحد!',
+      lbEmpty: 'لسه مفيش حد على اللوحة الأسبوع ده. ذاكر وكون أول واحد.',
       lbYou: 'انت',
       lbOut: 'انت لسه بره الـ 10 الأوائل',
       lbPts: 'نقطة',
@@ -3268,14 +3356,10 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       lbWait: 'بنحضّر اللوحة...',
       lbAnonErr: 'الدخول المجهول مش متفعّل في Firebase لسه (خطوة عند صاحب التطبيق)',
       // v20
-      lbNameShow: 'اظهر اسمي على اللوحة',
+      lbNameShow: 'اظهر باسمي',
       lbNameHide: 'خليها مجهولة',
-      lbNameHint: 'اسمك مخفي في اللوحة العامة (طالب مجهول). لو فعّلت الاسم هيظهر أول اسم من بروفايلك.',
-      lbNameOff: 'ظاهر باسم: طالب مجهول',
-      lbTestBtn: 'اختبر الاتصال',
-      lbTestOk: 'تمام، اللوحة شغالة والكتابة مسموحة ✓',
-      lbTestFail: 'الكتابة مرفوضة: ',
-      lbTestWait: 'بنجرب اللوحة...',
+      lbNameHint: 'انت بتظهر على اللوحة كـ«طالب مجهول». لو فعّلت اسمك هيظهر أول اسم من بروفايلك.',
+      lbNameOff: 'ظاهر كـ: طالب مجهول',
       lbWriteFail: 'نقطتك مش بتوصل للوحة:',
       lbPermErr: 'الصلاحيات على Firebase مش متظبطة. لازم تتظبط مرة واحدة من كونسول Firebase (القواعد اللي في ملف FIRESTORE_RULES).',
       lbSignInFirst: 'محتاج تدخل بحساب أو دخول مجهول عشان نقطك تتحفظ',
@@ -3371,26 +3455,43 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       mascotTitle: 'الأفتار الصغير', mascotSub: 'بيطلّ من حافة الشاشة بجملة قصيرة ويمشي. مش بيظهر والتايمر شغال، ولا بالليل، ولا والتطبيق مقفول. دوس عليه يختفي. الإعداد ده على الجهاز ده بس.', mascotEvery: (m) => 'كل ' + m + ' دقايق', mascotOff: 'مقفول', mascotTry: 'جرّبه دلوقتي',
       // v31: friends tab, time based points, names in rooms
       frTitle: 'الأصدقاء', anonName: 'طالب مجهول', frNameFallback: 'صاحبك',
-      frIntro: 'ضيف صحابك بالكود وشوفوا أرقام بعض: دقايق المذاكرة والستريك والنقط. محدش بيشوف أي حاجة عنك قبل ما توافق.',
+      frIntro: 'ضيف صحابك باسم المستخدم وشوفوا أرقام بعض: دقايق المذاكرة والستريك والنقط. محدش بيشوف أي حاجة عنك قبل ما توافق.',
       frNoNet: 'الأصدقاء محتاجين نت وحساب (مجهول أو بإيميل).', frEnable: 'فعّل الأصدقاء', frLoading: 'بنحمّل الأصدقاء...',
       frEnableSub: 'هيتعملك كود قصير تبعته لصحابك. اسمك (أول اسم) وأفتارك بيظهروا بس لمن يقبلوك، والأرقام حسب اللي تختاره.',
       frErr: 'حصلت مشكلة في الاتصال. جرّب تاني.', frPermErr: 'الصلاحيات الجديدة لسه متنشرتش على Firebase (ملف FIRESTORE_RULES-v31).',
       frMyCode: 'كودك', frCopy: 'انسخ', frShare: 'ابعته', frCopied: 'الكود اتنسخ ✓', frShareText: (c) => 'ضيفني على سِنّي، كودي: ' + c,
-      frAddTitle: 'ضيف صاحب', frAddPh: 'كود صاحبك', frAddBtn: 'ابعت طلب', frAddNeed: 'اكتب الكود الأول (6 حروف أو أرقام)',
-      frNotFound: 'الكود ده مش موجود', frSelf: 'ده كودك انت 🙂', frAlready: 'انتوا أصحاب بالفعل', frSent: 'الطلب اتبعت. لما يقبله هتظهر في الأصدقاء.',
+      frAddTitle: 'ضيف صاحب', frAddPh: 'اسم المستخدم أو الكود', frAddBtn: 'ابعت طلب', frAddNeed: 'اكتب اسم المستخدم أو الكود الأول',
+      frNotFound: 'مفيش اسم مستخدم أو كود بالشكل ده', frSelf: 'ده كودك انت 🙂', frAlready: 'انتوا أصحاب بالفعل', frSent: 'الطلب اتبعت. لما يقبله هتظهر في الأصدقاء.',
       frFull: 'وصلت للحد الأقصى: 30 صاحب', frPending: 'الطلب اتبعت قبل كده ومستني الرد', frAutoAcc: 'هو كان باعتلك طلب، فاتقبل وبقيتوا أصحاب ✓',
       frReqTitle: 'طلبات الصداقة', frReqFrom: (c) => 'طلب من الكود ' + c, frReqOut: 'طلبك لسه مستني الرد',
       frAccept: 'اقبل', frReject: 'ارفض', frCancel: 'الغي', frAccepted: 'بقيتوا أصحاب ✓',
       frListTitle: 'أصحابك', frEmpty: 'لسه مفيش أصحاب. ابعت كودك أو اكتب كود صاحبك فوق.', frSortNote: 'مترتبين بدقايق الأسبوع',
       frToday: 'النهارده', frWeek: 'الأسبوع', frMin: (m) => m + ' د', frStreak: 'ستريك', frPts: 'نقطة',
-      frActive: '● بيذاكر دلوقتي', frPausedLbl: 'موقّف المشاركة', frWait: '...', frRefresh: 'حدّث',
-      frCheerSent: 'التشجيع وصل ✓', frCheerWait: 'استنى دقيقة قبل التشجيع الجاي', frCheerGot: (n, k) => (n || 'صاحبك') + ' بعتلك ' + (k === 'fire' ? '🔥' : '👏'),
+      frActive: 'بيذاكر دلوقتي', frPausedLbl: 'موقّف المشاركة', frWait: '...', frRefresh: 'حدّث',
+      frCheerSent: 'التشجيع وصل ✓', frCheerWait: 'استنى دقيقة قبل التشجيع الجاي', frCheerGot: (n, k) => (n || 'صاحبك') + ' بعتلك ' + (k === 'fire' ? '🔥' : '❤️'),
       frCheerMany: (n) => 'جالك ' + n + ' تشجيع من أصحابك',
       frRemove: 'شيل', frRemoveAsk: (n) => 'تشيل ' + n + ' من أصحابك؟ محدش فيكم هيشوف أرقام التاني.', frRemoveYes: 'اه، شيله', frNo: 'لأ', frRemoved: 'اتشال',
       frPrivTitle: 'مين يشوف إيه', frPrivAll: 'كل الأرقام', frPrivMin: 'الدقايق بس', frPrivOff: 'وقّف المشاركة',
       frPrivAllD: 'أصحابك بيشوفوا دقايقك والستريك والنقط وإنك بتذاكر دلوقتي.', frPrivMinD: 'أصحابك بيشوفوا دقايق مذاكرتك بس.',
       frPrivOffD: 'مفيش أرقام بتظهر لأصحابك. بيفضل ظاهرلهم اسمك وأفتارك بس.',
       frPrivNote: 'المواد وتفاصيل المهام عمرها ما بتتشارك، أرقام بس. وبيظهر لأصحابك أول اسم من بروفايلك.',
+      unTitle: 'اسم المستخدم',
+      unIntro: 'صحابك بيضيفوك باسم المستخدم بدل الكود. تختاره مرة، وتقدر تغيّره مرة واحدة بس.',
+      unPh: 'ahmed_sadek',
+      unRule: 'من 3 لـ16 حرف: حروف إنجليزي صغيرة وأرقام ونقطة (.) وشرطة سفلية (_) بس، بدون مسافات.',
+      unSave: 'احفظ الاسم',
+      unBad: 'الاسم مش مظبوط: من 3 لـ16 حرف، حروف إنجليزي صغيرة وأرقام و . و _ بس.',
+      unTaken: 'الاسم ده محجوز لحد تاني. جرّب اسم غيره.',
+      unReserved: 'الاسم ده محجوز للتطبيق. جرّب غيره.',
+      unOnce: 'اسم المستخدم بيتغيّر مرة واحدة بس، وانت غيّرته خلاص.',
+      unSaved: 'اسم المستخدم اتحفظ ✓',
+      unChanged: 'اسم المستخدم اتغيّر ✓',
+      unYours: 'ده اللي صحابك بيضيفوك بيه.',
+      unChange: 'غيّر الاسم (مرة واحدة)',
+      unCancel: 'إلغاء',
+      unLegacy: (c) => 'كودك القديم ' + c + ' لسه شغال لو حد معاه.',
+      unShareText: (u) => 'ضيفني على سِنّي، اسم المستخدم: ' + u,
+
       ptsTitle: 'نقطك', ptsWeek: (m, p) => 'الأسبوع ده: ' + m + ' دقيقة مذاكرة · ' + p + ' نقطة',
       ptsHow: 'كل دقيقة تركيز = نقطة (جلسة 50 دقيقة = 50 نقطة). كل مهمة تخلصها = نقطة، لحد 10 في اليوم. الوقت بيتحسب والتطبيق مفتوح قدامك بس، ولو سبته بيقف. الجلسات الأقل من 10 دقايق مش بتتحسب، وأقصى نقط وقت في اليوم 480 (8 ساعات).',
       ptsHonest: 'النقط بتتحسب على جهازك، فممكن حد يتلاعب فيها. دي للمنافسة بين الصحاب، ولو في جوايز هنراجع الفايزين بإيدينا.',
@@ -3521,7 +3622,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       savedOk: 'اتحفظ',
       accountSec: 'الحساب والمزامنة',
       anonAccTitle: 'حساب مؤقت على الجهاز ده بس',
-      anonAccSub: 'الحساب ده اتعمل لوحده لما فعّلت الليدربورد، وهو مربوط بالمتصفح ده بس. عشان تفتح نفس بياناتك من جهاز تاني، اربطه بإيميل.',
+      anonAccSub: 'الحساب ده اتعمل لوحده عشان نقطك تظهر على لوحة الشطار، وهو مربوط بالمتصفح ده بس. عشان تفتح نفس بياناتك من جهاز تاني، اربطه بإيميل.',
       linkBtn: 'اربطه بإيميل عشان تتزامن',
       linkTitle: 'اربط حسابك بإيميل',
       linkSub: 'الإيميل والباسورد بيتعملوا حساب واحد ليك، وتقدر تدخل بيه من أي جهاز. اللي على الجهاز ده هيفضل زي ما هو.',
@@ -3687,13 +3788,25 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       avSec: 'Your avatar',
       avSub: 'Pick the look that represents you - it shows on your profile and the leaderboard',
       lbTitle: 'Leaderboard',
-      lbSub: 'A weekly ranking for all students. You can hide your name (shown as Anonymous student) and keep your points visible. Points: 1 per focus minute and 1 per finished task (up to 10 a day).',
+      lbSub: 'A weekly ranking for all students. The board is on for everyone, and each student shows their name or Anonymous. Points: 1 per focus minute and 1 per finished task (up to 10 a day).',
       lbReset: 'Points reset at the start of every week',
-      lbJoin: 'Count me in',
-      lbLeave: 'Leave the board',
+      lbNameLbl: 'Your name on the board',
+      lbNameOnHint: 'Your first name from the profile shows on the board. You can hide it any time.',
+      lbYouAnon: 'You · Anonymous',
+      lbNeedNext: (n, nm) => n + ' points to pass ' + nm,
+      lbYouFirst: 'You are first this week',
+      lbNeedTen: (n) => n + ' points to reach the top 10',
+      lbOutTen: 'You are outside the top 10 this week',
+      lbGoal: 'Weekly goal',
+      lbGoalOf: (m, g) => m + ' / ' + g,
+      frUnit: 'min',
+      lbRetry: 'Try again',
+      lbNeedName: 'Type your name in the profile first so it can show on the board',
+      lbNoAcc: 'The board is on for everyone, but your points need an account to show.',
+      lbNoAccBtn: 'Create an account',
       lbYourScore: (s, w) => 'Your points this week: ' + s + ' (' + w + ')',
       lbTop: 'Top 10',
-      lbEmpty: 'Nobody on the board yet. Be the first!',
+      lbEmpty: 'Nobody on the board this week yet. Study and be the first.',
       lbYou: 'you',
       lbOut: 'You are outside the top 10 for now',
       lbPts: 'pts',
@@ -3701,14 +3814,10 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       lbWait: 'Getting the board ready...',
       lbAnonErr: 'Anonymous sign-in is not enabled in Firebase yet (a step for the app owner)',
       // v20
-      lbNameShow: 'Show my name on the board',
+      lbNameShow: 'Show my name',
       lbNameHide: 'Keep me anonymous',
-      lbNameHint: 'Your name is hidden on the public board (Anonymous student). If you turn the name on, your first name from the profile shows.',
-      lbNameOff: 'Shown as: Anonymous student',
-      lbTestBtn: 'Test the connection',
-      lbTestOk: 'All good, the board is live and your score was accepted',
-      lbTestFail: 'The write was refused: ',
-      lbTestWait: 'Testing the board...',
+      lbNameHint: 'You show on the board as Anonymous. Turn your name on and your first name from the profile shows.',
+      lbNameOff: 'Shown as: Anonymous',
       lbWriteFail: 'Your score is not reaching the board:',
       lbPermErr: 'The Firebase rules are not set up. They need to be published once from the Firebase console (the rules in FIRESTORE_RULES).',
       lbSignInFirst: 'You need an account or an anonymous sign-in before your score can be saved',
@@ -3803,27 +3912,44 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       remTitle: 'Study reminder',
       mascotTitle: 'Little mascot', mascotSub: 'Your avatar peeks from the edge of the screen with a short line, then leaves. It never shows while the study timer runs, at night, or when the app is closed. Tap it to dismiss. This setting is for this device only.', mascotEvery: (m) => 'Every ' + m + ' min', mascotOff: 'Off', mascotTry: 'Try it now',
       // v31: friends tab, time based points, names in rooms
-      frTitle: 'Friends', anonName: 'Anonymous student', frNameFallback: 'Your friend',
-      frIntro: 'Add friends with a code and see each other\'s numbers: study minutes, streak and points. Nobody sees anything about you until you accept.',
+      frTitle: 'Friends', anonName: 'Anonymous', frNameFallback: 'Your friend',
+      frIntro: 'Add your friends by username and see each other\'s numbers: study minutes, streak and points. Nobody sees anything about you until you accept.',
       frNoNet: 'Friends need internet and an account (anonymous or email).', frEnable: 'Turn on Friends', frLoading: 'Loading friends...',
       frEnableSub: 'You get a short code to send to your friends. Your first name and avatar show only to people who are accepted, and the numbers follow what you choose.',
       frErr: 'Connection problem. Try again.', frPermErr: 'The new Firebase rules are not published yet (file FIRESTORE_RULES-v31).',
       frMyCode: 'Your code', frCopy: 'Copy', frShare: 'Send', frCopied: 'Code copied ✓', frShareText: (c) => 'Add me on Senny, my code: ' + c,
-      frAddTitle: 'Add a friend', frAddPh: 'Friend code', frAddBtn: 'Send request', frAddNeed: 'Type the code first (6 letters or digits)',
-      frNotFound: 'That code does not exist', frSelf: 'That is your own code 🙂', frAlready: 'You are already friends', frSent: 'Request sent. When they accept, they show up in Friends.',
+      frAddTitle: 'Add a friend', frAddPh: 'Username or code', frAddBtn: 'Send request', frAddNeed: 'Type a username or a code first',
+      frNotFound: 'No username or code like that', frSelf: 'That is your own code 🙂', frAlready: 'You are already friends', frSent: 'Request sent. When they accept, they show up in Friends.',
       frFull: 'You reached the limit: 30 friends', frPending: 'Request already sent, waiting for a reply', frAutoAcc: 'They had sent you a request, so it was accepted and you are friends ✓',
       frReqTitle: 'Friend requests', frReqFrom: (c) => 'Request from code ' + c, frReqOut: 'Your request is still waiting for a reply',
       frAccept: 'Accept', frReject: 'Reject', frCancel: 'Cancel', frAccepted: 'You are friends now ✓',
       frListTitle: 'Your friends', frEmpty: 'No friends yet. Send your code or type a friend\'s code above.', frSortNote: 'Sorted by this week\'s minutes',
       frToday: 'Today', frWeek: 'Week', frMin: (m) => m + ' min', frStreak: 'streak', frPts: 'pts',
-      frActive: '● Studying now', frPausedLbl: 'Sharing paused', frWait: '...', frRefresh: 'Refresh',
-      frCheerSent: 'Cheer sent ✓', frCheerWait: 'Wait a minute before the next cheer', frCheerGot: (n, k) => (n || 'A friend') + ' sent you a ' + (k === 'fire' ? '🔥' : '👏'),
+      frActive: 'Studying now', frPausedLbl: 'Sharing paused', frWait: '...', frRefresh: 'Refresh',
+      frCheerSent: 'Cheer sent ✓', frCheerWait: 'Wait a minute before the next cheer', frCheerGot: (n, k) => (n || 'A friend') + ' sent you a ' + (k === 'fire' ? '🔥' : '❤️'),
       frCheerMany: (n) => 'You got ' + n + ' cheers from friends',
       frRemove: 'Remove', frRemoveAsk: (n) => 'Remove ' + n + ' from your friends? Neither of you will see the other\'s numbers.', frRemoveYes: 'Yes, remove', frNo: 'No', frRemoved: 'Removed',
       frPrivTitle: 'Who sees what', frPrivAll: 'All numbers', frPrivMin: 'Minutes only', frPrivOff: 'Pause sharing',
       frPrivAllD: 'Friends see your minutes, streak, points and whether you are studying now.', frPrivMinD: 'Friends see your study minutes only.',
       frPrivOffD: 'No numbers are shown to friends. They still see your name and avatar.',
       frPrivNote: 'Subjects and task details are never shared, only numbers. Friends see the first name from your profile.',
+      unTitle: 'Username',
+      unIntro: 'Friends add you by username instead of a code. You choose it once and you can change it once.',
+      unPh: 'ahmed_sadek',
+      unRule: '3 to 16 characters: lowercase letters, digits, dot (.) and underscore (_) only, no spaces.',
+      unSave: 'Save it',
+      unBad: 'That name is not valid: 3 to 16 characters, lowercase letters, digits, . and _ only.',
+      unTaken: 'That username is taken. Try another one.',
+      unReserved: 'That name is reserved by the app. Try another one.',
+      unOnce: 'The username can be changed once, and you have used that change.',
+      unSaved: 'Username saved ✓',
+      unChanged: 'Username changed ✓',
+      unYours: 'This is what your friends add you with.',
+      unChange: 'Change it (once)',
+      unCancel: 'Cancel',
+      unLegacy: (c) => 'Your old code ' + c + ' still works for anyone who has it.',
+      unShareText: (u) => 'Add me on Senny, my username: ' + u,
+
       ptsTitle: 'Your points', ptsWeek: (m, p) => 'This week: ' + m + ' study minutes · ' + p + ' points',
       ptsHow: 'Each focus minute = 1 point (a 50 minute session = 50 points). Each finished task = 1 point, up to 10 a day. Time counts only while the app is open in front of you and stops when you leave. Sessions under 10 minutes do not count, and time points stop at 480 a day (8 hours).',
       ptsHonest: 'Points are calculated on your device, so someone could fake them. They are for friendly competition, and any prize will need the winners checked by hand.',
@@ -3954,7 +4080,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       savedOk: 'Saved',
       accountSec: 'Account & sync',
       anonAccTitle: 'Temporary account on this device only',
-      anonAccSub: 'This account was created automatically when you turned the leaderboard on, and it lives in this browser only. Link it to an email to open the same data on another device.',
+      anonAccSub: 'This account was created automatically so your points show on the leaderboard, and it lives in this browser only. Link it to an email to open the same data on another device.',
       linkBtn: 'Link it to an email to sync',
       linkTitle: 'Link your account to an email',
       linkSub: 'The email and password become one account you can sign in with anywhere. What is on this device stays as it is.',
@@ -4043,7 +4169,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
     theme: 'dark',   // 'dark' (default) or 'light'
     pace: { study: 60, solve: 20 }, // v13: the student's own minutes per lecture study / per question set
     motivIdx: -1, motivDate: '', // v13: which encouragement line showed, and on which day
-    leaderboard: { on: false, showName: false }, // v17: opt-in weekly leaderboard; v20: showName
+    leaderboard: { on: true, showName: false, v32: 1 }, // v17: weekly leaderboard; v20: showName; v32: on for everyone
     workout: { days: [1, 3, 5, 6], log: {} }, // v20: workout weekdays (0=Sun, sorted) + days finished
     reviewLog: {},   // v20: taskId -> date of the last 10-minute review
     challenge: { code: '' }, // v20: weekly challenge room code
@@ -4127,8 +4253,15 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
     if (!state.pace || typeof state.pace !== 'object') state.pace = { study: 60, solve: 20 };
     if (!state.profile || typeof state.profile !== 'object') state.profile = { name: '', year: null, onboarded: false, avatar: '' };
     if (typeof state.profile.avatar !== 'string') state.profile.avatar = ''; // v17
-    if (!state.leaderboard || typeof state.leaderboard !== 'object') state.leaderboard = { on: false, showName: false }; // v17
+    if (!state.leaderboard || typeof state.leaderboard !== 'object') state.leaderboard = { on: true, showName: false, v32: 1 }; // v17
     if (typeof state.leaderboard.showName !== 'boolean') state.leaderboard.showName = false; // v20
+    // v32: the board is on for everyone, so "on" is no longer a choice. A student who had never
+    // joined starts anonymous; anyone who was already on the board keeps the name choice they made.
+    if (state.leaderboard.v32 !== 1) {
+      if (state.leaderboard.on !== true) state.leaderboard.showName = false;
+      state.leaderboard.v32 = 1;
+    }
+    state.leaderboard.on = true;
     if (!state.workout || typeof state.workout !== 'object') state.workout = { days: [1, 3, 5, 6], log: {} }; // v20
     if (!Array.isArray(state.workout.days) || !state.workout.days.length) state.workout.days = [1, 3, 5, 6];
     if (!state.workout.log || typeof state.workout.log !== 'object') state.workout.log = {};
@@ -4373,10 +4506,8 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       setSync('syncing');
       clearTimeout(pushTimer);
       pushTimer = setTimeout(pushCloud, 1200);
-      if (state.leaderboard && state.leaderboard.on) {
-        clearTimeout(lbTimer);
-        lbTimer = setTimeout(pushLbScore, 30000); // v21.1: was 5s
-      }
+      clearTimeout(lbTimer);
+      lbTimer = setTimeout(pushLbScore, 30000); // v21.1: was 5s; v32: always, the board is on for everyone
       if (fr.on) frSchedule(30000);
       if ((state.challenge || {}).code) {
         clearTimeout(chTimer);
@@ -4418,7 +4549,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
   let lbPushKey = '', lbPushAt = 0;
   const lbKeyOf = (p) => p.avatar + '|' + p.score + '|' + p.name;
   async function pushLbScore(force) {
-    if (!session || !fbDb || !(state.leaderboard && state.leaderboard.on)) return;
+    if (!session || !fbDb) return; // v32: the board is on for everyone
     const payload = lbPayload();
     const key = lbKeyOf(payload);
     // v21.1: the same score does not need publishing again, so an idle student costs no writes
@@ -4474,7 +4605,8 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
   const FR_MAX = 30, FR_FLAG = KEY + '.fr', ROOM_ACK = KEY + '.roomack';
   const fr = { loaded: false, loading: false, on: false, code: '', share: 'all', list: [], stats: {}, statsAt: 0, statsKey: '',
     cheers: [], unsubF: null, unsubC: null, pushKey: '', pushAt: 0, pushTimer: null, lastActive: 0, cheerAt: {}, seen: {},
-    ask: null, msg: '', busy: false, err: '' };
+    ask: null, msg: '', busy: false, err: '',
+    username: '', unameCount: 0, unameAsk: false, unameBusy: false, unameErr: '' }; // v32: usernames
   let roomAsk = null; // { mode: 'create' | 'join', code }
   const frMe = () => (session && session.uid) || '';
   const frPair = (a, b) => (a < b ? a + '_' + b : b + '_' + a);
@@ -4488,7 +4620,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
   // What friends can read. 'off' drops every number, 'min' keeps only the minutes.
   function frPayload() {
     const today = todayStr(), ws = Scheduler.weekScore(state, today);
-    const p = { name: frFirst(), avatar: (avatarById(state.profile.avatar) || {}).id || 'av01', code: fr.code, share: fr.share, updatedAt: Date.now() };
+    const p = { name: frFirst(), avatar: (avatarById(state.profile.avatar) || {}).id || 'av01', code: fr.code, share: fr.share, updatedAt: Date.now(), username: fr.username || '', unameCount: fr.unameCount || 0 };
     if (fr.share === 'off') return p;
     p.day = today; p.week = ws.week; p.todayMin = Math.min(480, ws.todayMin); p.weekMin = Math.min(3360, ws.minutes);
     if (fr.share === 'all') {
@@ -4522,7 +4654,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
   }
   function frReset() {
     frDetach();
-    Object.assign(fr, { loaded: false, loading: false, on: false, code: '', share: 'all', list: [], stats: {}, statsAt: 0, statsKey: '', cheers: [], pushKey: '', lastActive: 0, ask: null, msg: '', err: '' });
+    Object.assign(fr, { loaded: false, loading: false, on: false, code: '', share: 'all', list: [], stats: {}, statsAt: 0, statsKey: '', cheers: [], pushKey: '', lastActive: 0, ask: null, msg: '', err: '', username: '', unameCount: 0, unameAsk: false, unameBusy: false, unameErr: '' });
     try { localStorage.removeItem(FR_FLAG); } catch (e) { /* ignore */ }
   }
   function frRefreshUI() {
@@ -4544,6 +4676,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       if (d.exists) {
         const v = d.data() || {};
         fr.on = true; fr.code = String(v.code || ''); fr.share = ['all', 'min', 'off'].indexOf(v.share) >= 0 ? v.share : 'all';
+        fr.username = String(v.username || ''); fr.unameCount = Number(v.unameCount) || 0; // v32
         try { localStorage.setItem(FR_FLAG, '1'); } catch (e) { /* ignore */ }
         frAttach();
         frSchedule(4000);
@@ -4568,6 +4701,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
         b.set(fbDb.collection('friend_codes').doc(code), { uid: frMe(), createdAt: Date.now() });
         await b.commit();
         fr.on = true; fr.loaded = true; fr.pushKey = frKeyOf(p); fr.pushAt = Date.now(); fr.err = '';
+        fr.username = ''; fr.unameCount = 0; fr.unameAsk = true; // v32: pick a username first
         try { localStorage.setItem(FR_FLAG, '1'); } catch (e) { /* ignore */ }
         frAttach(); fr.busy = false; return render();
       } catch (e) { lastErr = e; }
@@ -4609,23 +4743,40 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
     const mine = fr.cheers.slice();
     mine.forEach((c) => { try { fbDb.collection('cheers').doc(c.id).delete().catch(() => {}); } catch (e) { /* ignore */ } });
   }
+  // v32: a friend is added by username (the primary way) or by an old code, which stays
+  // as a fallback for anyone who has not chosen a username yet.
+  const UNAME_RE = /^[a-z0-9._]{3,16}$/;
+  const UNAME_RESERVED = ['admin', 'administrator', 'root', 'system', 'senny', 'support', 'help', 'instinct',
+    'official', 'team', 'moderator', 'security', 'firebase', 'test', 'api', 'www', 'mail', 'info', 'contact'];
+  const frNormName = (raw) => String(raw || '').trim().replace(/^@+/, '').toLowerCase();
+
   async function frSendRequest(raw) {
-    const code = String(raw || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-    if (!/^[A-Z2-9]{6}$/.test(code)) return toast(L().frAddNeed);
-    if (code === fr.code) return toast(L().frSelf);
+    const v = String(raw || '').trim().replace(/^@+/, '');
+    if (!v) return toast(L().frAddNeed);
     if (fr.list.length >= FR_MAX * 2) return toast(L().frFull);
     if (fr.list.filter((f) => f.status === 'accepted').length >= FR_MAX) return toast(L().frFull);
+    const low = v.toLowerCase();
+    const looksName = UNAME_RE.test(low);
+    const looksCode = /^[A-Z2-9]{6}$/.test(v.toUpperCase());
+    if (!looksName && !looksCode) return toast(L().frAddNeed);
     try {
-      const c = await fbDb.collection('friend_codes').doc(code).get();
-      if (!c.exists) return toast(L().frNotFound);
-      const other = String((c.data() || {}).uid || '');
-      if (!other || other === frMe()) return toast(L().frSelf);
+      let other = '';
+      if (looksName) {
+        const u = await fbDb.collection('usernames').doc(low).get();
+        if (u.exists) other = String((u.data() || {}).uid || '');
+      }
+      if (!other && looksCode) {
+        const c = await fbDb.collection('friend_codes').doc(v.toUpperCase()).get();
+        if (c.exists) other = String((c.data() || {}).uid || '');
+      }
+      if (!other) return toast(L().frNotFound);
+      if (other === frMe()) return toast(L().frSelf);
       const ref = fbDb.collection('friendships').doc(frPair(frMe(), other));
       const ex = await ref.get();
       if (ex.exists) {
-        const v = ex.data() || {};
-        if (v.status === 'accepted') return toast(L().frAlready);
-        if (v.from === frMe()) return toast(L().frPending);
+        const v2 = ex.data() || {};
+        if (v2.status === 'accepted') return toast(L().frAlready);
+        if (v2.from === frMe()) return toast(L().frPending);
         await ref.update({ status: 'accepted' }); fr.statsKey = ''; toast(L().frAutoAcc); return;
       }
       const m = [frMe(), other].sort();
@@ -4633,6 +4784,45 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       toast(L().frSent);
     } catch (e) { toast(frErrText(e)); }
   }
+
+  // v32: claim a username. One transaction writes the claim document, the stats document and
+  // releases the previous name, so two people racing for the same name cannot both win: the
+  // second transaction sees the claim and stops.
+  async function frSaveUsername(raw) {
+    if (!session || !fbDb) return toast(L().frNoNet);
+    const name = frNormName(raw);
+    if (!UNAME_RE.test(name)) { fr.unameErr = L().unBad; return render(); }
+    if (UNAME_RESERVED.indexOf(name) >= 0) { fr.unameErr = L().unReserved; return render(); }
+    if (fr.unameCount >= 2) { fr.unameErr = L().unOnce; return render(); }
+    if (name === fr.username) { fr.unameAsk = false; fr.unameErr = ''; return render(); }
+    fr.unameBusy = true; fr.unameErr = ''; render();
+    const wasFirst = !fr.username;
+    try {
+      const claimRef = fbDb.collection('usernames').doc(name);
+      const meRef = fbDb.collection('friend_stats').doc(frMe());
+      const old = fr.username;
+      await fbDb.runTransaction(async (tx) => {
+        const claim = await tx.get(claimRef);
+        if (claim.exists && String((claim.data() || {}).uid || '') !== frMe()) { const e = new Error('taken'); e.code = 'un/taken'; throw e; }
+        const snap = await tx.get(meRef);
+        const cur = snap.exists ? (snap.data() || {}) : {};
+        const count = Number(cur.unameCount) || 0;
+        if (count >= 2) { const e = new Error('once'); e.code = 'un/once'; throw e; }
+        const p = Object.assign({}, frPayload(), { username: name, unameCount: count + 1, updatedAt: Date.now() });
+        if (old && old !== name) tx.delete(fbDb.collection('usernames').doc(old));
+        tx.set(claimRef, { uid: frMe(), createdAt: Date.now() });
+        tx.set(meRef, p);
+        fr.unameCount = count + 1;
+      });
+      fr.username = name; fr.unameAsk = false; fr.pushKey = frKeyOf(frPayload()); fr.pushAt = Date.now();
+      toast(wasFirst ? L().unSaved : L().unChanged);
+    } catch (e) {
+      const code = String((e && e.code) || '');
+      fr.unameErr = code === 'un/taken' ? L().unTaken : (code === 'un/once' ? L().unOnce : frErrText(e));
+    }
+    fr.unameBusy = false; render();
+  }
+
   async function frAccept(pair) {
     if (fr.list.filter((f) => f.status === 'accepted').length >= FR_MAX) return toast(L().frFull);
     try { await fbDb.collection('friendships').doc(pair).update({ status: 'accepted' }); fr.statsKey = ''; toast(L().frAccepted); } catch (e) { toast(frErrText(e)); }
@@ -4660,6 +4850,26 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       weekMin: st.week === wk ? (st.weekMin || 0) : 0, streak: st.streak, points: st.week === wk ? st.points : (st.points != null ? 0 : undefined),
       active: (st.activeUntil || 0) > Date.now() && st.share === 'all' };
   }
+  function frUnameHtml() {
+    const me = fr.username;
+    const asking = fr.unameAsk || !me;
+    let h = `<div class="unbox${me ? '' : ' need'}"><div class="row"><b class="grow">@ ${esc(L().unTitle)}</b>${me && !asking ? `<b class="unname" dir="ltr">@${esc(me)}</b>` : ''}</div>`;
+    if (me && !asking) {
+      h += `<div class="muted sml" style="margin-top:4px">${esc(L().unYours)}</div>
+        <div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap"><button class="btn ghost sm" data-act="unCopy">${esc(L().frCopy)}</button><button class="btn ghost sm" data-act="frShare">${esc(L().frShare)}</button>${fr.unameCount < 2 ? `<button class="btn ghost sm" data-act="unAsk">${esc(L().unChange)}</button>` : ''}</div>
+        <div class="muted sml" style="margin-top:6px">${esc(L().unLegacy(fr.code))}</div></div>`;
+      return h;
+    }
+    h += `<div class="muted sml" style="margin-top:4px">${esc(L().unIntro)}</div>
+      <div class="row" style="margin-top:8px"><input id="unName" class="grow" dir="ltr" maxlength="16" placeholder="${esc(L().unPh)}" autocomplete="off" autocapitalize="none" spellcheck="false">
+      <button class="btn" data-act="unSave"${fr.unameBusy ? ' disabled' : ''}>${esc(L().unSave)}</button></div>
+      <div class="muted sml" style="margin-top:6px">${esc(L().unRule)}</div>
+      ${fr.unameErr ? `<div class="muted err" style="margin-top:4px">${esc(fr.unameErr)}</div>` : ''}
+      ${me ? `<div class="muted sml" style="margin-top:6px">${esc(L().unLegacy(fr.code))}</div><div style="margin-top:8px"><button class="btn ghost sm" data-act="unCancel">${esc(L().unCancel)}</button></div>` : ''}
+      </div>`;
+    return h;
+  }
+
   function frReqHtml() {
     const inc = fr.list.filter((f) => f.status === 'pending' && !f.mine), out = fr.list.filter((f) => f.status === 'pending' && f.mine);
     if (!inc.length && !out.length) return '';
@@ -4669,30 +4879,52 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
     out.forEach((f) => { h += `<div class="row frreq"><span class="grow muted sml">${esc(L().frReqOut)}</span><button class="btn ghost sm" data-act="frReject" data-p="${esc(f.pair)}">${esc(L().frCancel)}</button></div>`; });
     return h + '</div>';
   }
-  function frRowHtml(f) {
+  // v32: friend tiles (design B) with the details from design A. The avatar sits inside a
+  // ring that measures the week against a 500 minute goal, computed from the weekly minutes
+  // the friend already shares, so no new field and no new read. In paused mode there are no
+  // minutes to measure, so the coloured arc is not drawn at all (never a 0% ring).
+  const FR_PEOPLE = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-2px"><circle cx="9" cy="8.4" r="3.1"/><path d="M3.4 19.4c.4-3.2 2.7-5.1 5.6-5.1s5.2 1.9 5.6 5.1"/><circle cx="17" cy="9.4" r="2.4"/><path d="M16.4 14.2c2.5-.2 4.3 1.4 4.7 4.1"/></svg>';
+  const FR_WEEK_GOAL = 500;
+  const FR_ICON = {
+    heart: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 20.4S4.6 15.8 4.6 11A4.3 4.3 0 0 1 12 8.1a4.3 4.3 0 0 1 7.4 2.9c0 4.8-7.4 9.4-7.4 9.4z"/></svg>',
+    clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.6V12l2.9 1.8"/></svg>',
+    flame: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.4 2.4c.4 3.2-1.7 4.7-3 6.3-1.3 1.7-2.2 3.2-2.2 5.3a4.9 4.9 0 0 0 9.8 0c0-1.7-.6-3-1.5-4.2.2 1.7-.7 2.8-1.7 2.8-1.1 0-1.9-1-1.9-2.4 0-2.7 1.2-4.7.5-7.8z"/></svg>',
+    star: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3.4l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.9l6.1-.9z"/></svg>',
+  };
+  function frRingHtml(st) {
+    const R = 44, C = 2 * Math.PI * R;
+    const arc = !!(st && st.share !== 'off');
+    const pct = arc ? Math.max(0, Math.min(1, (Number(st.weekMin) || 0) / FR_WEEK_GOAL)) : 0;
+    const fg = arc && pct > 0 ? `<circle class="frrfg" cx="50" cy="50" r="${R}" style="stroke-dasharray:${C.toFixed(1)};stroke-dashoffset:${(C * (1 - pct)).toFixed(1)}"/>` : '';
+    // paused (or not read yet): no ring at all, so nothing can read as "0% of the goal"
+    if (!arc) return `<div class="frring plain"><span class="frrav">${avatarSvg(st ? st.avatar : 'av01')}</span></div>`;
+    return `<div class="frring"><svg class="frrsvg" viewBox="0 0 100 100" aria-hidden="true"><circle class="frrbg" cx="50" cy="50" r="${R}"/>${fg}</svg><span class="frrav">${avatarSvg(st ? st.avatar : 'av01')}</span></div>`;
+  }
+  function frTileHtml(f) {
     const st = frStale(fr.stats[f.other]);
     const loaded = Object.prototype.hasOwnProperty.call(fr.stats, f.other);
     const nm = st && st.name ? st.name : L().frNameFallback;
-    let body;
-    if (!loaded) body = `<div class="muted sml">${esc(L().frWait)}</div>`;
-    else if (!st) body = `<div class="muted sml">${esc(L().frPausedLbl)}</div>`;
-    else if (st.share === 'off') body = `<div class="muted sml">${esc(L().frPausedLbl)}</div>`;
-    else {
-      body = `<div class="muted sml">${esc(L().frToday)} <b>${esc(L().frMin(st.todayMin))}</b> · ${esc(L().frWeek)} <b>${esc(L().frMin(st.weekMin))}</b></div>`;
-      if (st.share === 'all') body += `<div class="muted sml">🔥 ${st.streak || 0} ${esc(L().frStreak)} · <b>${st.points || 0}</b> ${esc(L().frPts)}</div>`;
+    if (fr.ask && fr.ask.pair === f.pair) {
+      return `<div class="frtile asking"><div class="fraskq">${esc(L().frRemoveAsk(nm))}</div><div class="fraskb"><button class="btn danger sm" data-act="frRemoveYes" data-p="${esc(f.pair)}">${esc(L().frRemoveYes)}</button><button class="btn ghost sm" data-act="frRemoveNo">${esc(L().frNo)}</button></div></div>`;
     }
-    const active = st && st.active ? `<span class="fract">${esc(L().frActive)}</span>` : '';
-    let ctl;
-    if (fr.ask && fr.ask.pair === f.pair) ctl = `<div class="frask"><span class="muted sml">${esc(L().frRemoveAsk(nm))}</span><span class="row" style="gap:6px;margin-top:6px"><button class="btn danger sm" data-act="frRemoveYes" data-p="${esc(f.pair)}">${esc(L().frRemoveYes)}</button><button class="btn ghost sm" data-act="frRemoveNo">${esc(L().frNo)}</button></span></div>`;
-    else ctl = `<span class="frbtns"><button class="btn ghost sm" data-act="frCheer" data-u="${esc(f.other)}" data-k="clap" aria-label="clap">👏</button><button class="btn ghost sm" data-act="frCheer" data-u="${esc(f.other)}" data-k="fire" aria-label="fire">🔥</button><button class="btn ghost sm" data-act="frRemoveAsk" data-p="${esc(f.pair)}">${esc(L().frRemove)}</button></span>`;
-    return `<div class="frrow"><span class="avchip">${avatarSvg(st ? st.avatar : 'av01')}</span><div class="grow"><b>${esc(nm)}</b> ${active}${body}</div>${ctl}</div>`;
+    const live = !!(st && st.active);
+    let body;
+    if (!loaded) body = `<div class="frpaused">${esc(L().frWait)}</div>`;
+    else if (!st || st.share === 'off') body = `<div class="frpaused">${esc(L().frPausedLbl)}</div>`;
+    else {
+      body = `<div class="frnums"><span class="frc">${FR_ICON.clock}${esc(L().frMin(Math.round(st.todayMin || 0)))}</span>`;
+      if (st.share === 'all') body += `<span class="frf">${FR_ICON.flame}${st.streak || 0}</span><span class="frs">${FR_ICON.star}${st.points || 0}</span>`;
+      body += `</div><div class="frgoal"><b><bdi dir="ltr">${esc(L().lbGoalOf(Math.round(st.weekMin || 0), FR_WEEK_GOAL))}</bdi></b> ${esc(L().frUnit)} · ${esc(L().lbGoal)}</div>`;
+    }
+    const dot = live ? `<span class="frnow"><i></i>${esc(L().frActive)}</span>` : '';
+    return `<div class="frtile${live ? ' now' : ''}"><div class="frttop"><button class="frheart" data-act="frCheer" data-u="${esc(f.other)}" data-k="clap" aria-label="${esc(L().frCheerSent)}">${FR_ICON.heart}</button><button class="frrm" data-act="frRemoveAsk" data-p="${esc(f.pair)}" aria-label="${esc(L().frRemove)}">×</button></div>${frRingHtml(st)}<div class="frtnm">${esc(nm)}</div>${dot}${body}</div>`;
   }
   function frListHtml() {
     const acc = fr.list.filter((f) => f.status === 'accepted');
     if (!acc.length) return `<div class="muted">${esc(L().frEmpty)}</div>`;
     const wk = (f) => { const st = frStale(fr.stats[f.other]); return st && st.share !== 'off' ? st.weekMin : -1; };
     acc.sort((a, b) => wk(b) - wk(a));
-    return acc.map(frRowHtml).join('');
+    return '<div class="frgrid">' + acc.map(frTileHtml).join('') + '</div>';
   }
   function friendsTop() {
     const ws = Scheduler.weekScore(state, todayStr());
@@ -4709,12 +4941,10 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
         <div style="margin-top:10px"><button class="btn" data-act="frEnable"${fr.busy ? ' disabled' : ''}>${esc(L().frEnable)}</button></div></div>`;
     }
     if (!fr.loaded) return head + `<div class="muted" style="margin-top:8px">${esc(L().frLoading)}</div></div>`;
-    let h = head + `<div class="row" style="margin-top:10px"><span class="grow"><span class="muted sml">${esc(L().frMyCode)}</span><br><b class="chcode" dir="ltr">${esc(fr.code)}</b></span>
-      <button class="btn ghost sm" data-act="frCopy">${esc(L().frCopy)}</button><button class="btn sm" data-act="frShare">${esc(L().frShare)}</button></div>
-      <div class="row" style="margin-top:12px"><input id="frAdd" class="grow" placeholder="${esc(L().frAddPh)}" dir="ltr" maxlength="8" style="text-transform:uppercase" autocomplete="off">
+    let h = head + frUnameHtml() + `<div class="row" style="margin-top:12px"><input id="frAdd" class="grow" placeholder="${esc(L().frAddPh)}" dir="ltr" maxlength="17" autocomplete="off" autocapitalize="none" spellcheck="false">
       <button class="btn" data-act="frAddBtn">${esc(L().frAddBtn)}</button></div></div>`;
     h += `<div id="frReqBox">${frReqHtml()}</div>`;
-    h += `<div class="card"><div class="row"><b class="grow">🏅 ${esc(L().frListTitle)}</b><button class="btn ghost sm" data-act="frRefresh">${esc(L().frRefresh)}</button></div>
+    h += `<div class="card"><div class="row"><b class="grow">${FR_PEOPLE} ${esc(L().frListTitle)}</b><button class="btn ghost sm" data-act="frRefresh">${esc(L().frRefresh)}</button></div>
       <div class="muted sml" style="margin:2px 0 8px">${esc(L().frSortNote)}</div><div id="frListBox">${frListHtml()}</div></div>`;
     const pv = [['all', L().frPrivAll, L().frPrivAllD], ['min', L().frPrivMin, L().frPrivMinD], ['off', L().frPrivOff, L().frPrivOffD]];
     h += `<div class="card"><b>🔒 ${esc(L().frPrivTitle)}</b>
@@ -4724,7 +4954,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
     return h;
   }
   function viewFriends() {
-    return friendsTop() + friendsSection() + leaderboardCard() + challengeCard();
+    return leaderboardCard() + friendsSection() + friendsTop() + challengeCard(); // v32: the board leads, as in the approved design
   }
 
   // a friendly line for a Firebase error code, without dumping raw internals
@@ -4741,22 +4971,46 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
     return `<div class="row lbrow${me ? ' me' : ''}" style="margin-top:6px"><span class="lbrank">${i + 1}</span><span class="avchip">${avatarSvg(r.avatar)}</span><span class="grow">${nm}${me ? `<span class="muted"> · ${esc(L().lbYou)}</span>` : ''}</span><b>${r.score} ${esc(pts)}</b></div>`;
   }
 
+  // v32: the public board (design A). The top three stand on a gold, silver and bronze
+  // podium with a crown on the first, ranks 4 to 6 are a list, and the student's own card
+  // says how many points separate them from the person just above.
+  const LB_CROWN = '<svg viewBox="0 0 24 16" aria-hidden="true"><path d="M2.2 13.6h19.6l-1.7-9-4.7 3.7L12 2.2 8.6 8.3 3.9 4.6z" fill="#facc15" stroke="#a16207" stroke-width="1.1" stroke-linejoin="round"/><circle cx="12" cy="12" r="1" fill="#ef4444"/></svg>';
+  const lbName = (r) => (r && r.name ? String(r.name) : L().anonName);
+
   function lbListHtml() {
     if (lbReadErr) return `<div class="muted">${esc(fbErrText(lbReadErr))}</div>`;
     if (lbWriteErr) return `<div class="muted err">${esc(L().lbWriteFail)} ${esc(fbErrText(lbWriteErr))}</div>`;
     if (!lbRows) return `<div class="muted">${esc(L().lbWait)}</div>`;
     if (!lbRows.length) return `<div class="muted">${esc(L().lbEmpty)}</div>`;
     const uid0 = session && session.uid;
-    const medals = ['🥇', '🥈', '🥉'];
     const isMe = (r) => !!(uid0 && r.id === uid0);
-    let h = '', mine = false;
-    const top = lbRows.slice(0, 3), rest = lbRows.slice(3);
-    h += '<div class="lbtop">' + top.map((r, i) => {
-      const me = isMe(r); if (me) mine = true;
-      return `<div class="lbtopcard${me ? ' me' : ''}"><span class="lbmedal">${medals[i]}</span><span class="lbav">${avatarSvg(r.avatar)}</span><span class="lbname${r.name ? '' : ' muted'}">${esc(r.name || L().anonName)}</span><b class="lbscore">${r.score}</b><span class="muted sml">${esc(L().lbPts)}${me ? ' · ' + esc(L().lbYou) : ''}</span></div>`;
-    }).join('') + '</div>';
-    rest.forEach((r, i) => { const me = isMe(r); if (me) mine = true; h += lbRowHtml(r, i + 3, me, L().lbPts); });
-    if (!mine && uid0) h += `<div class="muted" style="margin-top:8px">${esc(L().lbOut)}</div>`;
+    const rows = lbRows.slice(0, 10);
+    const top = rows.slice(0, 3), rest = rows.slice(3, 6);
+    const tag = (r) => (isMe(r) ? ` (${esc(L().lbYou)})` : '');
+    let h = '<div class="lbpodium">';
+    [2, 1, 3].forEach((place) => {
+      const r = top[place - 1];
+      if (!r) { h += '<div class="lbp"></div>'; return; }
+      h += `<div class="lbp p${place}${isMe(r) ? ' me' : ''}"><span class="lbcrown">${place === 1 ? LB_CROWN : ''}</span><span class="lbpav">${avatarSvg(r.avatar)}</span><span class="lbpnm${r.name ? '' : ' muted'}">${esc(lbName(r))}${tag(r)}</span><span class="lbpsc">${r.score}</span><span class="lbstair">${place}</span></div>`;
+    });
+    h += '</div>';
+    if (rest.length) {
+      h += '<div class="lblist">' + rest.map((r, i) => `<div class="lblrow${isMe(r) ? ' me' : ''}"><span class="lbrk">${i + 4}</span><span class="avchip">${avatarSvg(r.avatar)}</span><span class="grow lbnm">${esc(lbName(r))}${tag(r)}</span><b class="lbsc">${r.score}</b></div>`).join('') + '</div>';
+    }
+    if (uid0) {
+      const my = Scheduler.weekScore(state, todayStr()).score;
+      const at = rows.findIndex(isMe);
+      const first = String((state.profile.name || '').trim().split(/\s+/)[0] || '');
+      const named = !!(state.leaderboard && state.leaderboard.showName) && !!first;
+      let sub;
+      if (at === 0) sub = L().lbYouFirst;
+      else if (at > 0) sub = L().lbNeedNext(Math.max(1, rows[at - 1].score - my + 1), lbName(rows[at - 1]));
+      else {
+        const need = (rows[rows.length - 1].score || 0) - my + 1;
+        sub = need > 0 ? L().lbNeedTen(need) : L().lbOutTen;
+      }
+      h += `<div class="lbyou">${at >= 0 ? `<span class="lbyrk">${at + 1}</span>` : ''}<span class="avchip">${avatarSvg(state.profile.avatar)}</span><span class="grow"><span class="lbynm">${esc(named ? first + ' (' + L().lbYou + ')' : L().lbYouAnon)}</span><div class="lbysub">${esc(sub)}</div></span><b class="lbysc">${my}</b></div>`;
+    }
     return h;
   }
 
@@ -4831,9 +5085,9 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
         if (session) {
           await loadCloud();
           attachCloud();
-          if (state.leaderboard && state.leaderboard.on) { pushLbScore(); fetchLbTop(); }
+          pushLbScore(); fetchLbTop(); // v32: always
           try { if (localStorage.getItem(FR_FLAG) === '1' && !fr.loaded) frLoad(); } catch (e) { /* ignore */ }
-        } else if (state.leaderboard && state.leaderboard.on) { detachCloud(); fetchLbTop(); } // v21.1: only when the board is on
+        } else { detachCloud(); fetchLbTop(); } // v32: read the board even before signing in
         // v21.2: tell them once that an anonymous account does not travel between devices
         if (session && !session.email) {
           try {
@@ -5564,7 +5818,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
           why: 'الأماكن الفاضية في الجدول بتتحسب من اللي حددته هنا.',
           fix: 'لو مواعيدك مش بتظهر في الجهاز التاني: اتأكد انك داخل بنفس الإيميل في الاتنين (شوف "الحساب والمزامنة").' },
         { i: '🔥', t: 'الستريك والتحدي',
-          steps: ['الستريك بيزيد لما تذاكر يوم ورا يوم. في البروفايل تلاقي عدد الأيام وأعلى ستريك.', 'لو فاتك يوم تقدر تدوس "استرجع الستريك" (محاولات محدودة في الشهر).', 'لوحة الشطار والتحدي الأسبوعي في تاب الأصدقاء. اللوحة العامة اسمك فيها مخفي إلا لو انت فعلته، لكن في أي غرفة تحدي أعضاؤها بيشوفوا اسمك ونقطك (وبنسألك قبل ما تدخل).'],
+          steps: ['الستريك بيزيد لما تذاكر يوم ورا يوم. في البروفايل تلاقي عدد الأيام وأعلى ستريك.', 'لو فاتك يوم تقدر تدوس "استرجع الستريك" (محاولات محدودة في الشهر).', 'لوحة الشطار والتحدي الأسبوعي في تاب الأصدقاء. لوحة الشطار شغالة للكل، واسمك فيها «طالب مجهول» إلا لو فعّلت اسمك بنفسك، لكن في أي غرفة تحدي أعضاؤها بيشوفوا اسمك ونقطك (وبنسألك قبل ما تدخل).'],
           why: 'بيحفزك تفتح كل يوم، والنقط بتتحسب من شغلك الحقيقي.',
           fix: 'لو نقطك مش بتظهر: اتأكد من النت ودوس "اختبر الاتصال".' },
         { i: '☁️', t: 'الحساب والمزامنة (جهازين)',
@@ -5649,7 +5903,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
           why: 'The free gaps in the schedule are worked out from what you set here.',
           fix: 'If these do not show on your other device, check you use the same email on both (see Account & sync).' },
         { i: '🔥', t: 'Streak and challenge',
-          steps: ['The streak grows when you study day after day. Profile shows the days and your best.', 'If you miss a day you can tap "Restore streak" (limited tries each month).', 'The leaderboard and weekly challenge are in the Friends tab. On the public board your name is hidden unless you turn it on, but in any challenge room the members see your name and points (we ask before you join).'],
+          steps: ['The streak grows when you study day after day. Profile shows the days and your best.', 'If you miss a day you can tap "Restore streak" (limited tries each month).', 'The leaderboard and weekly challenge are in the Friends tab. The board is on for everyone and your name shows as Anonymous unless you turn it on, but in any challenge room the members see your name and points (we ask before you join).'],
           why: 'It gets you opening the app every day, and points come from your real work.',
           fix: 'If your points do not show, check your internet and tap "Test connection".' },
         { i: '☁️', t: 'Account & sync (two devices)',
@@ -6408,30 +6662,26 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
   }
 
   // v17/v20/v31: the public weekly leaderboard (moved to the Friends tab in v31)
+  // v32: the board is on for everyone, so the card no longer offers to join or leave.
+  // The only choice left is the name: the first name, or the anonymous label.
+  const LB_TROPHY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7.4 3.6h9.2v4.6a4.6 4.6 0 0 1-9.2 0z"/><path d="M7.4 5.2H4.8v1.2a3.1 3.1 0 0 0 2.9 3.1"/><path d="M16.6 5.2h2.6v1.2a3.1 3.1 0 0 1-2.9 3.1"/><path d="M12 12.8v3.4"/><path d="M8.8 20.4h6.4l-.9-4.2H9.7z"/></svg>';
   function leaderboardCard() {
-    let h = '';
-    const lb = state.leaderboard || { on: false };
-    const ws = Scheduler.weekScore(state, todayStr());
-    h += `<div class="card"><b>🏆 ${esc(L().lbTitle)}</b>
-      <div class="muted" style="margin-top:4px">${esc(L().lbSub)}</div>
-      <div class="muted" style="margin-top:4px">${esc(L().lbReset)}</div>`;
-    if (!lb.on) {
-      h += `<div style="margin-top:10px"><button class="btn" data-act="lbJoin">${esc(L().lbJoin)}</button></div>`;
-    } else {
-      h += `<div class="row" style="margin-top:10px"><span class="avchip">${avatarSvg(state.profile.avatar)}</span><span class="grow"><b>${esc(L().lbYourScore(ws.score, ws.week))}</b></span>
-        <button class="btn ghost sm" data-act="lbLeave">${esc(L().lbLeave)}</button></div>
-        <div class="row" style="margin-top:10px"><span class="grow muted sml">${esc(L().lbNameHint)}</span>
-        <button class="btn ghost sm${lb.showName ? ' on' : ''}" data-act="lbNameToggle">${lb.showName ? esc(L().lbNameHide) : esc(L().lbNameShow)}</button></div>
-        <div class="muted sml" style="margin-top:4px">${esc(lb.showName ? ((state.profile.name || '').trim().split(/\s+/)[0] || '') : L().lbNameOff)}</div>`;
-      if (!cloudEnabled()) h += `<div class="muted" style="margin-top:8px">${esc(L().lbNoCloud)}</div>`;
-      else {
-        h += `<div class="row" style="margin-top:8px"><span class="muted sml grow errline">${lbWriteErr ? esc(L().lbWriteFail) + ' ' + esc(fbErrText(lbWriteErr)) : ''}</span>
-          <button class="btn ghost sm" data-act="lbTest">${esc(L().lbTestBtn)}</button></div>`;
-      }
-      h += `<div class="day" style="margin-top:10px">${esc(L().lbTop)}</div><div id="lbList">${lbListHtml()}</div>`;
+    const lb = state.leaderboard || {};
+    const first = String((state.profile.name || '').trim().split(/\s+/)[0] || '');
+    const named = !!lb.showName && !!first;
+    let h = `<div class="card lbcard"><div class="lbhead"><span class="lbtrophy" style="color:#e8b954">${LB_TROPHY}</span><b class="grow">${esc(L().lbTitle)}</b></div>
+      <div class="muted sml" style="margin-top:4px">${esc(L().lbSub)}</div>
+      <div class="muted sml" style="margin-top:2px">${esc(L().lbReset)}</div>
+      <div class="lbnamebar"><span class="grow"><span class="muted sml">${esc(L().lbNameLbl)}</span><br><b>${esc(named ? first : L().anonName)}</b></span>
+        <button class="btn ghost sm" data-act="lbNameToggle">${named ? esc(L().lbNameHide) : esc(L().lbNameShow)}</button></div>
+      <div class="muted sml">${esc(named ? L().lbNameOnHint : L().lbNameHint)}</div>`;
+    if (!cloudEnabled()) h += `<div class="muted" style="margin-top:8px">${esc(L().lbNoCloud)}</div>`;
+    else if (!session) h += `<div class="lbnoacc"><span class="grow muted sml">${esc(L().lbNoAcc)}</span><button class="btn sm" data-act="showAuth">${esc(L().lbNoAccBtn)}</button></div>`;
+    h += `<div class="day" style="margin-top:12px">${esc(L().lbTop)}</div><div id="lbList">${lbListHtml()}</div>`;
+    if (cloudEnabled() && (lbWriteErr || lbReadErr)) {
+      h += `<div class="row" style="margin-top:8px"><span class="muted sml grow errline">${esc(fbErrText(lbWriteErr || lbReadErr))}</span><button class="btn ghost sm" data-act="lbRetry">${esc(L().lbRetry)}</button></div>`;
     }
-    h += '</div>';
-    return h;
+    return h + '</div>';
   }
 
   function challengeCard() {
@@ -7200,7 +7450,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
     if (tab === 'friends' && fbDb) {
       if (session && !fr.loaded && !fr.loading) frLoad();
       if (fr.on) { frAttach(); frFetchStats(); if (fr.cheers.length) { frClearCheers(); } }
-      if (state.leaderboard && state.leaderboard.on && Date.now() - lbFetchedAt > 300000) fetchLbTop(); // v21.1: was 60s
+      if (Date.now() - lbFetchedAt > 300000) fetchLbTop(); // v21.1: was 60s; v32: always
       if (chCode() && Date.now() - chFetchedAt > 300000) fetchCh(); // v21.1: was 60s
     }
   }
@@ -7398,39 +7648,16 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
     if (a === 'outNo') { outAsk = false; return render(); }
     if (a === 'outYes') { outAsk = false; doLogout(); return; }
     if (a === 'pickAv') { state.profile.avatar = t.dataset.v; save(); return render(); }
-    if (a === 'lbJoin') {
-      (state.leaderboard = state.leaderboard || { on: true, showName: false }).on = true;
-      lbRows = null; save();
-      (async () => {
-        if (!cloudEnabled() || !fbAuth) return render();
-        if (!session) { try { await fbAuth.signInAnonymously(); } catch (e) { return toast(L().lbAnonErr); } }
-        await pushLbScore(true); await fetchLbTop(); render(); // v21.1: force the row on join
-      })();
-      return render();
-    }
-    if (a === 'lbLeave') {
-      if (state.leaderboard) state.leaderboard.on = false;
-      lbRows = null;
-      if (session && fbDb) { try { lbEntryRef().delete().catch(() => {}); } catch (e) {} }
-      save(); return render();
-    }
     if (a === 'lbNameToggle') {
-      if (!state.leaderboard) state.leaderboard = { on: true, showName: false };
+      const first = String((state.profile.name || '').trim().split(/\s+/)[0] || '');
+      if (!state.leaderboard.showName && !first) return toast(L().lbNeedName);
       state.leaderboard.showName = !state.leaderboard.showName;
       save(); pushLbScore(); if (chCode()) pushChScore();
       return render();
     }
-    if (a === 'lbTest') {
-      (async () => {
-        if (!cloudEnabled() || !fbAuth) return toast(L().lbNoCloud);
-        toast(L().lbTestWait);
-        if (!session) { try { await fbAuth.signInAnonymously(); } catch (e) { return toast(L().lbAnonErr); } }
-        if (!state.leaderboard) state.leaderboard = { on: false, showName: false };
-        state.leaderboard.on = true; save();
-        await pushLbScore(); await fetchLbTop();
-        toast(lbWriteErr ? L().lbTestFail + fbErrText(lbWriteErr) : L().lbTestOk);
-        render();
-      })();
+    if (a === 'lbRetry') {
+      lbFetchedAt = 0; lbPushKey = '';
+      (async () => { await pushLbScore(true); await fetchLbTop(); render(); })();
       return;
     }
     if (a === 'chCreate') { roomAsk = { mode: 'create', code: '' }; return render(); }
@@ -7460,16 +7687,20 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
     }
     // v31: friends
     if (a === 'frEnable') { frEnable(); return; }
-    if (a === 'frCopy' || a === 'frShare') {
-      const code = fr.code, text = L().frShareText(code);
+    if (a === 'frCopy' || a === 'frShare' || a === 'unCopy') {
+      const val = fr.username ? '@' + fr.username : fr.code;
+      const text = fr.username ? L().unShareText(fr.username) : L().frShareText(fr.code);
       if (a === 'frShare' && navigator.share) { navigator.share({ text }).catch(() => {}); return; }
       try {
-        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(a === 'frShare' ? text : code);
-        else { const el = document.createElement('textarea'); el.value = a === 'frShare' ? text : code; document.body.appendChild(el); el.select(); document.execCommand('copy'); el.remove(); }
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(a === 'frShare' ? text : val);
+        else { const el = document.createElement('textarea'); el.value = a === 'frShare' ? text : val; document.body.appendChild(el); el.select(); document.execCommand('copy'); el.remove(); }
         toast(L().frCopied);
-      } catch (e) { toast(code); }
+      } catch (e) { toast(val); }
       return;
     }
+    if (a === 'unSave') { frSaveUsername(($('unName') || {}).value); return; }
+    if (a === 'unAsk') { fr.unameAsk = true; fr.unameErr = ''; return render(); }
+    if (a === 'unCancel') { fr.unameAsk = false; fr.unameErr = ''; return render(); }
     if (a === 'frAddBtn') { frSendRequest(($('frAdd') || {}).value); return; }
     if (a === 'frAccept') { frAccept(t.dataset.p); return; }
     if (a === 'frReject') { frDelete(t.dataset.p); return; }
