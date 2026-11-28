@@ -180,7 +180,8 @@ main { padding-bottom: 104px; }
 .wkcell { flex: 1; background: var(--card); border: 1.5px solid var(--line); border-radius: 14px; padding: 7px 2px 6px; display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--muted); font: inherit; cursor: pointer; }
 .wkcell .wkname { font-size: 11px; }
 .wkcell .wknum { font-size: 15px; color: var(--text); }
-.wkcell.now .wknum { color: var(--primary); }
+.wkcell.now { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+  .wkcell.now .wknum { color: var(--primary); font-weight: 800; }
 .wkcell.sel { border-color: var(--primary); background: var(--ghost-bg); }
 .wkdot { width: 5px; height: 5px; border-radius: 50%; background: var(--primary); }
 .wkdot.off { background: transparent; }
@@ -3426,7 +3427,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       chEmpty: 'لسه محدش غيرك. ابعت الكود لصحابك.',
       chNeed: 'اكتب الكود الأول',
       chWait: 'بنجيب التحدي...',
-      chNoNet: 'التحدي محتاج نت',
+      chNoNet: 'التحدي محتاج نت', chRulesErr: 'مفيش صلاحية للتحديات على السيرفر: لازم تنشر القواعد الجديدة على فايربيز الأول', chNeedName: 'اكتب اسمك في البروفايل الأول، اسمك بيظهر لكل اللي في التحدي', chWorking: 'لحظة...', chShareHint: 'التحدي اتعمل! انسخ الكود وابعته لصحابك عشان ينضموا',
       revTitle: 'مراجعة سريعة',
       revSub: 'محاضرات خلصتها من فترة. 10 دقايق تراجعها ومتتنساش.',
       rev3: 'خلصتها من 3 أيام',
@@ -3884,7 +3885,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       chEmpty: 'Nobody else yet. Send the code to your friends.',
       chNeed: 'Type the code first',
       chWait: 'Getting the challenge...',
-      chNoNet: 'The challenge needs internet',
+      chNoNet: 'The challenge needs internet', chRulesErr: 'Challenges are not allowed on the server yet: publish the new Firestore rules first', chNeedName: 'Add your name in the profile first; it is shown to everyone in the challenge', chWorking: 'One moment...', chShareHint: 'Challenge created! Copy the code and send it to your friends',
       revTitle: 'Quick review',
       revSub: 'Lectures you finished a while ago. Ten minutes now keeps them from slipping.',
       rev3: 'Finished 3 days ago',
@@ -4353,6 +4354,26 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
 
   let tab = 'day', prevTab = 'day', openSubject = null, openExam = null, taskKind = {}, authSkipped = false, toastTimer = null, timeDay = null, onboardStep = 1, draftBusy = {};
   let lastTickDay = todayStr();
+  // v35: one place that moves the app to the new day. Called from the 500ms tick, from a timer
+  // armed for the next midnight, and when a hidden or frozen tab wakes (visibilitychange, focus,
+  // pageshow), so the app rolls over even if Chrome paused its timers overnight. It re-renders
+  // and pushes the new day's stats at once, so friends see the day flip too. The selected day
+  // needs no handling here: viewing "today" is dayViewDate === null, and the viewDate guard in
+  // viewDay keeps a day the student picked on purpose, so the rollover never yanks them away.
+  function rollDay() {
+    const t = todayStr();
+    if (t === lastTickDay) return false;
+    lastTickDay = t;
+    render();
+    try { if (fr.on) frPush(true); } catch (e) { /* ignore */ }
+    try { if (session) pushLbScore(true); } catch (e) { /* ignore */ }
+    return true;
+  }
+  function armMidnightRoll() {
+    const n = new Date();
+    const nx = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1, 0, 0, 3); // 3s past midnight
+    setTimeout(() => { rollDay(); armMidnightRoll(); }, Math.max(1500, nx.getTime() - n.getTime()));
+  }
 
   // focus mode runtime (the running session is also persisted locally, not synced)
   const FKEY = KEY + '.focus';
@@ -4656,10 +4677,11 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
   async function chCreate() {
     if (!chSetup || chBusy) return;
     if (!cloudEnabled() || !fbAuth) return toast(L().chNoNet);
-    chBusy = true;
+    chBusy = true; render();
     const setup = chSetup;
     try {
-      if (!session) { try { await fbAuth.signInAnonymously(); } catch (e) { chBusy = false; return toast(L().lbAnonErr); } }
+      if (!session) { try { await fbAuth.signInAnonymously(); } catch (e) { chBusy = false; render(); return toast(L().lbAnonErr); } }
+      if (!frFirst()) { chBusy = false; render(); return toast(L().chNeedName); }
       const code = genChCode();
       const doc = { host: session.uid, mode: setup.picks.length === 1 ? 'duel' : 'group', type: setup.type,
         target: setup.target, members: [session.uid], memberCap: CH_CAP, status: 'open', winner: '', winnerAt: 0,
@@ -4673,24 +4695,26 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       for (let i = 0; i < setup.picks.length; i++) {
         try { await fbDb.collection('challenge_invites').doc(setup.picks[i]).set(from); } catch (e) { /* the invite is best effort */ }
       }
-      await fetchCh(); render();
-    } catch (e) { toast(fbErrText(e)); }
-    chBusy = false;
+      await fetchCh();
+      if (!setup.picks.length) toast(L().chShareHint); // v35: nobody picked, the code is the way in
+    } catch (e) { chBusy = false; render(); return toast(chFailText(e)); }
+    chBusy = false; render();
   }
 
   async function chJoin(code) {
     if (!code || chBusy) return;
     if (!cloudEnabled() || !fbAuth) return toast(L().chNoNet);
-    chBusy = true;
+    chBusy = true; render();
     try {
-      if (!session) { try { await fbAuth.signInAnonymously(); } catch (e) { chBusy = false; return toast(L().lbAnonErr); } }
+      if (!session) { try { await fbAuth.signInAnonymously(); } catch (e) { chBusy = false; render(); return toast(L().lbAnonErr); } }
+      if (!frFirst()) { chBusy = false; render(); return toast(L().chNeedName); }
       const ref = fbDb.collection('challenges').doc(code);
       const snap = await ref.get();
-      if (!snap.exists) { chBusy = false; return toast(L().chNoChallenge); }
+      if (!snap.exists) { chBusy = false; render(); return toast(L().chNoChallenge); }
       const d = snap.data() || {};
       const mem = Array.isArray(d.members) ? d.members : [];
-      if (d.status === 'done') { chBusy = false; return toast(L().chEnded); }
-      if (mem.indexOf(session.uid) < 0 && mem.length >= (d.memberCap || CH_CAP)) { chBusy = false; return toast(L().chFull); }
+      if (d.status === 'done') { chBusy = false; render(); return toast(L().chEnded); }
+      if (mem.indexOf(session.uid) < 0 && mem.length >= (d.memberCap || CH_CAP)) { chBusy = false; render(); return toast(L().chFull); }
       if (mem.indexOf(session.uid) < 0) {
         await fbDb.runTransaction(async (tx) => {
           const s2 = await tx.get(ref);
@@ -4704,9 +4728,9 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       chDoc = d; chRows = null;
       try { await fbDb.collection('challenge_invites').doc(session.uid).delete(); } catch (e) { /* ignore */ }
       chInvite = null; chInviteSeen = '';
-      await pushChScore(true); await fetchCh(); render();
-    } catch (e) { toast(fbErrText(e)); }
-    chBusy = false;
+      await pushChScore(true); await fetchCh();
+    } catch (e) { chBusy = false; render(); return toast(chFailText(e)); }
+    chBusy = false; render();
   }
 
   // publish my progress. The entry keeps what it has already counted (seenStudy/seenTask for the
@@ -5157,6 +5181,13 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
     return String(code).slice(0, 60);
   }
 
+  // v35: a challenge write refused by the server almost always means the new rules are not published yet
+  function chFailText(e) {
+    const m = String((e && (e.code || e.message)) || e);
+    if (/permission|denied|insufficient/i.test(m)) return L().chRulesErr;
+    return fbErrText(m);
+  }
+
   function lbRowHtml(r, i, me, pts) {
     const nm = r.name ? `<span class="lbname">${esc(r.name)}</span>` : `<span class="lbname muted">${esc(L().anonName)}</span>`;
     return `<div class="row lbrow${me ? ' me' : ''}" style="margin-top:6px"><span class="lbrank">${i + 1}</span><span class="avchip">${avatarSvg(r.avatar)}</span><span class="grow">${nm}${me ? `<span class="muted"> · ${esc(L().lbYou)}</span>` : ''}</span><b>${r.score} ${esc(pts)}</b></div>`;
@@ -5211,7 +5242,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
 
   // v34: one progress bar per member, the target at the end, my own row marked.
   function chListHtml() {
-    if (chErr) return `<div class="muted">${esc(fbErrText(chErr))}</div>`;
+    if (chErr) return `<div class="muted">${esc(chFailText(chErr))}</div>`;
     if (!chDoc) return `<div class="muted">${esc(L().chWait)}</div>`;
     if (!chRows) return `<div class="muted">${esc(L().chWait)}</div>`;
     const t = Math.max(1, Number(chDoc.target) || 1);
@@ -6920,9 +6951,9 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
             return `<button class="btn ${on ? '' : 'ghost'} sm" data-act="chPick" data-u="${esc(f.other)}">${esc(nm)}</button>`;
           }).join('')}</div>`;
       }
-      h += `<div class="row" style="margin-top:10px"><button class="btn grow" data-act="chCreate"${chBusy ? ' disabled' : ''}>${esc(L().chCreate)}</button></div>
+      h += `<div class="row" style="margin-top:10px"><button class="btn grow" data-act="chCreate"${chBusy ? ' disabled' : ''}>${esc(chBusy ? L().chWorking : L().chCreate)}</button></div>
         <div class="muted sml" style="margin-top:10px">${esc(L().chJoinLbl)}</div>
-        <div class="row" style="margin-top:4px"><input id="chJoin" class="grow" placeholder="${esc(L().chJoinPh)}" dir="ltr" maxlength="8" style="text-transform:uppercase"><button class="btn ghost" data-act="chJoinBtn">${esc(L().chJoinBtn)}</button></div></div>`;
+        <div class="row" style="margin-top:4px"><input id="chJoin" class="grow" placeholder="${esc(L().chJoinPh)}" dir="ltr" maxlength="8" style="text-transform:uppercase"><button class="btn ghost" data-act="chJoinBtn"${chBusy ? ' disabled' : ''}>${esc(L().chJoinBtn)}</button></div></div>`;
       return h + '</div>';
     }
 
@@ -7161,7 +7192,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
     // keep the header clock fresh and roll the app over to the new day at midnight
     const clk = $('clockLbl');
     if (clk) { const c = clockNow(); if (clk.textContent !== c) clk.textContent = c; }
-    if (todayStr() !== lastTickDay) { lastTickDay = todayStr(); render(); return; }
+    if (rollDay()) return; // v35
     if (focusRun && !focusRun.paused && (focusRun.phase === 'focus' || focusRun.phase === 'break') && focusRun.endsAt && now >= focusRun.endsAt) {
       const p = Scheduler.FOCUS_PRESETS[focusRun.preset] || Scheduler.FOCUS_PRESETS[0];
       if (focusRun.phase === 'focus') {
@@ -7527,6 +7558,12 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
         <button class="btn ghost grow" data-act="authSignup">${esc(L().signupBtn)}</button></div>
         <div style="text-align:center;margin-top:10px"><button class="linklike" data-act="authSkip">${esc(L().skipBtn)}</button></div></div></div>`;
       return h;
+    }
+    if (roomAsk) {
+      return `<div class="overlay"><div class="sheet"><b style="font-size:17px">${esc(L().chTitle)}</b>
+        <p class="muted" style="margin-top:8px">${esc(L().roomWarn)}</p>
+        <div class="row" style="margin-top:12px"><button class="btn grow" data-act="roomYes">${esc(L().roomYes)}</button>
+        <button class="btn ghost grow" data-act="roomNo">${esc(L().roomNo)}</button></div></div></div>`;
     }
     if (guideOpen) return guideHtml();
     if (planSheet) return planSheetHtml();
@@ -8082,9 +8119,12 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
   });
 
   document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) { try { rollDay(); } catch (e) { /* ignore */ } } // v35
     if (!document.hidden && session && Date.now() - lastPull > 30000) loadCloud().then(render);
     if (!document.hidden && canSyncLectures() && Date.now() - (state.batchSync.lastSync || 0) > 30 * 60000) syncLecturesFile(false);
   });
+  window.addEventListener('focus', () => { try { rollDay(); } catch (e) { /* ignore */ } }); // v35
+  window.addEventListener('pageshow', () => { try { rollDay(); } catch (e) { /* ignore */ } }); // v35
 
   window.__planner = { get focusRun() { return focusRun; }, fr, todayStr, weekKey: Scheduler.weekKey, cairoToday: Scheduler.cairoToday, boardWeekKey: Scheduler.boardWeekKey, weekScore: (d) => Scheduler.weekScore(state, d || todayStr()), roomAcked, frPayload, mascotShow, mascotLeave, mascotTick, mascotFreq, setMascotFreq, mascotBlock, get mascotEl() { return mascotEl; }, set mascotLast(v) { mascotLast = v; }, get mascotLast() { return mascotLast; }, endTour: () => { tourClose(); render(); }, get state() { return state; }, loadCur, render, tick, loadCloud, pushCloud, save, get focusRun() { return focusRun; }, get session() { return session; }, batchIdle: () => batchPromise || Promise.resolve(), lbDemo: (rows) => { lbRows = rows; lbError = ''; const el = $('lbList'); if (el) el.innerHTML = lbListHtml(); } };
   render();
@@ -8092,6 +8132,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
   initCloud();
   if (canSyncLectures()) syncLecturesFile(false);
   setInterval(tick, 500);
+  armMidnightRoll(); // v35
 })();
 </script>
 </body>
