@@ -704,6 +704,20 @@ a.btn { display: inline-block; text-decoration: none; }
 @media (prefers-reduced-motion: reduce) { .mascot { transition: opacity .2s; transform: none !important; } }
 .mascot { direction: ltr; }
 html[dir="rtl"] .mascot .mbub { direction: rtl; }
+
+/* v31: friends tab */
+nav button { position: relative; min-width: 0; }
+nav button span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+nav button.dot::after { content: ''; position: absolute; top: 5px; inset-inline-end: 22%; width: 9px; height: 9px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 0 2px var(--nav-bg); }
+.frrow { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.frrow:first-child { border-top: 0; }
+.frrow .grow { min-width: 0; flex: 1 1 130px; }
+.frbtns { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.frbtns .btn.sm { padding: 5px 9px; }
+.frask { flex: 1 1 100%; }
+.frreq { padding: 8px 0; border-top: 1px solid var(--line); gap: 6px; }
+.fract { display: inline-block; font-size: 11px; font-weight: 700; color: #10b981; margin-inline-start: 4px; }
+.roomwarn { margin-top: 10px; padding: 10px 12px; border-radius: 14px; border: 1.5px solid #f59e0b; background: rgba(245, 158, 11, .12); font-size: 13.5px; line-height: 1.6; }
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
@@ -725,6 +739,7 @@ html[dir="rtl"] .mascot .mbub { direction: rtl; }
   <button data-tab="schedule">الجدول</button>
   <button data-tab="exams">الامتحانات</button>
   <button data-tab="subjects">المواد</button>
+  <button data-tab="friends">الأصدقاء</button>
 </nav>
 <main id="view"></main>
 <button id="fab" type="button" data-act="fabAdd" title="+" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
@@ -2598,29 +2613,46 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
     return year + '-W' + String(week).padStart(2, '0');
   }
 
-  // Weekly score from real data only (no estimates of skill, just work done):
-  //   10 points per lecture/clinic finished this week
-  //   + 10 points per study hour (focus log + the hours of tasks finished that day,
-  //     the same minutes the dashboard shows)
-  //   + 5 points per active day, so consistency counts too.
-  // A very heavy real week lands around 600-800 points; the Firebase rules cap
-  // writes well above that.
+  // v31: points are time based.
+  //   1 focus minute = 1 point, but only for a session of 10 minutes or more, and only
+  //   the minutes the app was open and in front of the student (field `am`, "active
+  //   minutes"; older sessions have no `am` and count by their length).
+  //   Time points are capped at 480 a day (8 hours).
+  //   + 1 point per finished task, at most 10 a day.
+  // Scores are computed on the device, so they can be faked: they are for friendly
+  // competition. Any prize needs the winners to be checked by hand.
+  const MIN_SESSION = 10, DAY_TIME_CAP = 480, DAY_TASK_CAP = 10;
+  function validMin(f) {
+    if (!f) return 0;
+    const len = Math.max(0, Number(f.minutes) || 0);
+    if (len < MIN_SESSION) return 0;
+    const m = (f.am != null && isFinite(Number(f.am))) ? Math.min(len, Math.max(0, Number(f.am))) : len;
+    return m >= MIN_SESSION ? Math.floor(m) : 0;
+  }
+  // valid minutes per day (after the daily cap), for one week key
+  function dayTimeMap(state) {
+    const per = {};
+    (state.focusLog || []).forEach((f) => { if (f && f.date) per[f.date] = (per[f.date] || 0) + validMin(f); });
+    Object.keys(per).forEach((d) => { per[d] = Math.min(DAY_TIME_CAP, per[d]); });
+    return per;
+  }
+  function dayTaskMap(state) {
+    const per = {};
+    (state.subjects || []).forEach((s) => (s.tasks || []).forEach((t) => {
+      if (t && t.done && t.doneAt) per[t.doneAt] = (per[t.doneAt] || 0) + 1;
+    }));
+    Object.keys(per).forEach((d) => { per[d] = Math.min(DAY_TASK_CAP, per[d]); });
+    return per;
+  }
   function weekScore(state, today) {
     const key = weekKey(today);
-    let lectures = 0, minutes = 0;
+    const tm = dayTimeMap(state), km = dayTaskMap(state);
+    let minutes = 0, tasks = 0;
     const days = {};
-    (state.focusLog || []).forEach((f) => {
-      if (f && f.date && weekKey(f.date) === key) { minutes += Math.max(0, Number(f.minutes) || 0); days[f.date] = 1; }
-    });
-    (state.subjects || []).forEach((s) => (s.tasks || []).forEach((t) => {
-      if (t.done && t.doneAt && weekKey(t.doneAt) === key) {
-        if (t.kind === 'lecture' || t.kind === 'clinic') lectures++;
-        minutes += Math.round(((t.studyH || 0) + (t.solveH || 0) + (t.workH || 0)) * 60);
-        days[t.doneAt] = 1;
-      }
-    }));
-    const activeDays = Object.keys(days).length;
-    return { week: key, score: lectures * 10 + Math.floor(minutes / 6) + activeDays * 5, lectures, minutes: Math.round(minutes), days: activeDays };
+    Object.keys(tm).forEach((d) => { if (weekKey(d) === key && tm[d] > 0) { minutes += tm[d]; days[d] = 1; } });
+    Object.keys(km).forEach((d) => { if (weekKey(d) === key && km[d] > 0) { tasks += km[d]; days[d] = 1; } });
+    return { week: key, score: minutes + tasks, minutes, tasks, days: Object.keys(days).length,
+      todayMin: tm[today] || 0 };
   }
 
   // The nearest upcoming exam/quiz (date + time), or null.
@@ -2804,7 +2836,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
     sleepBlock, blocksForWd, SLEEP_MIN, SLEEP_DEFAULT,
     BREAK_M, DAY_MIN,
     FOCUS_PRESETS, taskRemainingMin, deductFromTask, focusStats, nextExam,
-    weekKey, weekScore,
+    weekKey, weekScore, validMin, MIN_SESSION, DAY_TIME_CAP, DAY_TASK_CAP,
     countdownParts, revisionPlan,
     WORKOUT_DEFAULT, workoutDays, isWorkoutDay, workoutDone, workoutWeek,
     subjectMinutes, subjectStats, autoPlan,
@@ -3133,7 +3165,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       months: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'],
       appTitle: 'سِنّي',
       langBtn: 'English',
-      tabs: { day: 'يومي', schedule: 'الجدول', exams: 'الامتحانات', subjects: 'المواد' },
+      tabs: { day: 'يومي', schedule: 'الجدول', exams: 'الامتحانات', subjects: 'المواد', friends: 'الأصدقاء' },
       greetingAm: (n) => 'صباح الفل' + (n ? ' يا ' + n : ''),
       greetingPm: (n) => 'مساء الفل' + (n ? ' يا ' + n : ''),
       myDaySub: 'كل اللي عليك النهارده في مكان واحد',
@@ -3222,7 +3254,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       avSec: 'الأفتار بتاعك',
       avSub: 'اختار الشكل اللي يمثلك، هيظهر في البروفايل ولوحة الشطار',
       lbTitle: 'لوحة الشطار',
-      lbSub: 'ترتيب أسبوعي من غير أسماء خالص: الأفتار والنقط بس. النقط بتتحسب من شغلك الحقيقي: كل محاضرة تخلصها 10 نقط، وكل ساعة مذاكرة 10 نقط، وكل يوم مواظبة 5 نقط.',
+      lbSub: 'ترتيب أسبوعي عام لكل الطلبة. تقدر تخفي اسمك (بيظهر طالب مجهول) وتفضل نقطك ظاهرة. النقط: كل دقيقة تركيز نقطة، وكل مهمة تخلصها نقطة (لحد 10 في اليوم).',
       lbReset: 'النقط بتتصفّر مع أول كل أسبوع',
       lbJoin: 'شاركني في اللوحة',
       lbLeave: 'اطلع من اللوحة',
@@ -3238,8 +3270,8 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       // v20
       lbNameShow: 'اظهر اسمي على اللوحة',
       lbNameHide: 'خليها مجهولة',
-      lbNameHint: 'مجهول افتراضيًا: الأفتار والنقط بس. لو فعّلت الاسم هيظهر أول اسم من بروفايلك.',
-      lbNameOff: 'ظاهر مجهول (أفتار ونقط بس)',
+      lbNameHint: 'اسمك مخفي في اللوحة العامة (طالب مجهول). لو فعّلت الاسم هيظهر أول اسم من بروفايلك.',
+      lbNameOff: 'ظاهر باسم: طالب مجهول',
       lbTestBtn: 'اختبر الاتصال',
       lbTestOk: 'تمام، اللوحة شغالة والكتابة مسموحة ✓',
       lbTestFail: 'الكتابة مرفوضة: ',
@@ -3248,7 +3280,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       lbPermErr: 'الصلاحيات على Firebase مش متظبطة. لازم تتظبط مرة واحدة من كونسول Firebase (القواعد اللي في ملف FIRESTORE_RULES).',
       lbSignInFirst: 'محتاج تدخل بحساب أو دخول مجهول عشان نقطك تتحفظ',
       chTitle: 'تحدي الأسبوع',
-      chSub: 'اعمل كود وابعته لصحابك. كل واحد في المجموعة بيشوف ترتيب الباقي بالنقط، من غير أسماء.',
+      chSub: 'اعمل كود وابعته لصحابك. كل اللي في الغرفة بيشوفوا اسم (أول اسم) ونقط بعض.',
       chCreate: 'اعمل تحدي جديد',
       chJoinPh: 'كود التحدي',
       chJoinBtn: 'ادخل',
@@ -3337,6 +3369,34 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       notePh: 'اكتب اللي عايز تفتكره في المحاضرة دي...',
       remTitle: 'تذكير المذاكرة',
       mascotTitle: 'الأفتار الصغير', mascotSub: 'بيطلّ من حافة الشاشة بجملة قصيرة ويمشي. مش بيظهر والتايمر شغال، ولا بالليل، ولا والتطبيق مقفول. دوس عليه يختفي. الإعداد ده على الجهاز ده بس.', mascotEvery: (m) => 'كل ' + m + ' دقايق', mascotOff: 'مقفول', mascotTry: 'جرّبه دلوقتي',
+      // v31: friends tab, time based points, names in rooms
+      frTitle: 'الأصدقاء', anonName: 'طالب مجهول', frNameFallback: 'صاحبك',
+      frIntro: 'ضيف صحابك بالكود وشوفوا أرقام بعض: دقايق المذاكرة والستريك والنقط. محدش بيشوف أي حاجة عنك قبل ما توافق.',
+      frNoNet: 'الأصدقاء محتاجين نت وحساب (مجهول أو بإيميل).', frEnable: 'فعّل الأصدقاء', frLoading: 'بنحمّل الأصدقاء...',
+      frEnableSub: 'هيتعملك كود قصير تبعته لصحابك. اسمك (أول اسم) وأفتارك بيظهروا بس لمن يقبلوك، والأرقام حسب اللي تختاره.',
+      frErr: 'حصلت مشكلة في الاتصال. جرّب تاني.', frPermErr: 'الصلاحيات الجديدة لسه متنشرتش على Firebase (ملف FIRESTORE_RULES-v31).',
+      frMyCode: 'كودك', frCopy: 'انسخ', frShare: 'ابعته', frCopied: 'الكود اتنسخ ✓', frShareText: (c) => 'ضيفني على سِنّي، كودي: ' + c,
+      frAddTitle: 'ضيف صاحب', frAddPh: 'كود صاحبك', frAddBtn: 'ابعت طلب', frAddNeed: 'اكتب الكود الأول (6 حروف أو أرقام)',
+      frNotFound: 'الكود ده مش موجود', frSelf: 'ده كودك انت 🙂', frAlready: 'انتوا أصحاب بالفعل', frSent: 'الطلب اتبعت. لما يقبله هتظهر في الأصدقاء.',
+      frFull: 'وصلت للحد الأقصى: 30 صاحب', frPending: 'الطلب اتبعت قبل كده ومستني الرد', frAutoAcc: 'هو كان باعتلك طلب، فاتقبل وبقيتوا أصحاب ✓',
+      frReqTitle: 'طلبات الصداقة', frReqFrom: (c) => 'طلب من الكود ' + c, frReqOut: 'طلبك لسه مستني الرد',
+      frAccept: 'اقبل', frReject: 'ارفض', frCancel: 'الغي', frAccepted: 'بقيتوا أصحاب ✓',
+      frListTitle: 'أصحابك', frEmpty: 'لسه مفيش أصحاب. ابعت كودك أو اكتب كود صاحبك فوق.', frSortNote: 'مترتبين بدقايق الأسبوع',
+      frToday: 'النهارده', frWeek: 'الأسبوع', frMin: (m) => m + ' د', frStreak: 'ستريك', frPts: 'نقطة',
+      frActive: '● بيذاكر دلوقتي', frPausedLbl: 'موقّف المشاركة', frWait: '...', frRefresh: 'حدّث',
+      frCheerSent: 'التشجيع وصل ✓', frCheerWait: 'استنى دقيقة قبل التشجيع الجاي', frCheerGot: (n, k) => (n || 'صاحبك') + ' بعتلك ' + (k === 'fire' ? '🔥' : '👏'),
+      frCheerMany: (n) => 'جالك ' + n + ' تشجيع من أصحابك',
+      frRemove: 'شيل', frRemoveAsk: (n) => 'تشيل ' + n + ' من أصحابك؟ محدش فيكم هيشوف أرقام التاني.', frRemoveYes: 'اه، شيله', frNo: 'لأ', frRemoved: 'اتشال',
+      frPrivTitle: 'مين يشوف إيه', frPrivAll: 'كل الأرقام', frPrivMin: 'الدقايق بس', frPrivOff: 'وقّف المشاركة',
+      frPrivAllD: 'أصحابك بيشوفوا دقايقك والستريك والنقط وإنك بتذاكر دلوقتي.', frPrivMinD: 'أصحابك بيشوفوا دقايق مذاكرتك بس.',
+      frPrivOffD: 'مفيش أرقام بتظهر لأصحابك. بيفضل ظاهرلهم اسمك وأفتارك بس.',
+      frPrivNote: 'المواد وتفاصيل المهام عمرها ما بتتشارك، أرقام بس. وبيظهر لأصحابك أول اسم من بروفايلك.',
+      ptsTitle: 'نقطك', ptsWeek: (m, p) => 'الأسبوع ده: ' + m + ' دقيقة مذاكرة · ' + p + ' نقطة',
+      ptsHow: 'كل دقيقة تركيز = نقطة (جلسة 50 دقيقة = 50 نقطة). كل مهمة تخلصها = نقطة، لحد 10 في اليوم. الوقت بيتحسب والتطبيق مفتوح قدامك بس، ولو سبته بيقف. الجلسات الأقل من 10 دقايق مش بتتحسب، وأقصى نقط وقت في اليوم 480 (8 ساعات).',
+      ptsHonest: 'النقط بتتحسب على جهازك، فممكن حد يتلاعب فيها. دي للمنافسة بين الصحاب، ولو في جوايز هنراجع الفايزين بإيدينا.',
+      roomWarn: 'اسمك (أول اسم من بروفايلك) ونقطك هيظهروا لكل اللي في الغرفة دي. كمّل؟', roomYes: 'اه، كمّل واظهر اسمي', roomNo: 'لأ، إلغاء',
+      roomOld: 'تحدي الأسبوع بقى بيظهر اسمك (أول اسم) ونقطك لكل اللي في الغرفة. توافق؟', roomOldNo: 'اطلع من الغرفة',
+
       remSub: 'يفكرك لو لسه مخلصتش هدف النهارده. بيشتغل والتطبيق مفتوح بس (مفيش سيرفر يبعت وهو مقفول).',
       remOn: 'شغال',
       remOff: 'شغّله',
@@ -3354,7 +3414,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
         ['الجدول', 'ابني جدولك: دوس على أي وقت فاضي واختار مادة وتاسك، أو دوس "اقترح جدول تلقائي". فوق الأيام، وتقدر تعدل أي بلوك بالقلم.'],
         ['المواد', 'مواد سنتك جاهزة. دوس على مادة تفتحلك شاشتها، وضيف امتحانها ومحاضراتها، وجنب كل محاضرة نوتس وملفات ومساعد AI.'],
         ['الامتحانات', 'مواعيد الامتحانات والعد التنازلي. كل ما الامتحان يقرب الخطة بتركز على المحاضرات اللي لسه مخلصتهاش.'],
-        ['البروفايل', 'اسمك ونومك ومواعيدك وحسابك والتحدي مع صحابك. ومن هنا تفتح الشرح الكامل في أي وقت.'],
+        ['البروفايل', 'اسمك ونومك ومواعيدك وحسابك. التحدي والأصدقاء بقوا في تاب الأصدقاء. ومن هنا تفتح الشرح الكامل في أي وقت.'],
       ],
       aiBtn: 'اسأل AI',
       aiTitle: 'اسأل AI عن المحاضرة دي',
@@ -3525,7 +3585,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
       appTitle: 'Senny',
       langBtn: 'عربي',
-      tabs: { day: 'My Day', schedule: 'Schedule', exams: 'Exams', subjects: 'Subjects' },
+      tabs: { day: 'My Day', schedule: 'Schedule', exams: 'Exams', subjects: 'Subjects', friends: 'Friends' },
       greetingAm: (n) => 'Good morning' + (n ? ', ' + n : ''),
       greetingPm: (n) => 'Good evening' + (n ? ', ' + n : ''),
       myDaySub: 'Everything on you today, in one place',
@@ -3627,7 +3687,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       avSec: 'Your avatar',
       avSub: 'Pick the look that represents you - it shows on your profile and the leaderboard',
       lbTitle: 'Leaderboard',
-      lbSub: 'A weekly ranking with no names at all: just avatars and points. Points come from your real work: 10 per finished lecture, 10 per study hour, 5 per active day.',
+      lbSub: 'A weekly ranking for all students. You can hide your name (shown as Anonymous student) and keep your points visible. Points: 1 per focus minute and 1 per finished task (up to 10 a day).',
       lbReset: 'Points reset at the start of every week',
       lbJoin: 'Count me in',
       lbLeave: 'Leave the board',
@@ -3643,8 +3703,8 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       // v20
       lbNameShow: 'Show my name on the board',
       lbNameHide: 'Keep me anonymous',
-      lbNameHint: 'Anonymous by default: avatar and points only. If you turn the name on, your first name from the profile shows.',
-      lbNameOff: 'Shown as anonymous (avatar and points only)',
+      lbNameHint: 'Your name is hidden on the public board (Anonymous student). If you turn the name on, your first name from the profile shows.',
+      lbNameOff: 'Shown as: Anonymous student',
       lbTestBtn: 'Test the connection',
       lbTestOk: 'All good, the board is live and your score was accepted',
       lbTestFail: 'The write was refused: ',
@@ -3653,7 +3713,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       lbPermErr: 'The Firebase rules are not set up. They need to be published once from the Firebase console (the rules in FIRESTORE_RULES).',
       lbSignInFirst: 'You need an account or an anonymous sign-in before your score can be saved',
       chTitle: 'Weekly challenge',
-      chSub: 'Create a code and send it to your friends. Everyone in the group sees the others ranked by points, without names.',
+      chSub: 'Create a code and send it to your friends. Everyone in the room sees each other\'s first name and points.',
       chCreate: 'Create a challenge',
       chJoinPh: 'Challenge code',
       chJoinBtn: 'Join',
@@ -3742,6 +3802,34 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       notePh: 'Write anything to remember about this lecture...',
       remTitle: 'Study reminder',
       mascotTitle: 'Little mascot', mascotSub: 'Your avatar peeks from the edge of the screen with a short line, then leaves. It never shows while the study timer runs, at night, or when the app is closed. Tap it to dismiss. This setting is for this device only.', mascotEvery: (m) => 'Every ' + m + ' min', mascotOff: 'Off', mascotTry: 'Try it now',
+      // v31: friends tab, time based points, names in rooms
+      frTitle: 'Friends', anonName: 'Anonymous student', frNameFallback: 'Your friend',
+      frIntro: 'Add friends with a code and see each other\'s numbers: study minutes, streak and points. Nobody sees anything about you until you accept.',
+      frNoNet: 'Friends need internet and an account (anonymous or email).', frEnable: 'Turn on Friends', frLoading: 'Loading friends...',
+      frEnableSub: 'You get a short code to send to your friends. Your first name and avatar show only to people who are accepted, and the numbers follow what you choose.',
+      frErr: 'Connection problem. Try again.', frPermErr: 'The new Firebase rules are not published yet (file FIRESTORE_RULES-v31).',
+      frMyCode: 'Your code', frCopy: 'Copy', frShare: 'Send', frCopied: 'Code copied ✓', frShareText: (c) => 'Add me on Senny, my code: ' + c,
+      frAddTitle: 'Add a friend', frAddPh: 'Friend code', frAddBtn: 'Send request', frAddNeed: 'Type the code first (6 letters or digits)',
+      frNotFound: 'That code does not exist', frSelf: 'That is your own code 🙂', frAlready: 'You are already friends', frSent: 'Request sent. When they accept, they show up in Friends.',
+      frFull: 'You reached the limit: 30 friends', frPending: 'Request already sent, waiting for a reply', frAutoAcc: 'They had sent you a request, so it was accepted and you are friends ✓',
+      frReqTitle: 'Friend requests', frReqFrom: (c) => 'Request from code ' + c, frReqOut: 'Your request is still waiting for a reply',
+      frAccept: 'Accept', frReject: 'Reject', frCancel: 'Cancel', frAccepted: 'You are friends now ✓',
+      frListTitle: 'Your friends', frEmpty: 'No friends yet. Send your code or type a friend\'s code above.', frSortNote: 'Sorted by this week\'s minutes',
+      frToday: 'Today', frWeek: 'Week', frMin: (m) => m + ' min', frStreak: 'streak', frPts: 'pts',
+      frActive: '● Studying now', frPausedLbl: 'Sharing paused', frWait: '...', frRefresh: 'Refresh',
+      frCheerSent: 'Cheer sent ✓', frCheerWait: 'Wait a minute before the next cheer', frCheerGot: (n, k) => (n || 'A friend') + ' sent you a ' + (k === 'fire' ? '🔥' : '👏'),
+      frCheerMany: (n) => 'You got ' + n + ' cheers from friends',
+      frRemove: 'Remove', frRemoveAsk: (n) => 'Remove ' + n + ' from your friends? Neither of you will see the other\'s numbers.', frRemoveYes: 'Yes, remove', frNo: 'No', frRemoved: 'Removed',
+      frPrivTitle: 'Who sees what', frPrivAll: 'All numbers', frPrivMin: 'Minutes only', frPrivOff: 'Pause sharing',
+      frPrivAllD: 'Friends see your minutes, streak, points and whether you are studying now.', frPrivMinD: 'Friends see your study minutes only.',
+      frPrivOffD: 'No numbers are shown to friends. They still see your name and avatar.',
+      frPrivNote: 'Subjects and task details are never shared, only numbers. Friends see the first name from your profile.',
+      ptsTitle: 'Your points', ptsWeek: (m, p) => 'This week: ' + m + ' study minutes · ' + p + ' points',
+      ptsHow: 'Each focus minute = 1 point (a 50 minute session = 50 points). Each finished task = 1 point, up to 10 a day. Time counts only while the app is open in front of you and stops when you leave. Sessions under 10 minutes do not count, and time points stop at 480 a day (8 hours).',
+      ptsHonest: 'Points are calculated on your device, so someone could fake them. They are for friendly competition, and any prize will need the winners checked by hand.',
+      roomWarn: 'Your name (the first name from your profile) and your points will be visible to everyone in this room. Continue?', roomYes: 'Yes, continue and show my name', roomNo: 'No, cancel',
+      roomOld: 'The weekly challenge now shows your first name and points to everyone in the room. Do you agree?', roomOldNo: 'Leave the room',
+
       remSub: 'Reminds you if today\'s goal is not done. Works while the app is open (no server to send it when closed).',
       remOn: 'On',
       remOff: 'Turn on',
@@ -3759,7 +3847,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
         ['Schedule', 'Build your schedule: tap a free time, pick a subject and a task, or tap "Suggest a schedule". The days are at the top, and you can edit any block with the pencil.'],
         ['Subjects', 'Your year\'s subjects are ready. Tap one to open its own screen, add its exam and lectures. Each lecture has notes, files and an AI helper.'],
         ['Exams', 'Exam dates and countdowns. As an exam gets closer the plan focuses on the lectures you have not finished.'],
-        ['Profile', 'Your name, sleep, fixed times, account and the weekly challenge with friends. Open the full guide from here any time.'],
+        ['Profile', 'Your name, sleep, fixed times and account. The challenge and friends moved to the Friends tab. Open the full guide from here any time.'],
       ],
       aiBtn: 'Ask AI',
       aiTitle: 'Ask AI about this lecture',
@@ -4107,6 +4195,8 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
   } catch (e) {}
   // v20: a run is either one of the presets or a custom length (the 10-minute review)
   const focusMinOf = (r) => (r && r.customMin) || Scheduler.FOCUS_PRESETS[(r && r.preset) || 0].focusMin;
+  // v31: minutes the app was really open in front of the student during this focus run
+  const focusActiveMin = (r) => Math.floor(Math.max(0, Number(r && r.activeMs) || 0) / 60000);
   const persistFocus = () => { try { focusRun ? localStorage.setItem(FKEY, JSON.stringify(focusRun)) : localStorage.removeItem(FKEY); } catch (e) {} };
 
   const L = () => I18N[state.lang === 'en' ? 'en' : 'ar'];
@@ -4287,6 +4377,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
         clearTimeout(lbTimer);
         lbTimer = setTimeout(pushLbScore, 30000); // v21.1: was 5s
       }
+      if (fr.on) frSchedule(30000);
       if ((state.challenge || {}).code) {
         clearTimeout(chTimer);
         chTimer = setTimeout(pushChScore, 5000);
@@ -4315,10 +4406,12 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
 
   // What we publish: avatar + points always, the first name only when the
   // student turned the name switch on (an empty string keeps the row anonymous).
-  function lbPayload() {
+  function lbPayload(room) {
     const ws = Scheduler.weekScore(state, todayStr());
-    const nm = (state.leaderboard && state.leaderboard.showName)
-      ? String((state.profile.name || '').trim().split(/\s+/)[0] || '').slice(0, 24) : '';
+    // v31: in a room members always see the first name, but only after the student agreed to that
+    // (the warning). A room joined before v31 stays as it was until the student answers the warning.
+    const first = String((state.profile.name || '').trim().split(/\s+/)[0] || '').slice(0, 24);
+    const nm = (room && roomAcked()) ? first : ((state.leaderboard && state.leaderboard.showName) ? first : '');
     return { avatar: (avatarById(state.profile.avatar) || {}).id || 'av01', score: ws.score, updatedAt: Date.now(), name: nm };
   }
 
@@ -4351,7 +4444,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
   let chPushKey = '', chPushAt = 0;
   async function pushChScore(force) {
     if (!session || !fbDb || !chCode()) return;
-    const payload = lbPayload();
+    const payload = lbPayload(true);
     const key = lbKeyOf(payload);
     if (!force && key === chPushKey && Date.now() - chPushAt < 600000) return; // v21.1
     chPushKey = key; chPushAt = Date.now();
@@ -4372,6 +4465,268 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
     const el = $('chList'); if (el) el.innerHTML = chListHtml();
   }
 
+
+  /* ---- v31: friends (in-app only). Everything lives in Firestore, never in the saved state. ----
+     friend_stats/{uid}   the small numbers document friends can read once accepted
+     friend_codes/{CODE}  code -> uid, so a request can be sent by code
+     friendships/{pair}   pending or accepted, one per pair of people
+     cheers/{to_from}     a clap or a fire, shown once as an in-app notice */
+  const FR_MAX = 30, FR_FLAG = KEY + '.fr', ROOM_ACK = KEY + '.roomack';
+  const fr = { loaded: false, loading: false, on: false, code: '', share: 'all', list: [], stats: {}, statsAt: 0, statsKey: '',
+    cheers: [], unsubF: null, unsubC: null, pushKey: '', pushAt: 0, pushTimer: null, lastActive: 0, cheerAt: {}, seen: {},
+    ask: null, msg: '', busy: false, err: '' };
+  let roomAsk = null; // { mode: 'create' | 'join', code }
+  const frMe = () => (session && session.uid) || '';
+  const frPair = (a, b) => (a < b ? a + '_' + b : b + '_' + a);
+  const frFirst = () => String((state.profile.name || '').trim().split(/\s+/)[0] || '').slice(0, 24);
+  const frErrText = (e) => (/permission|denied|insufficient/i.test(String((e && (e.code || e.message)) || e)) ? L().frPermErr : L().frErr);
+  const roomAcked = () => { try { return !!chCode() && localStorage.getItem(ROOM_ACK) === chCode(); } catch (e) { return false; } };
+  const roomSetAck = (c) => { try { localStorage.setItem(ROOM_ACK, c); } catch (e) { /* ignore */ } };
+  function frActiveUntil() {
+    return (focusRun && focusRun.phase === 'focus' && !focusRun.paused && focusRun.endsAt && document.visibilityState === 'visible') ? focusRun.endsAt : 0;
+  }
+  // What friends can read. 'off' drops every number, 'min' keeps only the minutes.
+  function frPayload() {
+    const today = todayStr(), ws = Scheduler.weekScore(state, today);
+    const p = { name: frFirst(), avatar: (avatarById(state.profile.avatar) || {}).id || 'av01', code: fr.code, share: fr.share, updatedAt: Date.now() };
+    if (fr.share === 'off') return p;
+    p.day = today; p.week = ws.week; p.todayMin = Math.min(480, ws.todayMin); p.weekMin = Math.min(3360, ws.minutes);
+    if (fr.share === 'all') {
+      let cur = 0; try { cur = streakCalc(today).cur; } catch (e) { cur = 0; }
+      p.streak = Math.min(3650, cur); p.points = Math.min(3500, ws.score); p.activeUntil = frActiveUntil();
+    }
+    return p;
+  }
+  const frKeyOf = (p) => JSON.stringify(Object.assign({}, p, { updatedAt: 0 }));
+  async function frPush(force) {
+    if (!fr.on || !session || !fbDb || !fr.code) return;
+    const p = frPayload(), k = frKeyOf(p);
+    if (!force && k === fr.pushKey && Date.now() - fr.pushAt < 1800000) return;
+    fr.pushKey = k; fr.pushAt = Date.now();
+    try { await fbDb.collection('friend_stats').doc(frMe()).set(p); fr.err = ''; }
+    catch (e) { fr.pushKey = ''; fr.err = frErrText(e); }
+  }
+  function frSchedule(ms) { if (!fr.on) return; clearTimeout(fr.pushTimer); fr.pushTimer = setTimeout(() => frPush(), ms || 30000); }
+  // called from tick(): a timer start or stop is one small write, never a per-second one
+  function frTick() {
+    if (!fr.on) return;
+    const a = frActiveUntil();
+    if (a !== fr.lastActive) { fr.lastActive = a; frSchedule(2500); }
+  }
+  document.addEventListener('visibilitychange', () => { try { if (fr.on && document.visibilityState === 'hidden') frPush(true); frTick(); } catch (e) { /* ignore */ } });
+
+  function frDetach() {
+    if (fr.unsubF) { try { fr.unsubF(); } catch (e) { /* ignore */ } }
+    if (fr.unsubC) { try { fr.unsubC(); } catch (e) { /* ignore */ } }
+    fr.unsubF = null; fr.unsubC = null; clearTimeout(fr.pushTimer);
+  }
+  function frReset() {
+    frDetach();
+    Object.assign(fr, { loaded: false, loading: false, on: false, code: '', share: 'all', list: [], stats: {}, statsAt: 0, statsKey: '', cheers: [], pushKey: '', lastActive: 0, ask: null, msg: '', err: '' });
+    try { localStorage.removeItem(FR_FLAG); } catch (e) { /* ignore */ }
+  }
+  function frRefreshUI() {
+    const a = $('frReqBox'), b = $('frListBox');
+    if (a) a.innerHTML = frReqHtml();
+    if (b) b.innerHTML = frListHtml();
+    const d = document.querySelector('#tabs button[data-tab="friends"]');
+    if (d) d.classList.toggle('dot', frBadge() > 0);
+  }
+  const frBadge = () => fr.cheers.filter((c) => frIsFriend(c.from)).length + fr.list.filter((f) => f.status === 'pending' && !f.mine).length;
+  const frIsFriend = (u) => fr.list.some((f) => f.status === 'accepted' && f.other === u);
+
+  // read my own stats document: it holds my code and sharing choice (so a second device finds them)
+  async function frLoad() {
+    if (!session || !fbDb || fr.loading) return;
+    fr.loading = true;
+    try {
+      const d = await fbDb.collection('friend_stats').doc(frMe()).get();
+      if (d.exists) {
+        const v = d.data() || {};
+        fr.on = true; fr.code = String(v.code || ''); fr.share = ['all', 'min', 'off'].indexOf(v.share) >= 0 ? v.share : 'all';
+        try { localStorage.setItem(FR_FLAG, '1'); } catch (e) { /* ignore */ }
+        frAttach();
+        frSchedule(4000);
+      } else fr.on = false;
+      fr.err = '';
+    } catch (e) { fr.err = frErrText(e); }
+    fr.loading = false; fr.loaded = true;
+    if (tab === 'friends') render();
+  }
+  async function frEnable() {
+    if (!cloudEnabled() || !fbAuth) return toast(L().frNoNet);
+    if (!session) { try { await fbAuth.signInAnonymously(); } catch (e) { return toast(L().lbAnonErr); } }
+    fr.busy = true; render();
+    let lastErr = null;
+    for (let i = 0; i < 6; i++) {
+      const code = genChCode();
+      try {
+        fr.code = code; fr.share = 'all';
+        const p = frPayload();
+        const b = fbDb.batch();
+        b.set(fbDb.collection('friend_stats').doc(frMe()), p);
+        b.set(fbDb.collection('friend_codes').doc(code), { uid: frMe(), createdAt: Date.now() });
+        await b.commit();
+        fr.on = true; fr.loaded = true; fr.pushKey = frKeyOf(p); fr.pushAt = Date.now(); fr.err = '';
+        try { localStorage.setItem(FR_FLAG, '1'); } catch (e) { /* ignore */ }
+        frAttach(); fr.busy = false; return render();
+      } catch (e) { lastErr = e; }
+    }
+    fr.busy = false; fr.code = ''; fr.err = frErrText(lastErr); toast(fr.err); render();
+  }
+  function frAttach() {
+    const me = frMe(); if (!me || !fbDb) return;
+    if (!fr.unsubF) {
+      fr.unsubF = fbDb.collection('friendships').where('members', 'array-contains', me).limit(80).onSnapshot((snap) => {
+        fr.list = snap.docs.map((d) => { const v = d.data() || {}; return { pair: d.id, other: (v.members || []).filter((m) => m !== me)[0] || '', status: v.status, from: v.from, mine: v.from === me, fromCode: String(v.fromCode || '') }; });
+        frRefreshUI();
+        if (tab === 'friends') frFetchStats();
+      }, (e) => { fr.err = frErrText(e); });
+    }
+    if (!fr.unsubC) {
+      fr.unsubC = fbDb.collection('cheers').where('to', '==', me).limit(60).onSnapshot((snap) => {
+        fr.cheers = snap.docs.map((d) => Object.assign({ id: d.id }, d.data() || {}));
+        const fresh = fr.cheers.filter((c) => !fr.seen[c.id] && frIsFriend(c.from));
+        fresh.forEach((c) => { fr.seen[c.id] = 1; });
+        if (fresh.length === 1) { const st = fr.stats[fresh[0].from]; toast(L().frCheerGot(st && st.name, fresh[0].kind)); }
+        else if (fresh.length > 1) toast(L().frCheerMany(fresh.length));
+        frRefreshUI();
+      }, () => { /* the cheer box is optional */ });
+    }
+  }
+  // one read per accepted friend, at most every 5 minutes, only while the Friends tab is open
+  async function frFetchStats(force) {
+    if (!fr.on || !session || !fbDb) return;
+    const ids = fr.list.filter((f) => f.status === 'accepted').map((f) => f.other).sort();
+    const key = ids.join(',');
+    if (!force && key === fr.statsKey && Date.now() - fr.statsAt < 300000) return;
+    fr.statsKey = key; fr.statsAt = Date.now();
+    await Promise.all(ids.map((u) => fbDb.collection('friend_stats').doc(u).get().then((d) => { fr.stats[u] = d.exists ? d.data() : null; }).catch(() => { /* keep the old one */ })));
+    frRefreshUI();
+  }
+  function frClearCheers() {
+    // a cheer is shown once on the Friends tab, then removed
+    const mine = fr.cheers.slice();
+    mine.forEach((c) => { try { fbDb.collection('cheers').doc(c.id).delete().catch(() => {}); } catch (e) { /* ignore */ } });
+  }
+  async function frSendRequest(raw) {
+    const code = String(raw || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!/^[A-Z2-9]{6}$/.test(code)) return toast(L().frAddNeed);
+    if (code === fr.code) return toast(L().frSelf);
+    if (fr.list.length >= FR_MAX * 2) return toast(L().frFull);
+    if (fr.list.filter((f) => f.status === 'accepted').length >= FR_MAX) return toast(L().frFull);
+    try {
+      const c = await fbDb.collection('friend_codes').doc(code).get();
+      if (!c.exists) return toast(L().frNotFound);
+      const other = String((c.data() || {}).uid || '');
+      if (!other || other === frMe()) return toast(L().frSelf);
+      const ref = fbDb.collection('friendships').doc(frPair(frMe(), other));
+      const ex = await ref.get();
+      if (ex.exists) {
+        const v = ex.data() || {};
+        if (v.status === 'accepted') return toast(L().frAlready);
+        if (v.from === frMe()) return toast(L().frPending);
+        await ref.update({ status: 'accepted' }); fr.statsKey = ''; toast(L().frAutoAcc); return;
+      }
+      const m = [frMe(), other].sort();
+      await ref.set({ members: m, status: 'pending', from: frMe(), fromCode: fr.code, createdAt: Date.now() });
+      toast(L().frSent);
+    } catch (e) { toast(frErrText(e)); }
+  }
+  async function frAccept(pair) {
+    if (fr.list.filter((f) => f.status === 'accepted').length >= FR_MAX) return toast(L().frFull);
+    try { await fbDb.collection('friendships').doc(pair).update({ status: 'accepted' }); fr.statsKey = ''; toast(L().frAccepted); } catch (e) { toast(frErrText(e)); }
+  }
+  async function frDelete(pair) { try { await fbDb.collection('friendships').doc(pair).delete(); fr.statsKey = ''; } catch (e) { toast(frErrText(e)); } }
+  async function frCheer(u, kind) {
+    if (!frIsFriend(u)) return;
+    if (Date.now() - (fr.cheerAt[u] || 0) < 60000) return toast(L().frCheerWait);
+    fr.cheerAt[u] = Date.now();
+    try {
+      await fbDb.collection('cheers').doc(u + '_' + frMe()).set({ to: u, from: frMe(), kind: kind === 'fire' ? 'fire' : 'clap', at: window.firebase.firestore.FieldValue.serverTimestamp() });
+      toast(L().frCheerSent);
+    } catch (e) { toast(/permission|denied/i.test(String((e && e.code) || e)) ? L().frCheerWait : frErrText(e)); }
+  }
+  async function frSetShare(mode) {
+    if (['all', 'min', 'off'].indexOf(mode) < 0) return;
+    fr.share = mode; render(); await frPush(true);
+  }
+
+  // ----- Friends tab -----
+  function frStale(st) {
+    if (!st) return null;
+    const today = todayStr(), wk = Scheduler.weekKey(today);
+    return { name: String(st.name || ''), avatar: st.avatar, share: st.share || 'all', todayMin: st.day === today ? (st.todayMin || 0) : 0,
+      weekMin: st.week === wk ? (st.weekMin || 0) : 0, streak: st.streak, points: st.week === wk ? st.points : (st.points != null ? 0 : undefined),
+      active: (st.activeUntil || 0) > Date.now() && st.share === 'all' };
+  }
+  function frReqHtml() {
+    const inc = fr.list.filter((f) => f.status === 'pending' && !f.mine), out = fr.list.filter((f) => f.status === 'pending' && f.mine);
+    if (!inc.length && !out.length) return '';
+    let h = `<div class="card"><b>📨 ${esc(L().frReqTitle)}</b>`;
+    inc.forEach((f) => { h += `<div class="row frreq"><span class="grow"><span dir="ltr" class="chcode sml">${esc(f.fromCode)}</span><div class="muted sml">${esc(L().frReqFrom(f.fromCode))}</div></span>
+      <button class="btn sm" data-act="frAccept" data-p="${esc(f.pair)}">${esc(L().frAccept)}</button><button class="btn ghost sm" data-act="frReject" data-p="${esc(f.pair)}">${esc(L().frReject)}</button></div>`; });
+    out.forEach((f) => { h += `<div class="row frreq"><span class="grow muted sml">${esc(L().frReqOut)}</span><button class="btn ghost sm" data-act="frReject" data-p="${esc(f.pair)}">${esc(L().frCancel)}</button></div>`; });
+    return h + '</div>';
+  }
+  function frRowHtml(f) {
+    const st = frStale(fr.stats[f.other]);
+    const loaded = Object.prototype.hasOwnProperty.call(fr.stats, f.other);
+    const nm = st && st.name ? st.name : L().frNameFallback;
+    let body;
+    if (!loaded) body = `<div class="muted sml">${esc(L().frWait)}</div>`;
+    else if (!st) body = `<div class="muted sml">${esc(L().frPausedLbl)}</div>`;
+    else if (st.share === 'off') body = `<div class="muted sml">${esc(L().frPausedLbl)}</div>`;
+    else {
+      body = `<div class="muted sml">${esc(L().frToday)} <b>${esc(L().frMin(st.todayMin))}</b> · ${esc(L().frWeek)} <b>${esc(L().frMin(st.weekMin))}</b></div>`;
+      if (st.share === 'all') body += `<div class="muted sml">🔥 ${st.streak || 0} ${esc(L().frStreak)} · <b>${st.points || 0}</b> ${esc(L().frPts)}</div>`;
+    }
+    const active = st && st.active ? `<span class="fract">${esc(L().frActive)}</span>` : '';
+    let ctl;
+    if (fr.ask && fr.ask.pair === f.pair) ctl = `<div class="frask"><span class="muted sml">${esc(L().frRemoveAsk(nm))}</span><span class="row" style="gap:6px;margin-top:6px"><button class="btn danger sm" data-act="frRemoveYes" data-p="${esc(f.pair)}">${esc(L().frRemoveYes)}</button><button class="btn ghost sm" data-act="frRemoveNo">${esc(L().frNo)}</button></span></div>`;
+    else ctl = `<span class="frbtns"><button class="btn ghost sm" data-act="frCheer" data-u="${esc(f.other)}" data-k="clap" aria-label="clap">👏</button><button class="btn ghost sm" data-act="frCheer" data-u="${esc(f.other)}" data-k="fire" aria-label="fire">🔥</button><button class="btn ghost sm" data-act="frRemoveAsk" data-p="${esc(f.pair)}">${esc(L().frRemove)}</button></span>`;
+    return `<div class="frrow"><span class="avchip">${avatarSvg(st ? st.avatar : 'av01')}</span><div class="grow"><b>${esc(nm)}</b> ${active}${body}</div>${ctl}</div>`;
+  }
+  function frListHtml() {
+    const acc = fr.list.filter((f) => f.status === 'accepted');
+    if (!acc.length) return `<div class="muted">${esc(L().frEmpty)}</div>`;
+    const wk = (f) => { const st = frStale(fr.stats[f.other]); return st && st.share !== 'off' ? st.weekMin : -1; };
+    acc.sort((a, b) => wk(b) - wk(a));
+    return acc.map(frRowHtml).join('');
+  }
+  function friendsTop() {
+    const ws = Scheduler.weekScore(state, todayStr());
+    return `<div class="card"><b>⭐ ${esc(L().ptsTitle)}</b>
+      <div style="margin-top:6px"><b>${esc(L().ptsWeek(ws.minutes, ws.score))}</b></div>
+      <div class="muted sml" style="margin-top:6px">${esc(L().ptsHow)}</div>
+      <div class="muted sml" style="margin-top:6px">${esc(L().ptsHonest)}</div></div>`;
+  }
+  function friendsSection() {
+    if (!cloudEnabled()) return `<div class="card"><b>👫 ${esc(L().frTitle)}</b><div class="muted" style="margin-top:6px">${esc(L().frNoNet)}</div></div>`;
+    const head = `<div class="card"><b>👫 ${esc(L().frTitle)}</b><div class="muted" style="margin-top:4px">${esc(L().frIntro)}</div>`;
+    if (!session || (fr.loaded && !fr.on) || (session && !fr.loaded && !fr.loading && fr.err)) {
+      return head + `<div class="muted sml" style="margin-top:8px">${esc(L().frEnableSub)}</div>${fr.err ? `<div class="muted err" style="margin-top:6px">${esc(fr.err)}</div>` : ''}
+        <div style="margin-top:10px"><button class="btn" data-act="frEnable"${fr.busy ? ' disabled' : ''}>${esc(L().frEnable)}</button></div></div>`;
+    }
+    if (!fr.loaded) return head + `<div class="muted" style="margin-top:8px">${esc(L().frLoading)}</div></div>`;
+    let h = head + `<div class="row" style="margin-top:10px"><span class="grow"><span class="muted sml">${esc(L().frMyCode)}</span><br><b class="chcode" dir="ltr">${esc(fr.code)}</b></span>
+      <button class="btn ghost sm" data-act="frCopy">${esc(L().frCopy)}</button><button class="btn sm" data-act="frShare">${esc(L().frShare)}</button></div>
+      <div class="row" style="margin-top:12px"><input id="frAdd" class="grow" placeholder="${esc(L().frAddPh)}" dir="ltr" maxlength="8" style="text-transform:uppercase" autocomplete="off">
+      <button class="btn" data-act="frAddBtn">${esc(L().frAddBtn)}</button></div></div>`;
+    h += `<div id="frReqBox">${frReqHtml()}</div>`;
+    h += `<div class="card"><div class="row"><b class="grow">🏅 ${esc(L().frListTitle)}</b><button class="btn ghost sm" data-act="frRefresh">${esc(L().frRefresh)}</button></div>
+      <div class="muted sml" style="margin:2px 0 8px">${esc(L().frSortNote)}</div><div id="frListBox">${frListHtml()}</div></div>`;
+    const pv = [['all', L().frPrivAll, L().frPrivAllD], ['min', L().frPrivMin, L().frPrivMinD], ['off', L().frPrivOff, L().frPrivOffD]];
+    h += `<div class="card"><b>🔒 ${esc(L().frPrivTitle)}</b>
+      <div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap">${pv.map((x) => `<button class="btn ${fr.share === x[0] ? '' : 'ghost'} sm grow" data-act="frShareSet" data-m="${x[0]}">${esc(x[1])}</button>`).join('')}</div>
+      <div class="muted sml" style="margin-top:8px">${esc(pv.filter((x) => x[0] === fr.share)[0][2])}</div>
+      <div class="muted sml" style="margin-top:6px">${esc(L().frPrivNote)}</div></div>`;
+    return h;
+  }
+  function viewFriends() {
+    return friendsTop() + friendsSection() + leaderboardCard() + challengeCard();
+  }
+
   // a friendly line for a Firebase error code, without dumping raw internals
   function fbErrText(code) {
     if (!code) return '';
@@ -4382,8 +4737,8 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
   }
 
   function lbRowHtml(r, i, me, pts) {
-    const nm = r.name ? `<span class="lbname">${esc(r.name)}</span>` : '';
-    return `<div class="row lbrow${me ? ' me' : ''}" style="margin-top:6px"><span class="lbrank">${i + 1}</span><span class="avchip">${avatarSvg(r.avatar)}</span><span class="grow">${nm}${me ? `<span class="muted">${r.name ? ' · ' : ''}${esc(L().lbYou)}</span>` : ''}</span><b>${r.score} ${esc(pts)}</b></div>`;
+    const nm = r.name ? `<span class="lbname">${esc(r.name)}</span>` : `<span class="lbname muted">${esc(L().anonName)}</span>`;
+    return `<div class="row lbrow${me ? ' me' : ''}" style="margin-top:6px"><span class="lbrank">${i + 1}</span><span class="avchip">${avatarSvg(r.avatar)}</span><span class="grow">${nm}${me ? `<span class="muted"> · ${esc(L().lbYou)}</span>` : ''}</span><b>${r.score} ${esc(pts)}</b></div>`;
   }
 
   function lbListHtml() {
@@ -4398,7 +4753,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
     const top = lbRows.slice(0, 3), rest = lbRows.slice(3);
     h += '<div class="lbtop">' + top.map((r, i) => {
       const me = isMe(r); if (me) mine = true;
-      return `<div class="lbtopcard${me ? ' me' : ''}"><span class="lbmedal">${medals[i]}</span><span class="lbav">${avatarSvg(r.avatar)}</span>${r.name ? `<span class="lbname">${esc(r.name)}</span>` : ''}<b class="lbscore">${r.score}</b><span class="muted sml">${esc(L().lbPts)}${me ? ' · ' + esc(L().lbYou) : ''}</span></div>`;
+      return `<div class="lbtopcard${me ? ' me' : ''}"><span class="lbmedal">${medals[i]}</span><span class="lbav">${avatarSvg(r.avatar)}</span><span class="lbname${r.name ? '' : ' muted'}">${esc(r.name || L().anonName)}</span><b class="lbscore">${r.score}</b><span class="muted sml">${esc(L().lbPts)}${me ? ' · ' + esc(L().lbYou) : ''}</span></div>`;
     }).join('') + '</div>';
     rest.forEach((r, i) => { const me = isMe(r); if (me) mine = true; h += lbRowHtml(r, i + 3, me, L().lbPts); });
     if (!mine && uid0) h += `<div class="muted" style="margin-top:8px">${esc(L().lbOut)}</div>`;
@@ -4477,6 +4832,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
           await loadCloud();
           attachCloud();
           if (state.leaderboard && state.leaderboard.on) { pushLbScore(); fetchLbTop(); }
+          try { if (localStorage.getItem(FR_FLAG) === '1' && !fr.loaded) frLoad(); } catch (e) { /* ignore */ }
         } else if (state.leaderboard && state.leaderboard.on) { detachCloud(); fetchLbTop(); } // v21.1: only when the board is on
         // v21.2: tell them once that an anonymous account does not travel between devices
         if (session && !session.email) {
@@ -4537,7 +4893,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
     } catch (e) { /* ignore */ }
     try { if (fbAuth) await fbAuth.signOut(); } catch (e) { /* ignore */ }
     await wipeLocal();
-    session = null; authSkipped = false; setSync('');
+    session = null; authSkipped = false; setSync(''); frReset(); roomAsk = null;
     tab = 'day'; prevTab = 'day'; openSubject = null; fabOpen = false; focusRun = null;
     try { localStorage.removeItem(FKEY); } catch (e) { /* ignore */ }
     attMeta = {}; attOpen = null; attPlay = null; attUsage = null;
@@ -5154,6 +5510,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
         'Start Studying بيعرض اللي في خطة يومك بس.',
         'كل مادة بتفتح شاشتها لوحدها، وأسماء المواد بالإنجليزي.',
         'إعدادات اليوم (النوم والمواعيد والورك أوت) بتتزامن صح بين الجهازين.',
+        'جديد: تاب الأصدقاء: ضيف صحابك بكود قصير وشوفوا دقايق المذاكرة والستريك والنقط، وشجّعوا بعض بـ 👏 و 🔥. النقط بقت بالوقت: كل دقيقة تركيز نقطة. وفي غرف التحدي اسمك بيظهر للأعضاء (بنسألك قبل ما تدخل).',
         'جديد: 25 أفتار (الـ15 القدام اتغيّروا شكلهم والـ10 جداد)، وأفتار صغير بيطلّ من حافة الشاشة بجملة تشجيع كل شوية. تقدر تظبط الوقت أو تقفله من البروفايل.',
         'التذكير ونسبة "المخطط vs المنجز" الأسبوعية بقوا بيتحسبوا على الخطة اللي انت حطيتها في الجدول.',
         'جديد: حدد ساعات المذاكرة لكل يوم، وضيف جدول الكلية لكذا يوم مرة واحدة. الاقتراح بيملى الأوقات الفاضية بس ويحذرك لو اليوم زحمة.',
@@ -5162,6 +5519,10 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       why: 'بتفيدك ازاي',
       fix: 'لو حاجة مش مظبوطة',
       topics: [
+        { i: '👫', t: 'الأصدقاء والنقط',
+          steps: ['افتح تاب "الأصدقاء" (آخر تاب) وفعّل الأصدقاء، هيطلعلك كود قصير. ابعته لصاحبك.', 'اكتب كود صاحبك واضغط "ابعت طلب". لما يقبل بتظهروا لبعض. قبل القبول محدش بيشوف أي حاجة عن التاني.', 'القايمة بتعرض دقايق النهارده والأسبوع والستريك والنقط، ومترتبة بدقايق الأسبوع. تقدر تشجع صاحبك بـ 👏 أو 🔥.', 'من "مين يشوف إيه" اختار كل الأرقام أو الدقايق بس أو وقّف المشاركة. تقدر تشيل أي صاحب في أي وقت.', 'النقط: كل دقيقة تركيز نقطة، وكل مهمة نقطة (لحد 10 في اليوم). الوقت بيتحسب والتطبيق مفتوح قدامك بس.'],
+          why: 'منافسة خفيفة بين الصحاب بالأرقام بس. المواد وتفاصيل المهام عمرها ما بتتشارك.',
+          fix: 'لو الأصدقاء مش بيفتحوا: اتأكد من النت. النقط بتتحسب على جهازك فمش مضمونة ضد التلاعب، فأي جايزة هنراجعها بإيدينا.' },
         { i: '🦷', t: 'الأفتار الصغير والأفتارات',
           steps: ['من البروفايل اختار الأفتار اللي يمثلك من 25 شكل.', 'الأفتار بتاعك بيطلّ أحيانا من حافة الشاشة (يمين أو شمال أو من فوق) بجملة قصيرة وبيمشي بعد حوالي 10 ثواني.', 'دوس عليه عشان يختفي، أو سيبه.', 'من البروفايل > "الأفتار الصغير" اختار كل 5 أو 10 أو 20 دقيقة، أو اقفله. وفيه زرار "جرّبه دلوقتي".'],
           why: 'تشجيع خفيف بيفكّرك تبدأ أو ترتاح، من غير ضغط. الجمل بتتغيّر حسب وقت اليوم ومذاكرتك وامتحاناتك.',
@@ -5203,7 +5564,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
           why: 'الأماكن الفاضية في الجدول بتتحسب من اللي حددته هنا.',
           fix: 'لو مواعيدك مش بتظهر في الجهاز التاني: اتأكد انك داخل بنفس الإيميل في الاتنين (شوف "الحساب والمزامنة").' },
         { i: '🔥', t: 'الستريك والتحدي',
-          steps: ['الستريك بيزيد لما تذاكر يوم ورا يوم. في البروفايل تلاقي عدد الأيام وأعلى ستريك.', 'لو فاتك يوم تقدر تدوس "استرجع الستريك" (محاولات محدودة في الشهر).', 'لوحة الشطار والتحدي الأسبوعي اختياريين: بتشارك فيهم بنقطك وأفتارك، والاسم مجهول إلا لو انت فعلته.'],
+          steps: ['الستريك بيزيد لما تذاكر يوم ورا يوم. في البروفايل تلاقي عدد الأيام وأعلى ستريك.', 'لو فاتك يوم تقدر تدوس "استرجع الستريك" (محاولات محدودة في الشهر).', 'لوحة الشطار والتحدي الأسبوعي في تاب الأصدقاء. اللوحة العامة اسمك فيها مخفي إلا لو انت فعلته، لكن في أي غرفة تحدي أعضاؤها بيشوفوا اسمك ونقطك (وبنسألك قبل ما تدخل).'],
           why: 'بيحفزك تفتح كل يوم، والنقط بتتحسب من شغلك الحقيقي.',
           fix: 'لو نقطك مش بتظهر: اتأكد من النت ودوس "اختبر الاتصال".' },
         { i: '☁️', t: 'الحساب والمزامنة (جهازين)',
@@ -5228,6 +5589,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       newsBtn: 'Open the updates channel',
       latest: 'Latest changes',
       latestList: [
+        'New: the Friends tab. Add friends with a short code, see study minutes, streak and points, and cheer each other with 👏 and 🔥. Points are now time based: 1 focus minute = 1 point. In challenge rooms your name shows to the members (we ask before you join).',
         'New: 25 avatars (the first 15 were redrawn, 10 are new) and a little mascot: your avatar peeks from the screen edge with a short encouraging line now and then. Set how often, or turn it off, in Profile.',
         'The reminder and the weekly planned vs done percentage now follow the plan you put on the timeline.',
         'New: set study hours per day and add your college timetable to several days at once. Suggest fills real free gaps only and warns when a day is too crowded.',
@@ -5242,6 +5604,10 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       why: 'Why it helps',
       fix: 'If something looks wrong',
       topics: [
+        { i: '👫', t: 'Friends and points',
+          steps: ['Open the Friends tab (the last one) and turn Friends on. You get a short code. Send it to your friend.', 'Type your friend\'s code and tap Send request. Once they accept you see each other. Before that nobody sees anything about the other.', 'The list shows today and week minutes, streak and points, sorted by this week\'s minutes. Cheer a friend with 👏 or 🔥.', 'Under Who sees what choose all numbers, minutes only, or pause sharing. You can remove any friend any time.', 'Points: 1 per focus minute and 1 per task (up to 10 a day). Time counts only while the app is open in front of you.'],
+          why: 'Light friendly competition with numbers only. Subjects and task details are never shared.',
+          fix: 'If Friends does not load, check your internet. Points are calculated on your device so they can be faked, so any prize will be checked by hand.' },
         { i: '🦷', t: 'The little mascot and avatars',
           steps: ['In Profile pick the avatar that is you, from 25.', 'Your avatar sometimes peeks in from the screen edge (right, left or top) with a short line and leaves after about 10 seconds.', 'Tap it to dismiss, or just ignore it.', 'In Profile > Little mascot choose every 5, 10 or 20 minutes, or turn it off. There is also a Try it now button.'],
           why: 'A light nudge to start or to rest, without pressure. The lines change with the time of day, your studying and your exams.',
@@ -5283,7 +5649,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
           why: 'The free gaps in the schedule are worked out from what you set here.',
           fix: 'If these do not show on your other device, check you use the same email on both (see Account & sync).' },
         { i: '🔥', t: 'Streak and challenge',
-          steps: ['The streak grows when you study day after day. Profile shows the days and your best.', 'If you miss a day you can tap "Restore streak" (limited tries each month).', 'The leaderboard and weekly challenge are optional: you share points and an avatar, and your name stays hidden unless you turn it on.'],
+          steps: ['The streak grows when you study day after day. Profile shows the days and your best.', 'If you miss a day you can tap "Restore streak" (limited tries each month).', 'The leaderboard and weekly challenge are in the Friends tab. On the public board your name is hidden unless you turn it on, but in any challenge room the members see your name and points (we ask before you join).'],
           why: 'It gets you opening the app every day, and points come from your real work.',
           fix: 'If your points do not show, check your internet and tap "Test connection".' },
         { i: '☁️', t: 'Account & sync (two devices)',
@@ -5903,29 +6269,6 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       </span><button class="btn ghost" data-act="logout">${esc(L().logoutBtn)}</button></div>`;
     else h += `<p class="muted" style="margin:8px 0 6px">${esc(L().authSub)}</p><button class="btn" data-act="showAuth">${esc(L().authTitle)}</button>`;
     h += '</div>';
-    // v17/v20: opt-in leaderboard - anonymous by default, optional first name
-    const lb = state.leaderboard || { on: false };
-    const ws = Scheduler.weekScore(state, todayStr());
-    h += `<div class="card"><b>🏆 ${esc(L().lbTitle)}</b>
-      <div class="muted" style="margin-top:4px">${esc(L().lbSub)}</div>
-      <div class="muted" style="margin-top:4px">${esc(L().lbReset)}</div>`;
-    if (!lb.on) {
-      h += `<div style="margin-top:10px"><button class="btn" data-act="lbJoin">${esc(L().lbJoin)}</button></div>`;
-    } else {
-      h += `<div class="row" style="margin-top:10px"><span class="avchip">${avatarSvg(state.profile.avatar)}</span><span class="grow"><b>${esc(L().lbYourScore(ws.score, ws.week))}</b></span>
-        <button class="btn ghost sm" data-act="lbLeave">${esc(L().lbLeave)}</button></div>
-        <div class="row" style="margin-top:10px"><span class="grow muted sml">${esc(L().lbNameHint)}</span>
-        <button class="btn ghost sm${lb.showName ? ' on' : ''}" data-act="lbNameToggle">${lb.showName ? esc(L().lbNameHide) : esc(L().lbNameShow)}</button></div>
-        <div class="muted sml" style="margin-top:4px">${esc(lb.showName ? ((state.profile.name || '').trim().split(/\s+/)[0] || '') : L().lbNameOff)}</div>`;
-      if (!cloudEnabled()) h += `<div class="muted" style="margin-top:8px">${esc(L().lbNoCloud)}</div>`;
-      else {
-        h += `<div class="row" style="margin-top:8px"><span class="muted sml grow errline">${lbWriteErr ? esc(L().lbWriteFail) + ' ' + esc(fbErrText(lbWriteErr)) : ''}</span>
-          <button class="btn ghost sm" data-act="lbTest">${esc(L().lbTestBtn)}</button></div>`;
-      }
-      h += `<div class="day" style="margin-top:10px">${esc(L().lbTop)}</div><div id="lbList">${lbListHtml()}</div>`;
-    }
-    h += '</div>';
-    h += challengeCard(); // v20: weekly challenge with friends
     // v19: study reminder (in-app notifications while the app is open)
     h += `<div class="card"><b>🔔 ${esc(L().remTitle)}</b><div class="muted" style="margin-top:4px">${esc(L().remSub)}</div>
       <div class="row" style="margin-top:8px"><input type="time" data-act="remTime" value="${esc(state.remind.time || '20:00')}" style="width:110px">
@@ -6064,14 +6407,47 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
     return h + '</div>';
   }
 
+  // v17/v20/v31: the public weekly leaderboard (moved to the Friends tab in v31)
+  function leaderboardCard() {
+    let h = '';
+    const lb = state.leaderboard || { on: false };
+    const ws = Scheduler.weekScore(state, todayStr());
+    h += `<div class="card"><b>🏆 ${esc(L().lbTitle)}</b>
+      <div class="muted" style="margin-top:4px">${esc(L().lbSub)}</div>
+      <div class="muted" style="margin-top:4px">${esc(L().lbReset)}</div>`;
+    if (!lb.on) {
+      h += `<div style="margin-top:10px"><button class="btn" data-act="lbJoin">${esc(L().lbJoin)}</button></div>`;
+    } else {
+      h += `<div class="row" style="margin-top:10px"><span class="avchip">${avatarSvg(state.profile.avatar)}</span><span class="grow"><b>${esc(L().lbYourScore(ws.score, ws.week))}</b></span>
+        <button class="btn ghost sm" data-act="lbLeave">${esc(L().lbLeave)}</button></div>
+        <div class="row" style="margin-top:10px"><span class="grow muted sml">${esc(L().lbNameHint)}</span>
+        <button class="btn ghost sm${lb.showName ? ' on' : ''}" data-act="lbNameToggle">${lb.showName ? esc(L().lbNameHide) : esc(L().lbNameShow)}</button></div>
+        <div class="muted sml" style="margin-top:4px">${esc(lb.showName ? ((state.profile.name || '').trim().split(/\s+/)[0] || '') : L().lbNameOff)}</div>`;
+      if (!cloudEnabled()) h += `<div class="muted" style="margin-top:8px">${esc(L().lbNoCloud)}</div>`;
+      else {
+        h += `<div class="row" style="margin-top:8px"><span class="muted sml grow errline">${lbWriteErr ? esc(L().lbWriteFail) + ' ' + esc(fbErrText(lbWriteErr)) : ''}</span>
+          <button class="btn ghost sm" data-act="lbTest">${esc(L().lbTestBtn)}</button></div>`;
+      }
+      h += `<div class="day" style="margin-top:10px">${esc(L().lbTop)}</div><div id="lbList">${lbListHtml()}</div>`;
+    }
+    h += '</div>';
+    return h;
+  }
+
   function challengeCard() {
     const code = chCode();
     let h = `<div class="card"><b>👥 ${esc(L().chTitle)}</b><div class="muted" style="margin-top:4px">${esc(L().chSub)}</div>`;
-    if (!code) {
+    if (roomAsk) {
+      // v31: say it clearly before the name goes into a room
+      h += `<div class="roomwarn"><b>⚠️ ${esc(L().roomWarn)}</b>
+        <div class="row" style="margin-top:8px;gap:6px"><button class="btn grow" data-act="roomYes">${esc(L().roomYes)}</button><button class="btn ghost grow" data-act="roomNo">${esc(L().roomNo)}</button></div></div>`;
+    } else if (!code) {
       h += `<div style="margin-top:10px"><button class="btn" data-act="chCreate">${esc(L().chCreate)}</button></div>
         <div class="row" style="margin-top:8px"><input id="chJoin" class="grow" placeholder="${esc(L().chJoinPh)}" dir="ltr" maxlength="8" style="text-transform:uppercase">
         <button class="btn ghost" data-act="chJoinBtn">${esc(L().chJoinBtn)}</button></div>`;
     } else {
+      if (!roomAcked()) h += `<div class="roomwarn"><b>⚠️ ${esc(L().roomOld)}</b>
+        <div class="row" style="margin-top:8px;gap:6px"><button class="btn grow" data-act="roomOldYes">${esc(L().roomYes)}</button><button class="btn ghost grow" data-act="roomOldNo">${esc(L().roomOldNo)}</button></div></div>`;
       h += `<div class="row" style="margin-top:10px"><span class="grow"><span class="muted sml">${esc(L().chCodeLbl)}</span><br><b class="chcode" dir="ltr">${esc(code)}</b></span>
         <button class="btn ghost sm" data-act="chCopy">${esc(L().chCopy)}</button></div>
         <div class="row" style="margin-top:8px"><span class="muted sml grow">${chRows ? esc(L().chMembers(chRows.length)) : ''}</span>
@@ -6165,13 +6541,13 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
 
   /* ---------------- focus mode (pomodoro) ---------------- */
 
-  function logFocus(sid, tid, minutes) {
+  function logFocus(sid, tid, minutes, am) {
     const t = taskOf(sid, tid);
     if (t) {
       Scheduler.deductFromTask(t, minutes);
       if (Scheduler.taskRemainingMin(t) <= 0) setTimeout(() => toast(L().focusTaskDone), 2400);
     }
-    (state.focusLog = state.focusLog || []).push({ id: uid(), taskId: tid, subjectId: sid, date: todayStr(), minutes, at: Date.now() });
+    (state.focusLog = state.focusLog || []).push({ id: uid(), taskId: tid, subjectId: sid, date: todayStr(), minutes, am: (am == null ? minutes : Math.max(0, Math.min(minutes, am))), at: Date.now() });
     save();
     toast(L().focusLogged(minutes));
   }
@@ -6291,6 +6667,14 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       if (!el || !/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) { pendingRender = false; render(); return; }
     }
     try { mascotTick(); } catch (e) { /* ignored */ }
+    // v31: focus time counts only while the app is open in front of the student
+    // (hidden tab or locked screen: no points). A gap larger than 1.5s is never counted.
+    if (focusRun && focusRun.phase === 'focus' && !focusRun.paused && focusRun.endsAt) {
+      if (document.visibilityState === 'visible') focusRun.activeMs = (focusRun.activeMs || 0) + Math.min(Math.max(0, now - (tick.lastAct || now)), 1500);
+      if (!tick.lastPers || now - tick.lastPers > 15000) { tick.lastPers = now; persistFocus(); }
+    }
+    tick.lastAct = now;
+    try { frTick(); } catch (e) { /* ignored */ }
     if (!tick.lastRem || now - tick.lastRem > 30000) { tick.lastRem = now; try { checkReminder(); } catch (e) { /* ignored */ } }
     // keep the header clock fresh and roll the app over to the new day at midnight
     const clk = $('clockLbl');
@@ -6299,7 +6683,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
     if (focusRun && !focusRun.paused && (focusRun.phase === 'focus' || focusRun.phase === 'break') && focusRun.endsAt && now >= focusRun.endsAt) {
       const p = Scheduler.FOCUS_PRESETS[focusRun.preset] || Scheduler.FOCUS_PRESETS[0];
       if (focusRun.phase === 'focus') {
-        logFocus(focusRun.subjectId, focusRun.taskId, focusMinOf(focusRun));
+        logFocus(focusRun.subjectId, focusRun.taskId, focusMinOf(focusRun), focusActiveMin(focusRun));
         if (focusRun.review) { (state.reviewLog = state.reviewLog || {})[focusRun.taskId] = todayStr(); save(); }
         focusRun.cycles = (focusRun.cycles || 0) + 1;
         focusRun.phase = 'break';
@@ -6789,6 +7173,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       schedule: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
       exams: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2.5"/><path d="M9 4.2V2.8h6v1.4M9 13l2.3 2.3L15.8 10.8"/></svg>',
       subjects: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.2C6.7 4.1 9.3 4.1 12 5.7c2.7-1.6 5.3-1.6 8-.5v13c-2.7-1.1-5.3-1.1-8 .5-2.7-1.6-5.3-1.6-8-.5z"/><path d="M12 5.7v13"/></svg>',
+      friends: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.5" r="3.2"/><path d="M3.2 19.5c.4-3.3 2.8-5.3 5.8-5.3s5.4 2 5.8 5.3"/><circle cx="17.2" cy="9.5" r="2.5"/><path d="M16.5 14.4c2.6-.2 4.5 1.4 4.9 4.3"/></svg>',
     };
     document.querySelectorAll('#tabs button').forEach((b) => { b.innerHTML = (TAB_ICON[b.dataset.tab] || '') + '<span>' + esc(l.tabs[b.dataset.tab]) + '</span>'; });
   }
@@ -6805,13 +7190,16 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       : L().days[nowD.getDay()] + '\u060c ' + nowD.getDate() + ' ' + L().months[nowD.getMonth()];
     $('todayLbl').innerHTML = `<span>${esc(hd)}</span> \u00b7 <span id="clockLbl" dir="ltr">${esc(clockNow())}</span>`;
     document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
+    try { const fd = document.querySelector('#tabs button[data-tab="friends"]'); if (fd) fd.classList.toggle('dot', frBadge() > 0); } catch (e) { /* ignore */ }
     const fab = $('fab'); if (fab) fab.style.display = sharedData ? 'none' : ((tab === 'day' || tab === 'subjects') && state.profile.onboarded && state.subjects.length) ? 'flex' : 'none';
     const pb = $('profileBtn'); if (pb) pb.innerHTML = avatarSvg(state.profile.avatar) || '👤'; // v17: the chosen avatar rides in the header
-    $('view').innerHTML = sharedData ? sharedView() : { day: viewDay, schedule: viewSchedule, exams: viewExams, subjects: viewSubjects, profile: viewProfile }[tab]() + footerHtml();
+    $('view').innerHTML = sharedData ? sharedView() : { day: viewDay, schedule: viewSchedule, exams: viewExams, subjects: viewSubjects, profile: viewProfile, friends: viewFriends }[tab]() + footerHtml();
     $('overlays').innerHTML = sharedData ? '' : overlays();
     if (focusRun) updateFocusText();
     // v17/v20: refresh the board and the challenge whenever the profile shows and they are stale
-    if (tab === 'profile' && fbDb) {
+    if (tab === 'friends' && fbDb) {
+      if (session && !fr.loaded && !fr.loading) frLoad();
+      if (fr.on) { frAttach(); frFetchStats(); if (fr.cheers.length) { frClearCheers(); } }
       if (state.leaderboard && state.leaderboard.on && Date.now() - lbFetchedAt > 300000) fetchLbTop(); // v21.1: was 60s
       if (chCode() && Date.now() - chFetchedAt > 300000) fetchCh(); // v21.1: was 60s
     }
@@ -6881,12 +7269,12 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
     if (a === 'pickFPreset') { focusPreset = +t.dataset.i || 0; return render(); }
     if (a === 'focusBegin') {
       if (!focusSel || !taskOf(focusSel.s, focusSel.l)) return render();
-      focusRun = { subjectId: focusSel.s, taskId: focusSel.l, preset: focusPreset, phase: 'focus', endsAt: Date.now() + Scheduler.FOCUS_PRESETS[focusPreset].focusMin * 60000, remainMs: 0, paused: false, cycles: 0 };
+      focusRun = { subjectId: focusSel.s, taskId: focusSel.l, preset: focusPreset, phase: 'focus', endsAt: Date.now() + Scheduler.FOCUS_PRESETS[focusPreset].focusMin * 60000, remainMs: 0, paused: false, cycles: 0, activeMs: 0 };
       focusOpen = false; persistFocus(); beep(); return render();
     }
     if (a === 'focusNext') {
       if (!focusRun) return render();
-      focusRun.phase = 'focus'; focusRun.endsAt = Date.now() + focusMinOf(focusRun) * 60000; focusRun.paused = false;
+      focusRun.phase = 'focus'; focusRun.endsAt = Date.now() + focusMinOf(focusRun) * 60000; focusRun.paused = false; focusRun.activeMs = 0;
       persistFocus(); return render();
     }
     if (a === 'focusPause') { if (focusRun && !focusRun.paused) { focusRun.remainMs = Math.max(0, focusRun.endsAt - Date.now()); focusRun.paused = true; persistFocus(); } return render(); }
@@ -6895,7 +7283,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       if (focusRun && focusRun.phase === 'focus') {
         const remain = focusRun.paused ? focusRun.remainMs : Math.max(0, focusRun.endsAt - Date.now());
         const elapsed = Math.floor((focusMinOf(focusRun) * 60000 - remain) / 60000);
-        if (elapsed >= 1) logFocus(focusRun.subjectId, focusRun.taskId, elapsed);
+        if (elapsed >= 1) logFocus(focusRun.subjectId, focusRun.taskId, elapsed, focusActiveMin(focusRun));
       }
       focusRun = null; focusOpen = false; persistFocus(); return render();
     }
@@ -7045,32 +7433,52 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
       })();
       return;
     }
-    if (a === 'chCreate') {
-      state.challenge = { code: genChCode() }; chRows = null; save(); render();
-      (async () => {
-        if (!cloudEnabled() || !fbAuth) return toast(L().chNoNet);
-        if (!session) { try { await fbAuth.signInAnonymously(); } catch (e) { return toast(L().lbAnonErr); } }
-        await pushChScore(); await fetchCh(); render();
-      })();
-      return;
-    }
+    if (a === 'chCreate') { roomAsk = { mode: 'create', code: '' }; return render(); }
     if (a === 'chJoinBtn') {
       const v = String(($('chJoin') || {}).value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
       if (v.length < 4) return toast(L().chNeed);
-      state.challenge = { code: v }; chRows = null; save(); render();
+      roomAsk = { mode: 'join', code: v }; return render();
+    }
+    if (a === 'roomNo') { roomAsk = null; return render(); }
+    if (a === 'roomYes') {
+      const ra = roomAsk; roomAsk = null; if (!ra) return render();
+      const code = ra.mode === 'create' ? genChCode() : ra.code;
+      state.challenge = { code }; roomSetAck(code); chRows = null; save(); render();
       (async () => {
         if (!cloudEnabled() || !fbAuth) return toast(L().chNoNet);
         if (!session) { try { await fbAuth.signInAnonymously(); } catch (e) { return toast(L().lbAnonErr); } }
-        await pushChScore(); await fetchCh(); render();
+        await pushChScore(true); await fetchCh(); render();
       })();
       return;
     }
-    if (a === 'chLeave') {
+    if (a === 'roomOldYes') { roomSetAck(chCode()); chPushKey = ''; pushChScore(true); return render(); }
+    if (a === 'chLeave' || a === 'roomOldNo') {
       const oldCode = chCode();
       state.challenge = { code: '' }; chRows = null; save(); render();
       if (session && fbDb && oldCode) { try { fbDb.collection('challenges').doc(oldCode).collection('entries').doc(session.uid).delete().catch(() => {}); } catch (e) {} }
       return;
     }
+    // v31: friends
+    if (a === 'frEnable') { frEnable(); return; }
+    if (a === 'frCopy' || a === 'frShare') {
+      const code = fr.code, text = L().frShareText(code);
+      if (a === 'frShare' && navigator.share) { navigator.share({ text }).catch(() => {}); return; }
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(a === 'frShare' ? text : code);
+        else { const el = document.createElement('textarea'); el.value = a === 'frShare' ? text : code; document.body.appendChild(el); el.select(); document.execCommand('copy'); el.remove(); }
+        toast(L().frCopied);
+      } catch (e) { toast(code); }
+      return;
+    }
+    if (a === 'frAddBtn') { frSendRequest(($('frAdd') || {}).value); return; }
+    if (a === 'frAccept') { frAccept(t.dataset.p); return; }
+    if (a === 'frReject') { frDelete(t.dataset.p); return; }
+    if (a === 'frCheer') { frCheer(t.dataset.u, t.dataset.k); return; }
+    if (a === 'frRemoveAsk') { fr.ask = { pair: t.dataset.p }; frRefreshUI(); return; }
+    if (a === 'frRemoveNo') { fr.ask = null; frRefreshUI(); return; }
+    if (a === 'frRemoveYes') { fr.ask = null; frDelete(t.dataset.p); toast(L().frRemoved); return; }
+    if (a === 'frShareSet') { frSetShare(t.dataset.m); return; }
+    if (a === 'frRefresh') { fr.statsKey = ''; frFetchStats(true); return; }
     if (a === 'chCopy') {
       const code = chCode();
       try {
@@ -7083,7 +7491,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
     if (a === 'revStart') {
       if (!taskOf(s, l)) return render();
       focusSel = { s, l };
-      focusRun = { subjectId: s, taskId: l, preset: 0, customMin: 10, review: true, phase: 'focus', endsAt: Date.now() + 10 * 60000, remainMs: 0, paused: false, cycles: 0 };
+      focusRun = { subjectId: s, taskId: l, preset: 0, customMin: 10, review: true, phase: 'focus', endsAt: Date.now() + 10 * 60000, remainMs: 0, paused: false, cycles: 0, activeMs: 0 };
       focusOpen = false; persistFocus(); return render();
     }
     if (a === 'revLater') { (state.reviewLog = state.reviewLog || {})[l] = todayStr(); save(); return render(); }
@@ -7215,7 +7623,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
     if (!document.hidden && canSyncLectures() && Date.now() - (state.batchSync.lastSync || 0) > 30 * 60000) syncLecturesFile(false);
   });
 
-  window.__planner = { mascotShow, mascotLeave, mascotTick, mascotFreq, setMascotFreq, mascotBlock, get mascotEl() { return mascotEl; }, set mascotLast(v) { mascotLast = v; }, get mascotLast() { return mascotLast; }, endTour: () => { tourClose(); render(); }, get state() { return state; }, loadCur, render, tick, loadCloud, pushCloud, save, get focusRun() { return focusRun; }, get session() { return session; }, batchIdle: () => batchPromise || Promise.resolve(), lbDemo: (rows) => { lbRows = rows; lbError = ''; const el = $('lbList'); if (el) el.innerHTML = lbListHtml(); } };
+  window.__planner = { get focusRun() { return focusRun; }, fr, todayStr, weekKey: Scheduler.weekKey, weekScore: (d) => Scheduler.weekScore(state, d || todayStr()), roomAcked, frPayload, mascotShow, mascotLeave, mascotTick, mascotFreq, setMascotFreq, mascotBlock, get mascotEl() { return mascotEl; }, set mascotLast(v) { mascotLast = v; }, get mascotLast() { return mascotLast; }, endTour: () => { tourClose(); render(); }, get state() { return state; }, loadCur, render, tick, loadCloud, pushCloud, save, get focusRun() { return focusRun; }, get session() { return session; }, batchIdle: () => batchPromise || Promise.resolve(), lbDemo: (rows) => { lbRows = rows; lbError = ''; const el = $('lbList'); if (el) el.innerHTML = lbListHtml(); } };
   render();
   attLoadMeta();
   initCloud();
