@@ -829,6 +829,257 @@ nav button.dot::after { content: ''; position: absolute; top: 5px; inset-inline-
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<style id="senny-theme-c">
+/* v37: Noir Luxe theme */
+/* ============================================================
+   سِنّي · Theme C — "Noir Luxe"
+   Near-black canvas, slow rotating rim light, hairline gradient
+   borders on every card, teal→coral accents.
+   ============================================================ */
+
+html { background: #03080a; }
+
+body {
+  background:
+    radial-gradient(900px 520px at 72% -8%, rgba(13, 148, 136, 0.22), transparent 60%),
+    radial-gradient(700px 480px at 6% 8%, rgba(251, 113, 133, 0.12), transparent 58%),
+    linear-gradient(180deg, #050e11 0%, #04090b 55%, #020608 100%);
+  background-attachment: fixed;
+}
+
+/* rotating rim light */
+body::before {
+  content: "";
+  position: fixed; top: 50%; left: 50%;
+  width: 190vmax; height: 190vmax;
+  margin: -95vmax 0 0 -95vmax;
+  z-index: 0; pointer-events: none;
+  background: conic-gradient(from 0deg,
+    rgba(20, 184, 166, 0.20), rgba(2, 132, 199, 0.10) 18%,
+    transparent 32%, transparent 62%,
+    rgba(251, 113, 133, 0.13) 78%, rgba(20, 184, 166, 0.20));
+  filter: blur(40px);
+  animation: rimSpin 120s linear infinite;
+  will-change: transform;
+}
+/* fine drifting grid */
+body::after {
+  content: "";
+  position: fixed; inset: -10%;
+  z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(94, 234, 212, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(94, 234, 212, 0.055) 1px, transparent 1px);
+  background-size: 46px 46px;
+  mask-image: radial-gradient(120% 80% at 50% 0%, #000 0%, transparent 78%);
+  -webkit-mask-image: radial-gradient(120% 80% at 50% 0%, #000 0%, transparent 78%);
+  animation: gridDrift 48s ease-in-out infinite alternate;
+  will-change: transform;
+}
+@keyframes rimSpin { to { transform: rotate(360deg); } }
+@keyframes gridDrift {
+  0%   { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(0, 18px, 0); }
+}
+
+/* header and page content sit above the animated background; nav and + keep their fixed position */
+header, main { position: relative; z-index: 1; }
+
+:root {
+  --bg: #04090b;
+  --card: #0b1518;
+  --ink: #eef7f6;
+  --muted: #86999e;
+  --line: rgba(255, 255, 255, 0.09);
+  --line-soft: rgba(255, 255, 255, 0.05);
+  --soft: rgba(255, 255, 255, 0.03);
+  --input-bg: rgba(3, 10, 12, 0.85);
+  --ghost-bg: rgba(255, 255, 255, 0.05);
+  --ghost-hover: rgba(255, 255, 255, 0.09);
+  --nav-bg: rgba(6, 13, 15, 0.78);
+  --bar-bg: rgba(255, 255, 255, 0.08);
+  --exam-bg: rgba(43, 33, 12, 0.6);
+  --exam-line: rgba(212, 168, 56, 0.3);
+  --teal-bg: rgba(20, 184, 166, 0.14);
+  --teal-ink: #5eead4;
+  --solve-bg: rgba(2, 132, 199, 0.16);
+  --solve-ink: #7dd3fc;
+  --amber-bg: rgba(232, 185, 84, 0.12);
+  --amber-ink: #e8c37a;
+  --violet-bg: rgba(167, 139, 250, 0.12);
+  --violet-ink: #c4b5fd;
+  --primary: #14b8a6;
+  --primary-d: #0f766e;
+  --primary-2: #fb7185;
+  --radius: 18px;
+  --shadow: 0 24px 50px -34px rgba(0, 0, 0, 1);
+}
+
+/* ---- header ---- */
+header {
+  background: linear-gradient(180deg, rgba(5, 13, 15, 0.95), rgba(4, 10, 12, 0.78));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid transparent;
+  border-image: linear-gradient(90deg, transparent, rgba(94, 234, 212, 0.45), rgba(251, 113, 133, 0.35), transparent) 1;
+  box-shadow: 0 22px 44px -34px rgba(0, 0, 0, 1);
+  color: var(--ink);
+}
+#appTitle {
+  background: linear-gradient(100deg, #eafffb, #5eead4 48%, #fda4af);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+.tagline { color: #6d8b8e; opacity: 1; letter-spacing: 0.9px; }
+#langBtn, #themeBtn, #profileBtn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--ink);
+}
+#langBtn:hover, #themeBtn:hover, #profileBtn:hover { background: rgba(94, 234, 212, 0.14); }
+#todayLbl {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cfeae6;
+}
+.sync { color: #6fd8c7; }
+
+/* ---- cards: hairline gradient border ---- */
+.card {
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background:
+    linear-gradient(180deg, #0c171a, #091114) padding-box,
+    linear-gradient(150deg, rgba(94, 234, 212, 0.38), rgba(251, 113, 133, 0.16) 42%, rgba(255, 255, 255, 0.06) 72%) border-box;
+  box-shadow: var(--shadow);
+}
+.statcard {
+  border: 1px solid transparent;
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, #0c171a, #091114) padding-box,
+    linear-gradient(150deg, rgba(94, 234, 212, 0.30), rgba(255, 255, 255, 0.05) 70%) border-box;
+}
+.statcard .sc-num { color: #f2fffd; }
+.subjcard {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(180deg, #0c171a, #091114) padding-box,
+    linear-gradient(150deg, rgba(94, 234, 212, 0.26), rgba(255, 255, 255, 0.05) 70%) border-box;
+  border-radius: 20px;
+}
+.wkcell, .cell { background: rgba(255, 255, 255, 0.035); border-color: rgba(255, 255, 255, 0.08); }
+
+/* ---- buttons: teal → coral with a glow ---- */
+.btn {
+  background: linear-gradient(115deg, #0d9488, #14b8a6 46%, #f472b6 130%);
+  box-shadow: 0 12px 28px -14px rgba(20, 184, 166, 0.85), 0 0 0 1px rgba(94, 234, 212, 0.16) inset;
+}
+.btn.ghost { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: none; }
+#fab {
+  background: linear-gradient(135deg, #14b8a6, #0d9488 55%, #fb7185);
+  box-shadow: 0 16px 32px -12px rgba(20, 184, 166, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.14) inset;
+}
+
+/* ---- bottom bar ---- */
+nav {
+  background: var(--nav-bg);
+  backdrop-filter: blur(20px) saturate(1.25);
+  -webkit-backdrop-filter: blur(20px) saturate(1.25);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  box-shadow: 0 24px 44px -22px rgba(0, 0, 0, 1);
+}
+nav button.on {
+  background: linear-gradient(135deg, rgba(20, 184, 166, 0.92), rgba(13, 148, 136, 0.9) 55%, rgba(251, 113, 133, 0.85));
+  box-shadow: 0 10px 24px -10px rgba(20, 184, 166, 0.85);
+}
+
+/* ---- bits ---- */
+.bar { background: rgba(255, 255, 255, 0.08); }
+.bar i { background: linear-gradient(90deg, #5eead4, #14b8a6 55%, #fb7185); }
+.focuscard {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(135deg, #07171a, #0a2a2c 60%, #12181c) padding-box,
+    linear-gradient(140deg, rgba(94, 234, 212, 0.5), rgba(251, 113, 133, 0.3)) border-box;
+  color: #f0fffd;
+}
+.motiv { background: rgba(255, 255, 255, 0.05); border-color: rgba(94, 234, 212, 0.22); color: #a9f2e7; }
+.wkcell.now { border-color: rgba(94, 234, 212, 0.6); box-shadow: inset 0 0 0 1px rgba(94, 234, 212, 0.25); }
+.cell.sel { background: rgba(20, 184, 166, 0.14); }
+.sheet {
+  background: linear-gradient(180deg, #0c1a1d, #081113);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.overlay { background: rgba(1, 6, 8, 0.7); }
+.pcard { border-inline-start-color: #14b8a6; }
+
+/* ---- light counterpart ---- */
+[data-theme="light"] {
+  --bg: #f6f8f8;
+  --card: #ffffff;
+  --ink: #101c1f;
+  --muted: #62777c;
+  --line: rgba(10, 40, 44, 0.12);
+  --line-soft: rgba(10, 40, 44, 0.08);
+  --soft: #f2f7f6;
+  --input-bg: #ffffff;
+  --ghost-bg: #eef5f4;
+  --ghost-hover: #e4efed;
+  --nav-bg: rgba(255, 255, 255, 0.85);
+  --bar-bg: #e7efee;
+  --teal-bg: #dcf6f1;
+  --teal-ink: #0a6b60;
+  --shadow: 0 20px 40px -30px rgba(6, 30, 32, 0.5);
+}
+[data-theme="light"] body {
+  background:
+    radial-gradient(900px 520px at 76% -10%, rgba(13, 148, 136, 0.16), transparent 60%),
+    radial-gradient(700px 460px at 4% 6%, rgba(251, 113, 133, 0.1), transparent 58%),
+    linear-gradient(180deg, #fbfdfd, #f1f6f6);
+}
+[data-theme="light"] body::before { opacity: 0.35; }
+[data-theme="light"] body::after { opacity: 0.5; }
+[data-theme="light"] header {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 252, 252, 0.75));
+  border-bottom: 1px solid rgba(10, 40, 44, 0.1);
+  color: var(--ink);
+}
+[data-theme="light"] #appTitle {
+  background: linear-gradient(100deg, #0f766e, #0d9488 50%, #db2777);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+[data-theme="light"] #langBtn,
+[data-theme="light"] #themeBtn,
+[data-theme="light"] #profileBtn {
+  background: #ffffff;
+  border-color: rgba(10, 40, 44, 0.12);
+  color: #10282b;
+}
+[data-theme="light"] .card,
+[data-theme="light"] .statcard,
+[data-theme="light"] .subjcard {
+  background:
+    linear-gradient(180deg, #ffffff, #fdfefe) padding-box,
+    linear-gradient(150deg, rgba(13, 148, 136, 0.35), rgba(251, 113, 133, 0.14) 45%, rgba(0, 0, 0, 0.04) 75%) border-box;
+}
+[data-theme="light"] .sheet { background: #ffffff; }
+[data-theme="light"] .overlay { background: rgba(6, 30, 32, 0.35); }
+
+/* v37: tab bar stays at the bottom, clear of the phone's bottom edge */
+nav { position: fixed; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); z-index: 30; }
+#fab { position: fixed; bottom: calc(92px + env(safe-area-inset-bottom, 0px)); z-index: 29; }
+#toast { bottom: calc(170px + env(safe-area-inset-bottom, 0px)); }
+main { padding-bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
+
+@media (prefers-reduced-motion: reduce) {
+  body::before, body::after { animation: none !important; }
+  .card { animation: none !important; }
+}
+
+</style>
 </head>
 <body>
 <header>
