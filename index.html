@@ -830,7 +830,7 @@ nav button.dot::after { content: ''; position: absolute; top: 5px; inset-inline-
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <style id="senny-theme-c">
-/* v37: Noir Luxe theme */
+/* v37.1: Noir Luxe, light effects by default */
 /* ============================================================
    سِنّي · Theme C — "Noir Luxe"
    Near-black canvas, slow rotating rim light, hairline gradient
@@ -844,45 +844,33 @@ body {
     radial-gradient(900px 520px at 72% -8%, rgba(13, 148, 136, 0.22), transparent 60%),
     radial-gradient(700px 480px at 6% 8%, rgba(251, 113, 133, 0.12), transparent 58%),
     linear-gradient(180deg, #050e11 0%, #04090b 55%, #020608 100%);
-  background-attachment: fixed;
 }
 
-/* rotating rim light */
+/* v37.1: static background painted once on a fixed layer (no blur, no rotation, no fixed attachment) */
 body::before {
   content: "";
-  position: fixed; top: 50%; left: 50%;
-  width: 190vmax; height: 190vmax;
-  margin: -95vmax 0 0 -95vmax;
+  position: fixed; inset: 0;
   z-index: 0; pointer-events: none;
-  background: conic-gradient(from 0deg,
-    rgba(20, 184, 166, 0.20), rgba(2, 132, 199, 0.10) 18%,
-    transparent 32%, transparent 62%,
-    rgba(251, 113, 133, 0.13) 78%, rgba(20, 184, 166, 0.20));
-  filter: blur(40px);
-  animation: rimSpin 120s linear infinite;
+  background:
+    radial-gradient(70% 38% at 72% 0%, rgba(20, 184, 166, 0.20), transparent 70%),
+    radial-gradient(55% 34% at 6% 6%, rgba(251, 113, 133, 0.10), transparent 70%),
+    radial-gradient(60% 30% at 100% 100%, rgba(2, 132, 199, 0.08), transparent 70%);
+}
+/* full effects only: slow drift, transform only, one viewport-sized layer */
+html[data-fx="full"] body::before {
+  inset: -12%;
+  background:
+    radial-gradient(closest-side, rgba(20, 184, 166, 0.26), transparent 70%) 70% 14% / 60% 46% no-repeat,
+    radial-gradient(closest-side, rgba(251, 113, 133, 0.13), transparent 70%) 6% 20% / 50% 40% no-repeat,
+    radial-gradient(closest-side, rgba(2, 132, 199, 0.12), transparent 70%) 90% 88% / 56% 40% no-repeat;
+  animation: fxDrift 70s ease-in-out infinite alternate;
   will-change: transform;
 }
-/* fine drifting grid */
-body::after {
-  content: "";
-  position: fixed; inset: -10%;
-  z-index: 0; pointer-events: none;
-  background-image:
-    linear-gradient(rgba(94, 234, 212, 0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(94, 234, 212, 0.055) 1px, transparent 1px);
-  background-size: 46px 46px;
-  mask-image: radial-gradient(120% 80% at 50% 0%, #000 0%, transparent 78%);
-  -webkit-mask-image: radial-gradient(120% 80% at 50% 0%, #000 0%, transparent 78%);
-  animation: gridDrift 48s ease-in-out infinite alternate;
-  will-change: transform;
-}
-@keyframes rimSpin { to { transform: rotate(360deg); } }
-@keyframes gridDrift {
-  0%   { transform: translate3d(0, 0, 0); }
-  100% { transform: translate3d(0, 18px, 0); }
+@keyframes fxDrift {
+  0%   { transform: translate3d(-2%, -1%, 0); }
+  100% { transform: translate3d(2%, 2%, 0); }
 }
 
-/* header and page content sit above the animated background; nav and + keep their fixed position */
 header, main { position: relative; z-index: 1; }
 
 :root {
@@ -896,7 +884,7 @@ header, main { position: relative; z-index: 1; }
   --input-bg: rgba(3, 10, 12, 0.85);
   --ghost-bg: rgba(255, 255, 255, 0.05);
   --ghost-hover: rgba(255, 255, 255, 0.09);
-  --nav-bg: rgba(6, 13, 15, 0.78);
+  --nav-bg: rgba(7, 15, 17, 0.96);
   --bar-bg: rgba(255, 255, 255, 0.08);
   --exam-bg: rgba(43, 33, 12, 0.6);
   --exam-line: rgba(212, 168, 56, 0.3);
@@ -912,17 +900,15 @@ header, main { position: relative; z-index: 1; }
   --primary-d: #0f766e;
   --primary-2: #fb7185;
   --radius: 18px;
-  --shadow: 0 24px 50px -34px rgba(0, 0, 0, 1);
+  --shadow: 0 10px 18px -14px rgba(0, 0, 0, 0.9);
 }
 
 /* ---- header ---- */
 header {
-  background: linear-gradient(180deg, rgba(5, 13, 15, 0.95), rgba(4, 10, 12, 0.78));
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: linear-gradient(180deg, rgba(5, 13, 15, 0.98), rgba(4, 10, 12, 0.94));
   border-bottom: 1px solid transparent;
   border-image: linear-gradient(90deg, transparent, rgba(94, 234, 212, 0.45), rgba(251, 113, 133, 0.35), transparent) 1;
-  box-shadow: 0 22px 44px -34px rgba(0, 0, 0, 1);
+  box-shadow: 0 8px 16px -12px rgba(0, 0, 0, 0.9);
   color: var(--ink);
 }
 #appTitle {
@@ -984,11 +970,9 @@ header {
 /* ---- bottom bar ---- */
 nav {
   background: var(--nav-bg);
-  backdrop-filter: blur(20px) saturate(1.25);
-  -webkit-backdrop-filter: blur(20px) saturate(1.25);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 20px;
-  box-shadow: 0 24px 44px -22px rgba(0, 0, 0, 1);
+  box-shadow: 0 8px 18px -10px rgba(0, 0, 0, 0.9);
 }
 nav button.on {
   background: linear-gradient(135deg, rgba(20, 184, 166, 0.92), rgba(13, 148, 136, 0.9) 55%, rgba(251, 113, 133, 0.85));
@@ -1012,7 +996,7 @@ nav button.on {
   background: linear-gradient(180deg, #0c1a1d, #081113);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
-.overlay { background: rgba(1, 6, 8, 0.7); }
+.overlay { background: rgba(1, 6, 8, 0.78); backdrop-filter: none; -webkit-backdrop-filter: none; }
 .pcard { border-inline-start-color: #14b8a6; }
 
 /* ---- light counterpart ---- */
@@ -1027,7 +1011,7 @@ nav button.on {
   --input-bg: #ffffff;
   --ghost-bg: #eef5f4;
   --ghost-hover: #e4efed;
-  --nav-bg: rgba(255, 255, 255, 0.85);
+  --nav-bg: rgba(255, 255, 255, 0.97);
   --bar-bg: #e7efee;
   --teal-bg: #dcf6f1;
   --teal-ink: #0a6b60;
@@ -1039,10 +1023,9 @@ nav button.on {
     radial-gradient(700px 460px at 4% 6%, rgba(251, 113, 133, 0.1), transparent 58%),
     linear-gradient(180deg, #fbfdfd, #f1f6f6);
 }
-[data-theme="light"] body::before { opacity: 0.35; }
-[data-theme="light"] body::after { opacity: 0.5; }
+[data-theme="light"] body::before { opacity: 0.5; }
 [data-theme="light"] header {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 252, 252, 0.75));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 252, 252, 0.94));
   border-bottom: 1px solid rgba(10, 40, 44, 0.1);
   color: var(--ink);
 }
@@ -1075,9 +1058,15 @@ nav { position: fixed; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); z-
 main { padding-bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
 
 @media (prefers-reduced-motion: reduce) {
-  body::before, body::after { animation: none !important; }
+  body::before { animation: none !important; }
   .card { animation: none !important; }
 }
+
+/* full effects: a light glass blur on the bottom bar only */
+html[data-fx="full"] nav { background: rgba(6, 13, 15, 0.78); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+html[data-fx="full"][data-theme="light"] nav { background: rgba(255, 255, 255, 0.85); }
+/* cheap wins on every card */
+.card, .statcard, .subjcard { contain: layout style; }
 
 </style>
 </head>
@@ -7108,6 +7097,8 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
     h += `<div class="card"><b>\uD83E\uDDB7 ${esc(L().mascotTitle)}</b><div class="muted" style="margin-top:4px">${esc(L().mascotSub)}</div>
       <div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap">${Mascot.FREQS.map((m) => `<button class="btn ${mascotFreq() === m ? '' : 'ghost'} sm grow" data-act="mascotFreq" data-m="${m}">${esc(m ? L().mascotEvery(m) : L().mascotOff)}</button>`).join('')}</div>
       <div class="row" style="margin-top:8px"><button class="btn ghost sm grow" data-act="mascotTry">${esc(L().mascotTry)}</button></div></div>`;
+    h += `<div class="card"><b>\u2728 ${state.lang === 'en' ? 'Visual effects' : 'المؤثرات'}</b><div class="muted" style="margin-top:4px">${state.lang === 'en' ? 'Light is faster and saves battery. Full adds a slowly moving background.' : 'الخفيف أسرع وبيوفر بطارية. الكامل بيضيف خلفية بتتحرك ببطء.'}</div>
+      <div class="row" style="margin-top:8px;gap:6px"><button class="btn ${fxMode() === 'light' ? '' : 'ghost'} sm grow" data-act="fxSet" data-m="light">${state.lang === 'en' ? 'Light' : 'خفيف'}</button><button class="btn ${fxMode() === 'full' ? '' : 'ghost'} sm grow" data-act="fxSet" data-m="full">${state.lang === 'en' ? 'Full' : 'كامل'}</button></div></div>`;
     h += `<div style="margin:0 0 12px"><button class="btn ghost" data-act="guideOpen" style="width:100%">❓ ${esc(L().tourBtn)}</button></div>`;
     h += `<div style="margin:0 0 12px"><button class="btn ghost" data-act="shareProg" style="width:100%">📤 ${esc(L().shareBtn)}</button></div>`;
     h += subjStatsHtml(); // v20: real minutes per subject
@@ -8026,11 +8017,15 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
 
   /* ---------------- chrome / render ---------------- */
 
+  // v37.1: 'light' (default, cheap) or 'full' (slow animated background)
+  const FX_KEY = 'senny.fx';
+  const fxMode = () => { try { return localStorage.getItem(FX_KEY) === 'full' ? 'full' : 'light'; } catch (e) { return 'light'; } };
   function applyChrome() {
     const l = L();
     document.documentElement.lang = state.lang === 'en' ? 'en' : 'ar';
     document.documentElement.dir = l.dir;
     document.documentElement.dataset.theme = state.theme === 'light' ? 'light' : '';
+    document.documentElement.dataset.fx = fxMode(); // v37.1
     $('appTitle').textContent = l.appTitle;
     $('langBtn').textContent = l.langBtn;
     $('themeBtn').textContent = state.theme === 'light' ? '☾' : '☀';
@@ -8426,6 +8421,7 @@ if (typeof module === 'object' && module.exports) module.exports = Mascot;
     if (a === 'attOpenF') { attOpenFile(t.dataset.f, l); return; }
     if (a === 'attDel') { if (confirm(L().attDelConfirm)) attDelete(t.dataset.f, l); return; }
     if (a === 'noteT') { noteOpen = (noteOpen === l) ? null : l; return render(); }
+    if (a === 'fxSet') { try { localStorage.setItem(FX_KEY, t.dataset.m === 'full' ? 'full' : 'light'); } catch (e) { /* ignore */ } return render(); }
     if (a === 'remToggle') {
       const rm = state.remind;
       if (!rm.on && 'Notification' in window && Notification.permission === 'default') {
